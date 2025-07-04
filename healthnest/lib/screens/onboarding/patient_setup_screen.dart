@@ -1,10 +1,12 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/patient.dart';
 import '../../providers/user_provider.dart';
+import 'onboarding_complete_screen.dart';
 
 class PatientSetupScreen extends StatefulWidget {
-  const PatientSetupScreen({Key? key}) : super(key: key);
+  const PatientSetupScreen({super.key});
 
   @override
   State<PatientSetupScreen> createState() => _PatientSetupScreenState();
@@ -30,12 +32,51 @@ class _PatientSetupScreenState extends State<PatientSetupScreen> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
+    final DateTime? picked = await showCupertinoModalPopup<DateTime>(
       context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
+      builder: (BuildContext context) {
+        return Container(
+          height: 300,
+          color: CupertinoColors.systemBackground,
+          child: Column(
+            children: [
+              Container(
+                height: 40,
+                color: CupertinoColors.systemGrey6,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    CupertinoButton(
+                      child: const Text('Cancel'),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    CupertinoButton(
+                      child: const Text('Done'),
+                      onPressed: () => Navigator.pop(context, _selectedDate ?? DateTime.now()),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.date,
+                  initialDateTime: _selectedDate ?? DateTime.now(),
+                  maximumDate: DateTime.now(),
+                  minimumDate: DateTime(1900),
+                  onDateTimeChanged: (DateTime newDate) {
+                    setState(() {
+                      _selectedDate = newDate;
+                      _dateController.text = '${newDate.day}/${newDate.month}/${newDate.year}';
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
+    
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
@@ -65,10 +106,26 @@ class _PatientSetupScreenState extends State<PatientSetupScreen> {
         final userProvider = Provider.of<UserProvider>(context, listen: false);
         await userProvider.addPatient(patient);
         
-        Navigator.pushNamed(context, '/onboarding/complete');
+        Navigator.pushReplacement(
+          context,
+          CupertinoPageRoute(
+            builder: (context) => const OnboardingCompleteScreen(),
+            fullscreenDialog: true,
+          ),
+        );
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating patient: $e')),
+        showCupertinoDialog(
+          context: context,
+          builder: (context) => CupertinoAlertDialog(
+            title: const Text('Error'),
+            content: Text('Error creating patient: $e'),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text('OK'),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
         );
       }
     }
@@ -76,117 +133,132 @@ class _PatientSetupScreenState extends State<PatientSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add First Patient'),
+    return CupertinoPageScaffold(
+      backgroundColor: CupertinoColors.systemGroupedBackground,
+      navigationBar: const CupertinoNavigationBar(
+        middle: Text('Add First Patient'),
         automaticallyImplyLeading: false,
       ),
-      body: SafeArea(
-        child: Padding(
+      child: SafeArea(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Add your first patient profile',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemBackground,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: CupertinoColors.systemGrey.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'This could be yourself or a family member',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: CupertinoColors.systemGreen.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: const Icon(
+                          CupertinoIcons.person_add,
+                          size: 30,
+                          color: CupertinoColors.systemGreen,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Add your first patient profile',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: CupertinoColors.label,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'This could be yourself or a family member',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: CupertinoColors.secondaryLabel,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 32),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter the name';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                GestureDetector(
-                  onTap: () => _selectDate(context),
-                  child: AbsorbPointer(
-                    child: TextFormField(
-                      controller: _dateController,
-                      decoration: const InputDecoration(
-                        labelText: 'Date of Birth',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.calendar_today),
+                
+                // Form Fields
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemBackground,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: CupertinoColors.systemGrey.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
                       ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please select date of birth';
-                        }
-                        return null;
-                      },
-                    ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      _buildTextField(
+                        controller: _nameController,
+                        label: 'Full Name',
+                        icon: CupertinoIcons.person,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter the name';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      _buildDateField(),
+                      const SizedBox(height: 20),
+                      _buildGenderField(),
+                      const SizedBox(height: 20),
+                      _buildTextField(
+                        controller: _bloodGroupController,
+                        label: 'Blood Group (Optional)',
+                        icon: CupertinoIcons.drop,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildTextField(
+                        controller: _abhaController,
+                        label: 'ABHA Number (Optional)',
+                        icon: CupertinoIcons.heart,
+                        helperText: 'Ayushman Bharat Health Account Number',
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _selectedGender,
-                  decoration: const InputDecoration(
-                    labelText: 'Gender',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person_outline),
-                  ),
-                  items: ['Male', 'Female', 'Other'].map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _selectedGender = newValue!;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _bloodGroupController,
-                  decoration: const InputDecoration(
-                    labelText: 'Blood Group (Optional)',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.bloodtype),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _abhaController,
-                  decoration: const InputDecoration(
-                    labelText: 'ABHA Number (Optional)',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.health_and_safety),
-                    helperText: 'Ayushman Bharat Health Account Number',
-                  ),
-                ),
-                const Spacer(),
+                const SizedBox(height: 32),
+                
+                // Continue Button
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton(
+                  child: CupertinoButton.filled(
                     onPressed: _savePatient,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
                     child: const Text(
                       'Continue',
-                      style: TextStyle(fontSize: 18),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -195,6 +267,200 @@ class _PatientSetupScreenState extends State<PatientSetupScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    String? Function(String?)? validator,
+    String? helperText,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: CupertinoColors.systemBlue,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: CupertinoColors.label,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        CupertinoTextField(
+          controller: controller,
+          placeholder: 'Enter $label',
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: CupertinoColors.systemGrey4,
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+        if (helperText != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            helperText,
+            style: TextStyle(
+              fontSize: 12,
+              color: CupertinoColors.tertiaryLabel,
+            ),
+          ),
+        ],
+        if (validator != null) ...[
+          const SizedBox(height: 4),
+          Builder(
+            builder: (context) {
+              final error = validator(controller.text);
+              if (error != null) {
+                return Text(
+                  error,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: CupertinoColors.systemRed,
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildDateField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              CupertinoIcons.calendar,
+              size: 20,
+              color: CupertinoColors.systemBlue,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Date of Birth',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: CupertinoColors.label,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: () => _selectDate(context),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: CupertinoColors.systemGrey4,
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _dateController.text.isEmpty ? 'Select date of birth' : _dateController.text,
+                    style: TextStyle(
+                      color: _dateController.text.isEmpty 
+                          ? CupertinoColors.placeholderText 
+                          : CupertinoColors.label,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  CupertinoIcons.chevron_down,
+                  size: 16,
+                  color: CupertinoColors.systemGrey,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_dateController.text.isEmpty) ...[
+          const SizedBox(height: 4),
+          const Text(
+            'Please select date of birth',
+            style: TextStyle(
+              fontSize: 12,
+              color: CupertinoColors.systemRed,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildGenderField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              CupertinoIcons.person_crop_circle,
+              size: 20,
+              color: CupertinoColors.systemBlue,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Gender',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: CupertinoColors.label,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: CupertinoColors.systemGrey4,
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: CupertinoSlidingSegmentedControl<String>(
+            groupValue: _selectedGender,
+            children: const {
+              'Male': Text('Male'),
+              'Female': Text('Female'),
+              'Other': Text('Other'),
+            },
+            onValueChanged: (String? value) {
+              if (value != null) {
+                setState(() {
+                  _selectedGender = value;
+                });
+              }
+            },
+          ),
+        ),
+      ],
     );
   }
 } 

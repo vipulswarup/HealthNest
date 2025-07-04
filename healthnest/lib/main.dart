@@ -1,29 +1,29 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/onboarding/welcome_screen.dart';
-import 'screens/onboarding/user_setup_screen.dart';
-import 'utils/constants.dart';
 import 'providers/user_provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const HealthNestApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class HealthNestApp extends StatelessWidget {
+  const HealthNestApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (context) => UserProvider(),
-      child: MaterialApp(
-        title: AppConstants.appName,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          useMaterial3: true,
+      child: CupertinoApp(
+        title: 'HealthNest',
+        theme: const CupertinoThemeData(
+          primaryColor: CupertinoColors.systemBlue,
+          brightness: Brightness.light,
         ),
         home: const AppRouter(),
+        debugShowCheckedModeBanner: false,
       ),
     );
   }
@@ -53,17 +53,17 @@ class _AppRouterState extends State<AppRouter> {
     return Consumer<UserProvider>(
       builder: (context, userProvider, child) {
         if (userProvider.isLoading) {
-          return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
+          return const CupertinoPageScaffold(
+            child: Center(
+              child: CupertinoActivityIndicator(),
             ),
           );
         }
 
         if (!userProvider.isInitialized) {
-          return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
+          return const CupertinoPageScaffold(
+            child: Center(
+              child: CupertinoActivityIndicator(),
             ),
           );
         }
@@ -73,7 +73,7 @@ class _AppRouterState extends State<AppRouter> {
         }
 
         if (!userProvider.onboardingCompleted) {
-          return const UserSetupScreen();
+          return const WelcomeScreen();
         }
 
         return const DashboardScreen();
