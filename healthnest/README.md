@@ -9,6 +9,8 @@ HealthNest addresses the critical need for a unified health record system that w
 ## Key Features
 
 ### Core Functionality
+- **User Onboarding**: Simple setup flow for app owner and first patient profile
+- **Multi-Patient Management**: Single user can manage multiple family member profiles
 - **Local-First Architecture**: All data stored locally on device with optional sync to user-controlled cloud storage
 - **AI-Powered Document Management**: Automatic scanning, tagging, and categorization of medical documents
 - **Structured Health Records**: Based on openEHR archetypes, SNOMED CT, and LOINC standards
@@ -44,6 +46,7 @@ HealthNest addresses the critical need for a unified health record system that w
 ### Data Layer
 - **Local Storage**: SQLite with encryption for offline-first operation
 - **Cloud Sync**: Google Drive/Sheets API for user-controlled cloud storage
+- **Hybrid Architecture**: Local-first with optional cloud sync for cross-device functionality
 - **Standards Compliance**: openEHR archetypes, SNOMED CT, LOINC coding
 
 ### AI & ML
@@ -61,8 +64,10 @@ HealthNest addresses the critical need for a unified health record system that w
 ```
 lib/
 ├── models/          # Data models based on openEHR archetypes
-├── services/        # Google Drive/Sheets, ML, local storage services
+├── services/        # Storage services (local, cloud, hybrid)
+├── providers/       # State management with Provider
 ├── screens/         # UI screens for different app sections
+│   └── onboarding/  # User onboarding flow screens
 ├── widgets/         # Reusable UI components
 └── utils/           # Helper functions and standards mapping
 ```

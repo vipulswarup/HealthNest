@@ -1,8 +1,6 @@
 // ML service interface for AI-powered document processing
 // Supports on-device ML for document scanning and tagging
 
-import '../models/health_record.dart';
-
 abstract class MLService {
   // Document processing
   Future<Map<String, dynamic>> processDocument(String imagePath);

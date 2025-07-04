@@ -3,11 +3,18 @@
 
 import '../models/health_record.dart';
 import '../models/patient.dart';
+import '../models/user.dart';
 
 abstract class StorageService {
   // Local storage operations
   Future<void> initialize();
   Future<void> close();
+  
+  // User operations
+  Future<User?> getCurrentUser();
+  Future<void> saveUser(User user);
+  Future<void> deleteUser(String id);
+  Future<bool> hasUser();
   
   // Health record operations
   Future<List<HealthRecord>> getHealthRecords(String patientId);
