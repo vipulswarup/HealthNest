@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 // Patient model for family member management
 // Supports multiple family members with access controls
 
@@ -63,12 +65,12 @@ class Patient {
       'gender': gender,
       'abhaNumber': abhaNumber,
       'bloodGroup': bloodGroup,
-      'emergencyContacts': emergencyContacts,
-      'preferences': preferences,
+      'emergencyContacts': jsonEncode(emergencyContacts),
+      'preferences': jsonEncode(preferences),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
-      'hospitalIdentifiers': hospitalIdentifiers.map((h) => h.toJson()).toList(),
-      'mobileNumbers': mobileNumbers,
+      'hospitalIdentifiers': jsonEncode(hospitalIdentifiers.map((h) => h.toJson()).toList()),
+      'mobileNumbers': jsonEncode(mobileNumbers),
     };
   }
 
@@ -80,12 +82,22 @@ class Patient {
       gender: json['gender'],
       abhaNumber: json['abhaNumber'],
       bloodGroup: json['bloodGroup'],
-      emergencyContacts: List<String>.from(json['emergencyContacts']),
-      preferences: json['preferences'],
+      emergencyContacts: json['emergencyContacts'] != null 
+          ? List<String>.from(jsonDecode(json['emergencyContacts']))
+          : [],
+      preferences: json['preferences'] != null 
+          ? Map<String, dynamic>.from(jsonDecode(json['preferences']))
+          : {},
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
-      hospitalIdentifiers: (json['hospitalIdentifiers'] as List<dynamic>?)?.map((h) => HospitalIdentifier.fromJson(h)).toList() ?? [],
-      mobileNumbers: List<String>.from(json['mobileNumbers'] ?? []),
+      hospitalIdentifiers: json['hospitalIdentifiers'] != null 
+          ? (jsonDecode(json['hospitalIdentifiers']) as List<dynamic>)
+              .map((h) => HospitalIdentifier.fromJson(h))
+              .toList()
+          : [],
+      mobileNumbers: json['mobileNumbers'] != null 
+          ? List<String>.from(jsonDecode(json['mobileNumbers']))
+          : [],
     );
   }
 } 

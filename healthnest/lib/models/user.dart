@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 // App owner/primary user model
 // This user manages multiple patient profiles (family members)
 
@@ -30,8 +32,8 @@ class User {
       'phoneNumber': phoneNumber,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
-      'preferences': preferences,
-      'onboardingCompleted': onboardingCompleted,
+      'preferences': jsonEncode(preferences),
+      'onboardingCompleted': onboardingCompleted ? 1 : 0,
     };
   }
 
@@ -43,8 +45,10 @@ class User {
       phoneNumber: json['phoneNumber'],
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
-      preferences: json['preferences'] ?? {},
-      onboardingCompleted: json['onboardingCompleted'] ?? false,
+      preferences: json['preferences'] != null 
+          ? Map<String, dynamic>.from(jsonDecode(json['preferences']))
+          : {},
+      onboardingCompleted: json['onboardingCompleted'] == 1,
     );
   }
 

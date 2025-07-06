@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 // Core health record model based on openEHR archetypes
 // This will be expanded to include SNOMED CT and LOINC coding
 
@@ -37,8 +39,8 @@ class HealthRecord {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'recordType': recordType,
-      'data': data,
-      'tags': tags,
+      'data': jsonEncode(data),
+      'tags': jsonEncode(tags),
       'source': source,
       'documentPath': documentPath,
       'hospitalSystemName': hospitalSystemName,
@@ -54,8 +56,12 @@ class HealthRecord {
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
       recordType: json['recordType'],
-      data: json['data'],
-      tags: List<String>.from(json['tags']),
+      data: json['data'] != null 
+          ? Map<String, dynamic>.from(jsonDecode(json['data']))
+          : {},
+      tags: json['tags'] != null 
+          ? List<String>.from(jsonDecode(json['tags']))
+          : [],
       source: json['source'],
       documentPath: json['documentPath'],
       hospitalSystemName: json['hospitalSystemName'],

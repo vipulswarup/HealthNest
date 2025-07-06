@@ -1,130 +1,266 @@
 # HealthNest
 
-A local-first, privacy-compliant health record management application built with Flutter. HealthNest empowers users to take control of their health data with AI-powered document scanning, structured health records, and comprehensive family health management.
+A local-first, privacy-compliant health record management application built with Flutter. Designed specifically for patients managing complex healthcare across multiple providers in India.
 
 ## Overview
 
-HealthNest addresses the critical need for a unified health record system that works across multiple healthcare providers, especially in regions where electronic health records are fragmented or non-existent. The app provides a single source of truth for all health-related documents, test results, medications, and care plans.
+HealthNest addresses the critical need for a unified health record management system for patients with complex medical conditions who receive care from multiple providers, hospitals, and systems. The app provides AI-powered document scanning, automatic categorization, and comprehensive health tracking while maintaining complete user control over their data.
 
 ## Key Features
 
-### Core Functionality
-- **User Onboarding**: Simple setup flow for app owner and first patient profile
-- **Multi-Patient Management**: Single user can manage multiple family member profiles
-- **Local-First Architecture**: All data stored locally on device with optional sync to user-controlled cloud storage
-- **AI-Powered Document Management**: Automatic scanning, tagging, and categorization of medical documents
-- **Structured Health Records**: Based on openEHR archetypes, SNOMED CT, and LOINC standards
-- **Cross-Platform Support**: iOS, Android, Web, and Desktop applications
+### 🔍 AI-Powered Document Scanning
+- **Automatic Text Recognition**: Extract text from medical documents using Google ML Kit
+- **Smart Categorization**: Automatically classify documents as prescriptions, lab reports, scan reports, etc.
+- **Intelligent Tagging**: Extract relevant medical terms, hospital names, and dates
+- **Structured Data Extraction**: Parse lab results, vital signs, and medication information
 
-### Health Management
-- **Comprehensive Record Keeping**: Doctor visits, test results, medications, symptoms, care plans
-- **Data Visualization**: Trend analysis and comparison of health metrics over time
-- **Medication Management**: Reminders, adherence tracking, and medication history
-- **Voice Notes**: Recording and transcription of doctor visits and symptom updates
+### 📊 Health Data Visualization
+- **Trend Analysis**: Track changes in blood work, vital signs, and other metrics over time
+- **Interactive Charts**: Visualize health data using Syncfusion Flutter Charts
+- **Comparative Analysis**: Compare values across different time periods
+- **Metric Summaries**: Quick overview of key health indicators
 
-### Family & Privacy
-- **Multi-Family Support**: Secure management of multiple family members' records
-- **Granular Access Controls**: Customizable permissions for family member access
-- **Privacy by Design**: No backend hosting costs; data never leaves user control
-- **Compliance Ready**: Built for HIPAA, GDPR, and Indian privacy regulations
+### 🎤 Voice Notes & Transcription
+- **Voice Recording**: Record doctor consultations and symptom updates
+- **Auto-Transcription**: Convert voice recordings to text
+- **Categorization**: Organize voice notes by type (consultation, symptom, medication)
+- **Search & Filter**: Find specific voice notes quickly
 
-### Data Portability
-- **Export/Import**: Standard formats (PDF, CSV, FHIR) for sharing with providers
-- **Google Drive Integration**: Seamless sync with existing Google Drive health folders
-- **Backup & Recovery**: Comprehensive data backup and restoration capabilities
+### 💊 Medication Management
+- **Medication Tracking**: Comprehensive medication lists with dosages and schedules
+- **Adherence Monitoring**: Track medication compliance
+- **Reminder System**: Customizable medication reminders
+- **Dose Logging**: Record when medications are taken
 
-### Hospital/Lab System Support
-- **Multiple Identifiers**: Store hospital/lab-specific patient numbers (UHID, etc.) for each patient
-- **Mobile Number Association**: Support multiple family members per mobile number and vice versa
-- **Hospital-Specific Records**: Health records can be linked to hospital/lab identifiers for accurate association
+### 👨‍👩‍👧‍👦 Family Management
+- **Multi-Patient Support**: Manage health records for multiple family members
+- **Granular Access Controls**: Control who can access which records
+- **Hospital System Integration**: Support for UHID and patient numbers
+- **ABHA Integration**: Support for Ayushman Bharat Health Account numbers
 
-### Desktop Platform Support
-- **Cross-Platform**: Build and run on iOS, Android, Web, macOS, Windows, and Linux
+### 🔒 Privacy & Security
+- **Local-First Architecture**: All data stored locally on device
+- **User-Controlled Cloud**: Optional Google Drive/Sheets integration
+- **No Backend Costs**: Zero hosting fees, user owns their data
+- **Privacy Compliance**: Designed for HIPAA, GDPR, and Indian regulations
+
+### 📱 Cross-Platform Support
+- **iOS & Android**: Native mobile applications
+- **Web & Desktop**: Browser and desktop versions
+- **Offline Functionality**: Works without internet connection
+- **Sync Capabilities**: Optional cloud synchronization
 
 ## Technical Architecture
 
-### Data Layer
-- **Local Storage**: SQLite with encryption for offline-first operation
-- **Cloud Sync**: Google Drive/Sheets API for user-controlled cloud storage
-- **Hybrid Architecture**: Local-first with optional cloud sync for cross-device functionality
-- **Standards Compliance**: openEHR archetypes, SNOMED CT, LOINC coding
+### Data Models
+- **User**: App owner managing multiple patient profiles
+- **Patient**: Family member health records with hospital identifiers
+- **HealthRecord**: Core health data based on openEHR archetypes
+- **Medication**: Medication tracking with adherence monitoring
+- **VoiceNote**: Voice recordings with transcription
 
-### AI & ML
-- **On-Device Processing**: Core ML (iOS) and ML Kit (Android) for document analysis
-- **Intelligent Tagging**: Automatic categorization with user approval for new tags
-- **Document Recognition**: Prescription, lab report, and medical document parsing
+### Services
+- **MLService**: AI-powered document analysis and text extraction
+- **VoiceService**: Voice recording and transcription
+- **StorageService**: Local and cloud data management
+- **GoogleSheetsService**: Google Sheets integration for cloud storage
 
-### Security & Privacy
-- **End-to-End Encryption**: All data encrypted at rest and in transit
-- **Zero-Knowledge Architecture**: No server-side data processing or storage
-- **User-Controlled Access**: Complete user ownership of data and access controls
+### Standards Compliance
+- **openEHR**: Archetypes, templates, and compositions for health records
+- **SNOMED CT**: Clinical terminology coding
+- **LOINC**: Laboratory observation coding
+- **FHIR**: Future interoperability support
 
-## Project Structure
-
-```
-lib/
-├── models/          # Data models based on openEHR archetypes
-├── services/        # Storage services (local, cloud, hybrid)
-├── providers/       # State management with Provider
-├── screens/         # UI screens for different app sections
-│   └── onboarding/  # User onboarding flow screens
-├── widgets/         # Reusable UI components
-└── utils/           # Helper functions and standards mapping
-```
-
-## Development Setup
+## Installation & Setup
 
 ### Prerequisites
-- Flutter SDK (latest stable)
-- Dart SDK
-- iOS development tools (for iOS builds)
-- Android Studio (for Android builds)
-- **Desktop:**
-  - macOS: Xcode and CocoaPods
-  - Windows: Visual Studio with Desktop development tools
-  - Linux: GTK3 and related dependencies
+- Flutter SDK 3.8.1 or higher
+- Dart SDK 3.8.1 or higher
+- iOS 12.0+ / Android API 21+
+- Google Cloud Project (for ML features)
 
-### Installation
-```bash
-# Clone the repository
-git clone <repository-url>
-cd healthnest
+### Installation Steps
 
-# Install dependencies
-flutter pub get
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/healthnest.git
+   cd healthnest
+   ```
 
-# Run the app (choose your platform)
-flutter run -d ios      # iOS
-flutter run -d android  # Android
-flutter run -d web      # Web
-flutter run -d macos    # macOS
-flutter run -d windows  # Windows
-flutter run -d linux    # Linux
-```
+2. **Install dependencies**
+   ```bash
+   flutter pub get
+   ```
+
+3. **Configure Google Services**
+   - Create a Google Cloud Project
+   - Enable Google ML Kit APIs
+   - Add configuration files:
+     - `ios/Runner/GoogleService-Info.plist` (iOS)
+     - `android/app/google-services.json` (Android)
+
+4. **Set up Google Sheets Integration**
+   - Create a Google Sheets document
+   - Update `lib/services/google_sheets_service.dart` with your spreadsheet ID
+   - Configure Google Sheets API credentials
+
+5. **Run the application**
+   ```bash
+   flutter run
+   ```
 
 ### Platform-Specific Setup
-- **iOS**: Configure signing certificates in Xcode
-- **Android**: Set up Android SDK and signing keys
-- **Web**: No additional setup required
 
-## Contributing
+#### iOS
+```bash
+cd ios
+pod install
+cd ..
+flutter run
+```
 
-HealthNest is open source and welcomes community contributions. Please read our contributing guidelines before submitting pull requests.
+#### Android
+- Ensure Android SDK is properly configured
+- Enable developer options on device/emulator
+- Run `flutter run`
 
-### Development Guidelines
-- Follow Flutter best practices and conventions
-- Maintain privacy and security standards
-- Write comprehensive tests for new features
-- Document all public APIs and interfaces
+## Usage Guide
 
-## License
+### Initial Setup
+1. **Create User Profile**: Enter name, email, and phone number
+2. **Complete Onboarding**: Set up preferences and privacy settings
+3. **Add Family Members**: Create patient profiles for family members
+4. **Configure Hospital IDs**: Add UHID and patient numbers for each hospital
 
-[License information to be added]
+### Document Scanning
+1. **Select Patient**: Choose the family member for the document
+2. **Take Photo**: Use camera or select from gallery
+3. **Review Analysis**: Confirm AI-generated categorization and tags
+4. **Save Record**: Document is automatically organized and stored
+
+### Voice Notes
+1. **Start Recording**: Tap record button during consultations
+2. **Add Notes**: Include additional context or observations
+3. **Review Transcription**: Edit auto-generated text if needed
+4. **Categorize**: Tag voice note by type and relevant topics
+
+### Health Tracking
+1. **View Trends**: Access charts showing health metric changes
+2. **Add Manual Entries**: Input vital signs or symptoms
+3. **Set Reminders**: Configure medication and appointment reminders
+4. **Export Data**: Generate reports for healthcare providers
+
+## Development
+
+### Project Structure
+```
+lib/
+├── main.dart                 # App entry point
+├── models/                   # Data models
+│   ├── user.dart
+│   ├── patient.dart
+│   ├── health_record.dart
+│   ├── medication.dart
+│   └── voice_note.dart
+├── services/                 # Business logic
+│   ├── storage_service.dart
+│   ├── ml_service.dart
+│   ├── voice_service.dart
+│   └── google_sheets_service.dart
+├── providers/                # State management
+│   └── user_provider.dart
+├── screens/                  # UI screens
+│   ├── dashboard_screen.dart
+│   ├── scan_screen.dart
+│   ├── records_screen.dart
+│   └── onboarding/
+├── widgets/                  # Reusable components
+│   ├── health_record_card.dart
+│   └── health_trends_chart.dart
+└── utils/                    # Utilities
+    └── constants.dart
+```
+
+### Contributing
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Submit a pull request
+
+### Code Style
+- Follow Flutter/Dart style guidelines
+- Use meaningful variable and function names
+- Add comments for complex logic
+- Maintain consistent formatting
+
+## Privacy & Compliance
+
+### Data Protection
+- **Local Storage**: All data stored on user's device
+- **Encryption**: Data encrypted at rest and in transit
+- **No Telemetry**: No usage data collection
+- **User Control**: Complete control over data sharing
+
+### Regulatory Compliance
+- **HIPAA**: Health Insurance Portability and Accountability Act
+- **GDPR**: General Data Protection Regulation
+- **Indian Privacy Laws**: Compliance with Indian data protection regulations
+- **openEHR**: International health record standards
+
+## Roadmap
+
+### Phase 1: Core Features ✅
+- [x] Basic health record management
+- [x] Document scanning and OCR
+- [x] Patient profile management
+- [x] Local data storage
+
+### Phase 2: AI & ML Integration ✅
+- [x] AI-powered document classification
+- [x] Automatic text extraction
+- [x] Smart tagging system
+- [x] Voice transcription
+
+### Phase 3: Advanced Features 🚧
+- [ ] Hospital system integration
+- [ ] ABHA number support
+- [ ] Advanced analytics
+- [ ] Export/import functionality
+
+### Phase 4: Community & Ecosystem 🚧
+- [ ] Open source release
+- [ ] Community contributions
+- [ ] Plugin ecosystem
+- [ ] API for third-party integrations
 
 ## Support
 
-For support, feature requests, or bug reports, please use the GitHub issues page.
+### Documentation
+- [User Guide](docs/user-guide.md)
+- [Developer Guide](docs/developer-guide.md)
+- [API Reference](docs/api-reference.md)
+
+### Community
+- [GitHub Issues](https://github.com/yourusername/healthnest/issues)
+- [Discussions](https://github.com/yourusername/healthnest/discussions)
+- [Wiki](https://github.com/yourusername/healthnest/wiki)
+
+### Contact
+- Email: support@healthnest.app
+- Twitter: [@HealthNestApp](https://twitter.com/HealthNestApp)
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- **Google ML Kit**: For AI-powered document processing
+- **openEHR**: For health record standards
+- **Flutter Team**: For the amazing framework
+- **Open Source Community**: For the libraries and tools that make this possible
 
 ---
 
-**HealthNest**: Empowering individuals to take control of their health data, one record at a time.
+**HealthNest** - Empowering patients to take control of their health data, one scan at a time.

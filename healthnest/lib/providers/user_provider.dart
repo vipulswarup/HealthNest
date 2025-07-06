@@ -212,6 +212,7 @@ class UserProvider with ChangeNotifier {
   }
 
   // Cleanup
+  @override
   Future<void> dispose() async {
     await _storage.close();
     super.dispose();

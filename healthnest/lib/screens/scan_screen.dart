@@ -1,237 +1,396 @@
 // Document scanning screen for AI-powered document processing
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import '../models/health_record.dart';
+import '../models/patient.dart';
+import '../services/ml_service.dart';
+import '../providers/user_provider.dart';
+import '../widgets/health_record_card.dart';
 
-class ScanScreen extends StatelessWidget {
+class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
+
+  @override
+  State<ScanScreen> createState() => _ScanScreenState();
+}
+
+class _ScanScreenState extends State<ScanScreen> {
+  final ImagePicker _picker = ImagePicker();
+  final MLService _mlService = MLService();
+  
+  bool _isProcessing = false;
+  String? _selectedPatientId;
+  List<Patient> _patients = [];
+  List<HealthRecord> _recentRecords = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPatients();
+    _loadRecentRecords();
+  }
+
+  Future<void> _loadPatients() async {
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final patients = userProvider.patients;
+      setState(() {
+        _patients = patients;
+        if (patients.isNotEmpty && _selectedPatientId == null) {
+          _selectedPatientId = patients.first.id;
+        }
+      });
+    } catch (e) {
+      _showError('Failed to load patients: $e');
+    }
+  }
+
+  Future<void> _loadRecentRecords() async {
+    if (_selectedPatientId == null) return;
+    
+    try {
+      // For now, we'll use a placeholder implementation
+      // In a real app, you would get records from the storage service
+      setState(() {
+        _recentRecords = []; // Placeholder - no records loaded yet
+      });
+    } catch (e) {
+      _showError('Failed to load recent records: $e');
+    }
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        await _processDocument(image.path);
+      }
+    } catch (e) {
+      _showError('Failed to pick image: $e');
+    }
+  }
+
+  Future<void> _processDocument(String imagePath) async {
+    if (_selectedPatientId == null) {
+      _showError('Please select a patient first');
+      return;
+    }
+
+    setState(() {
+      _isProcessing = true;
+    });
+
+    try {
+      // Analyze document using ML service
+      final DocumentAnalysisResult result = await _mlService.analyzeDocument(imagePath);
+      
+      // Show analysis results for user confirmation
+      final bool confirmed = await _showAnalysisConfirmation(result, imagePath);
+      
+      if (confirmed) {
+        await _saveHealthRecord(result, imagePath);
+        await _loadRecentRecords(); // Refresh the list
+      }
+    } catch (e) {
+      _showError('Failed to process document: $e');
+    } finally {
+      setState(() {
+        _isProcessing = false;
+      });
+    }
+  }
+
+  Future<bool> _showAnalysisConfirmation(DocumentAnalysisResult result, String imagePath) async {
+    return await showCupertinoDialog<bool>(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Document Analysis'),
+        content: Column(
+          children: [
+            const SizedBox(height: 16),
+            Text('Document Type: ${_getDocumentTypeName(result.documentType)}'),
+            const SizedBox(height: 8),
+            Text('Confidence: ${(result.confidence * 100).toStringAsFixed(1)}%'),
+            const SizedBox(height: 8),
+            Text('Tags: ${result.tags.join(', ')}'),
+            const SizedBox(height: 16),
+            const Text('Extracted Text:'),
+            const SizedBox(height: 8),
+            Container(
+              height: 100,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                border: Border.all(color: CupertinoColors.systemGrey4),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: SingleChildScrollView(
+                child: Text(
+                  result.extractedText,
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          CupertinoDialogAction(
+            child: const Text('Save'),
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
+  Future<void> _saveHealthRecord(DocumentAnalysisResult result, String imagePath) async {
+    try {
+      // For now, we'll use a placeholder implementation
+      // In a real app, you would save to the storage service
+      
+      // Create health record
+      final HealthRecord record = HealthRecord(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        patientId: _selectedPatientId!,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        recordType: _getRecordType(result.documentType),
+        data: result.extractedData,
+        tags: result.tags,
+        source: 'Document Scan',
+        documentPath: imagePath, // Use original path for now
+      );
+      
+      // Add to recent records for display
+      setState(() {
+        _recentRecords.insert(0, record);
+        if (_recentRecords.length > 5) {
+          _recentRecords.removeLast();
+        }
+      });
+      
+      _showSuccess('Document saved successfully');
+    } catch (e) {
+      _showError('Failed to save document: $e');
+    }
+  }
+
+  String _getDocumentTypeName(DocumentType type) {
+    switch (type) {
+      case DocumentType.prescription:
+        return 'Prescription';
+      case DocumentType.labReport:
+        return 'Lab Report';
+      case DocumentType.scanReport:
+        return 'Scan Report';
+      case DocumentType.dischargeSummary:
+        return 'Discharge Summary';
+      case DocumentType.consultationNote:
+        return 'Consultation Note';
+      case DocumentType.medicationList:
+        return 'Medication List';
+      case DocumentType.vitalSigns:
+        return 'Vital Signs';
+      case DocumentType.unknown:
+        return 'Unknown';
+    }
+  }
+
+  String _getRecordType(DocumentType type) {
+    switch (type) {
+      case DocumentType.prescription:
+        return 'prescription';
+      case DocumentType.labReport:
+        return 'lab_report';
+      case DocumentType.scanReport:
+        return 'scan_report';
+      case DocumentType.dischargeSummary:
+        return 'discharge_summary';
+      case DocumentType.consultationNote:
+        return 'consultation_note';
+      case DocumentType.medicationList:
+        return 'medication_list';
+      case DocumentType.vitalSigns:
+        return 'vital_signs';
+      case DocumentType.unknown:
+        return 'unknown';
+    }
+  }
+
+  void _showError(String message) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('OK'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSuccess(String message) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Success'),
+        content: Text(message),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('OK'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
-      backgroundColor: CupertinoColors.systemGroupedBackground,
       navigationBar: const CupertinoNavigationBar(
-        middle: Text('Scan Document'),
+        middle: Text('Scan Documents'),
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(16),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Spacer(flex: 2),
-              
-              // Scan Icon
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [CupertinoColors.systemBlue, CupertinoColors.systemTeal],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              // Patient Selection
+              if (_patients.isNotEmpty) ...[
+                const Text(
+                  'Select Patient:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [
-                    BoxShadow(
-                      color: CupertinoColors.systemBlue.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
                 ),
-                child: const Icon(
-                  CupertinoIcons.camera,
-                  size: 60,
-                  color: CupertinoColors.white,
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: CupertinoColors.systemGrey4),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: CupertinoPicker(
+                    itemExtent: 40,
+                    onSelectedItemChanged: (index) {
+                      setState(() {
+                        _selectedPatientId = _patients[index].id;
+                      });
+                      _loadRecentRecords();
+                    },
+                    children: _patients.map((patient) => 
+                      Center(child: Text(patient.name))
+                    ).toList(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 32),
-              
-              // Title
+                const SizedBox(height: 24),
+              ],
+
+              // Scan Options
               const Text(
-                'Scan Health Document',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: CupertinoColors.label,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              
-              Text(
-                'Take a photo of your medical document to add it to your health records',
+                'Scan Document:',
                 style: TextStyle(
                   fontSize: 16,
-                  color: CupertinoColors.secondaryLabel,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              
-              // Features
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: CupertinoColors.systemBackground,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: CupertinoColors.systemGrey.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    _buildFeatureRow(
-                      CupertinoIcons.doc_text,
-                      'Automatic Text Recognition',
-                      'Extract text from medical documents',
-                    ),
-                    const SizedBox(height: 16),
-                    _buildFeatureRow(
-                      CupertinoIcons.tag,
-                      'Smart Tagging',
-                      'Automatically categorize documents',
-                    ),
-                    const SizedBox(height: 16),
-                    _buildFeatureRow(
-                      CupertinoIcons.lock_shield,
-                      'Secure Storage',
-                      'Your documents are encrypted locally',
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              
-              // Scan Button
-              SizedBox(
-                width: double.infinity,
-                child: CupertinoButton.filled(
-                  onPressed: () {
-                    showCupertinoDialog(
-                      context: context,
-                      builder: (context) => CupertinoAlertDialog(
-                        title: const Text('Coming Soon'),
-                        content: const Text('Document scanning will be available soon.'),
-                        actions: [
-                          CupertinoDialogAction(
-                            child: const Text('OK'),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    'Start Scanning',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 16),
               
-              // Alternative Options
               Row(
                 children: [
                   Expanded(
                     child: CupertinoButton(
-                      onPressed: () {
-                        showCupertinoDialog(
-                          context: context,
-                          builder: (context) => CupertinoAlertDialog(
-                            title: const Text('Coming Soon'),
-                            content: const Text('File upload will be available soon.'),
-                            actions: [
-                              CupertinoDialogAction(
-                                child: const Text('OK'),
-                                onPressed: () => Navigator.pop(context),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      child: const Text('Upload File'),
+                      color: CupertinoColors.systemBlue,
+                      onPressed: _isProcessing ? null : () => _pickImage(ImageSource.camera),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(CupertinoIcons.camera),
+                          SizedBox(width: 8),
+                          Text('Camera'),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: CupertinoButton(
-                      onPressed: () {
-                        showCupertinoDialog(
-                          context: context,
-                          builder: (context) => CupertinoAlertDialog(
-                            title: const Text('Coming Soon'),
-                            content: const Text('Manual entry will be available soon.'),
-                            actions: [
-                              CupertinoDialogAction(
-                                child: const Text('OK'),
-                                onPressed: () => Navigator.pop(context),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      child: const Text('Manual Entry'),
+                      color: CupertinoColors.systemGrey,
+                      onPressed: _isProcessing ? null : () => _pickImage(ImageSource.gallery),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(CupertinoIcons.photo),
+                          SizedBox(width: 8),
+                          Text('Gallery'),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+
+              if (_isProcessing) ...[
+                const SizedBox(height: 24),
+                const Center(
+                  child: Column(
+                    children: [
+                      CupertinoActivityIndicator(),
+                      SizedBox(height: 8),
+                      Text('Processing document...'),
+                    ],
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 32),
+
+              // Recent Records
+              if (_recentRecords.isNotEmpty) ...[
+                const Text(
+                  'Recent Records:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: _recentRecords.length,
+                    itemBuilder: (context, index) {
+                      return HealthRecordCard(
+                        record: _recentRecords[index],
+                        onTap: () {
+                          // Navigate to record details
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildFeatureRow(IconData icon, String title, String subtitle) {
-    return Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: CupertinoColors.systemBlue.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            icon,
-            color: CupertinoColors.systemBlue,
-            size: 20,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: CupertinoColors.label,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: CupertinoColors.secondaryLabel,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 } 

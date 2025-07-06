@@ -9,11 +9,11 @@ class HealthRecordCard extends StatelessWidget {
   final VoidCallback? onDelete;
 
   const HealthRecordCard({
-    Key? key,
     required this.record,
     this.onTap,
     this.onDelete,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

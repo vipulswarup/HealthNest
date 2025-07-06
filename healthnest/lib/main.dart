@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/onboarding/welcome_screen.dart';
@@ -14,7 +13,7 @@ class HealthNestApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
+    return ChangeNotifierProvider<UserProvider>(
       create: (context) => UserProvider(),
       child: CupertinoApp(
         title: 'HealthNest',
@@ -40,7 +39,10 @@ class _AppRouterState extends State<AppRouter> {
   @override
   void initState() {
     super.initState();
-    _initializeApp();
+    // Defer initialization until after the first frame is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeApp();
+    });
   }
 
   Future<void> _initializeApp() async {
