@@ -1,7 +1,5 @@
 import 'dart:convert';
 import 'package:googleapis/sheets/v4.dart';
-import 'package:googleapis_auth/auth_io.dart';
-import 'package:googleapis_auth/auth_browser.dart';
 import '../models/health_record.dart';
 import '../models/patient.dart';
 import '../models/user.dart';
@@ -158,22 +156,30 @@ class GoogleSheetsService {
   User _parseUserFromRow(List<dynamic> row) {
     return User(
       id: row[0],
-      name: row[1],
-      email: row[2],
-      phoneNumber: row[3],
-      createdAt: DateTime.parse(row[4]),
-      updatedAt: DateTime.parse(row[5]),
-      preferences: jsonDecode(row[6]),
-      onboardingCompleted: row[7] == '1',
+      firstName: row[1],
+      middleName: row[2].isNotEmpty ? row[2] : null,
+      lastName: row[3].isNotEmpty ? row[3] : null,
+      title: row[4].isNotEmpty ? row[4] : null,
+      suffix: row[5].isNotEmpty ? row[5] : null,
+      emails: jsonDecode(row[6]),
+      mobileNumbers: jsonDecode(row[7]),
+      createdAt: DateTime.parse(row[8]),
+      updatedAt: DateTime.parse(row[9]),
+      preferences: jsonDecode(row[10]),
+      onboardingCompleted: row[11] == '1',
     );
   }
 
   List<dynamic> _userToRow(User user) {
     return [
       user.id,
-      user.name,
-      user.email,
-      user.phoneNumber ?? '',
+      user.firstName,
+      user.middleName ?? '',
+      user.lastName ?? '',
+      user.title ?? '',
+      user.suffix ?? '',
+      jsonEncode(user.emails),
+      jsonEncode(user.mobileNumbers),
       user.createdAt.toIso8601String(),
       user.updatedAt.toIso8601String(),
       jsonEncode(user.preferences),
@@ -182,28 +188,38 @@ class GoogleSheetsService {
   }
 
   Patient? _parsePatientFromRow(List<dynamic> row) {
-    if (row.length < 8) return null;
+    if (row.length < 12) return null;
     
     return Patient(
       id: row[0],
-      name: row[1],
-      dateOfBirth: DateTime.parse(row[2]),
-      gender: row[3],
-      abhaNumber: row[4].isNotEmpty ? row[4] : null,
-      bloodGroup: row[5].isNotEmpty ? row[5] : null,
-      emergencyContacts: jsonDecode(row[6]),
-      preferences: jsonDecode(row[7]),
-      createdAt: DateTime.parse(row[8]),
-      updatedAt: DateTime.parse(row[9]),
-      hospitalIdentifiers: jsonDecode(row[10]),
-      mobileNumbers: jsonDecode(row[11]),
+      firstName: row[1],
+      middleName: row[2].isNotEmpty ? row[2] : null,
+      lastName: row[3].isNotEmpty ? row[3] : null,
+      title: row[4].isNotEmpty ? row[4] : null,
+      suffix: row[5].isNotEmpty ? row[5] : null,
+      emails: jsonDecode(row[6]),
+      dateOfBirth: DateTime.parse(row[7]),
+      gender: row[8],
+      abhaNumber: row[9].isNotEmpty ? row[9] : null,
+      bloodGroup: row[10].isNotEmpty ? row[10] : null,
+      emergencyContacts: jsonDecode(row[11]),
+      preferences: jsonDecode(row[12]),
+      createdAt: DateTime.parse(row[13]),
+      updatedAt: DateTime.parse(row[14]),
+      hospitalIdentifiers: jsonDecode(row[15]),
+      mobileNumbers: jsonDecode(row[16]),
     );
   }
 
   List<dynamic> _patientToRow(Patient patient) {
     return [
       patient.id,
-      patient.name,
+      patient.firstName,
+      patient.middleName ?? '',
+      patient.lastName ?? '',
+      patient.title ?? '',
+      patient.suffix ?? '',
+      jsonEncode(patient.emails),
       patient.dateOfBirth.toIso8601String(),
       patient.gender,
       patient.abhaNumber ?? '',
