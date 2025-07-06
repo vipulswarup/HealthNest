@@ -20,9 +20,13 @@ class LocalStorageService implements StorageService {
         await db.execute('''
           CREATE TABLE users (
             id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            email TEXT NOT NULL,
-            phoneNumber TEXT,
+            firstName TEXT NOT NULL,
+            middleName TEXT,
+            lastName TEXT,
+            title TEXT,
+            suffix TEXT,
+            emails TEXT NOT NULL,
+            phoneNumbers TEXT NOT NULL,
             createdAt TEXT NOT NULL,
             updatedAt TEXT NOT NULL,
             preferences TEXT NOT NULL,

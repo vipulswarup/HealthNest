@@ -56,22 +56,25 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        user?.name ?? 'User',
+                        user?.displayName ?? 'User',
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: CupertinoColors.label,
                         ),
                       ),
-                      if (user?.email != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          user!.email,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: CupertinoColors.secondaryLabel,
-                          ),
-                        ),
+                      if (user?.emails != null && user!.emails.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        ...user!.emails.map((email) => Row(
+                          children: [
+                            const Icon(CupertinoIcons.mail, size: 18, color: CupertinoColors.systemBlue),
+                            const SizedBox(width: 8),
+                            Text(
+                              email,
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ],
+                        )),
                       ],
                     ],
                   ),

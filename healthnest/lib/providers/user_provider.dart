@@ -50,15 +50,27 @@ class UserProvider with ChangeNotifier {
   }
 
   // User operations
-  Future<void> createUser(String name, String email, String? phoneNumber) async {
+  Future<void> createUser({
+    required String firstName,
+    String? middleName,
+    String? lastName,
+    String? title,
+    String? suffix,
+    required List<String> emails,
+    required List<Map<String, String>> mobileNumbers,
+  }) async {
     _setLoading(true);
     
     try {
       final user = User(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: name,
-        email: email,
-        phoneNumber: phoneNumber,
+        firstName: firstName,
+        middleName: middleName,
+        lastName: lastName,
+        title: title,
+        suffix: suffix,
+        emails: emails,
+        mobileNumbers: mobileNumbers,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         preferences: {},

@@ -100,7 +100,7 @@ class DashboardScreen extends StatelessWidget {
                                       ),
                                     ),
                                     Text(
-                                      user.name,
+                                      user.displayName,
                                       style: const TextStyle(
                                         fontSize: 24,
                                         fontWeight: FontWeight.bold,
@@ -388,7 +388,7 @@ class DashboardScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  patient.name,
+                  patient.displayName,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,

@@ -5,9 +5,13 @@ import 'dart:convert';
 
 class User {
   final String id;
-  final String name;
-  final String email;
-  final String? phoneNumber;
+  final String firstName;
+  final String? middleName;
+  final String? lastName;
+  final String? title;
+  final String? suffix;
+  final List<String> emails;
+  final List<Map<String, String>> mobileNumbers; // [{countryCode: '+91', number: '1234567890'}]
   final DateTime createdAt;
   final DateTime updatedAt;
   final Map<String, dynamic> preferences;
@@ -15,9 +19,13 @@ class User {
 
   User({
     required this.id,
-    required this.name,
-    required this.email,
-    this.phoneNumber,
+    required this.firstName,
+    this.middleName,
+    this.lastName,
+    this.title,
+    this.suffix,
+    required this.emails,
+    required this.mobileNumbers,
     required this.createdAt,
     required this.updatedAt,
     required this.preferences,
@@ -27,9 +35,13 @@ class User {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'name': name,
-      'email': email,
-      'phoneNumber': phoneNumber,
+      'firstName': firstName,
+      'middleName': middleName,
+      'lastName': lastName,
+      'title': title,
+      'suffix': suffix,
+      'emails': jsonEncode(emails),
+      'mobileNumbers': jsonEncode(mobileNumbers),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'preferences': jsonEncode(preferences),
@@ -40,9 +52,13 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id'],
-      name: json['name'],
-      email: json['email'],
-      phoneNumber: json['phoneNumber'],
+      firstName: json['firstName'],
+      middleName: json['middleName'],
+      lastName: json['lastName'],
+      title: json['title'],
+      suffix: json['suffix'],
+      emails: json['emails'] != null ? List<String>.from(jsonDecode(json['emails'])) : [],
+      mobileNumbers: json['mobileNumbers'] != null ? List<Map<String, String>>.from(jsonDecode(json['mobileNumbers'])) : [],
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
       preferences: json['preferences'] != null 
@@ -54,9 +70,13 @@ class User {
 
   User copyWith({
     String? id,
-    String? name,
-    String? email,
-    String? phoneNumber,
+    String? firstName,
+    String? middleName,
+    String? lastName,
+    String? title,
+    String? suffix,
+    List<String>? emails,
+    List<Map<String, String>>? mobileNumbers,
     DateTime? createdAt,
     DateTime? updatedAt,
     Map<String, dynamic>? preferences,
@@ -64,13 +84,28 @@ class User {
   }) {
     return User(
       id: id ?? this.id,
-      name: name ?? this.name,
-      email: email ?? this.email,
-      phoneNumber: phoneNumber ?? this.phoneNumber,
+      firstName: firstName ?? this.firstName,
+      middleName: middleName ?? this.middleName,
+      lastName: lastName ?? this.lastName,
+      title: title ?? this.title,
+      suffix: suffix ?? this.suffix,
+      emails: emails ?? this.emails,
+      mobileNumbers: mobileNumbers ?? this.mobileNumbers,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       preferences: preferences ?? this.preferences,
       onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
     );
+  }
+
+  String get displayName {
+    final parts = [
+      if (title != null && title!.isNotEmpty) title,
+      firstName,
+      if (middleName != null && middleName!.isNotEmpty) middleName,
+      if (lastName != null && lastName!.isNotEmpty) lastName,
+      if (suffix != null && suffix!.isNotEmpty) suffix,
+    ];
+    return parts.whereType<String>().join(' ').replaceAll(RegExp(' +'), ' ').trim();
   }
 } 

@@ -14,15 +14,31 @@ class UserSetupScreen extends StatefulWidget {
 
 class _UserSetupScreenState extends State<UserSetupScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
+  final _titleController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _middleNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _suffixController = TextEditingController();
+  List<TextEditingController> _emailControllers = [TextEditingController()];
+  List<Map<String, TextEditingController>> _mobileControllers = [
+    {
+      'countryCode': TextEditingController(text: '+91'),
+      'number': TextEditingController(),
+    }
+  ];
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
+    _titleController.dispose();
+    _firstNameController.dispose();
+    _middleNameController.dispose();
+    _lastNameController.dispose();
+    _suffixController.dispose();
+    for (var c in _emailControllers) c.dispose();
+    for (var m in _mobileControllers) {
+      m['countryCode']?.dispose();
+      m['number']?.dispose();
+    }
     super.dispose();
   }
 
@@ -30,10 +46,25 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
     if (_formKey.currentState!.validate()) {
       try {
         final userProvider = Provider.of<UserProvider>(context, listen: false);
+        final emails = _emailControllers
+            .map((c) => c.text.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+        final mobileNumbers = _mobileControllers
+            .where((m) => m['number']!.text.trim().isNotEmpty)
+            .map((m) => {
+                  'countryCode': m['countryCode']!.text.trim(),
+                  'number': m['number']!.text.trim(),
+                })
+            .toList();
         await userProvider.createUser(
-          _nameController.text.trim(),
-          _emailController.text.trim(),
-          _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+          firstName: _firstNameController.text.trim(),
+          middleName: _middleNameController.text.trim(),
+          lastName: _lastNameController.text.trim(),
+          title: _titleController.text.trim(),
+          suffix: _suffixController.text.trim(),
+          emails: emails,
+          mobileNumbers: mobileNumbers,
         );
         
         Navigator.push(
@@ -145,43 +176,29 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
                   ),
                   child: Column(
                     children: [
+                      _buildTextField(controller: _titleController, label: 'Title (Optional)', icon: CupertinoIcons.person),
+                      const SizedBox(height: 12),
                       _buildTextField(
-                        controller: _nameController,
-                        label: 'Full Name',
+                        controller: _firstNameController,
+                        label: 'First Name',
                         icon: CupertinoIcons.person,
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Please enter your name';
+                            return 'First name is required';
                           }
                           return null;
                         },
                       ),
+                      const SizedBox(height: 12),
+                      _buildTextField(controller: _middleNameController, label: 'Middle Name (Optional)', icon: CupertinoIcons.person),
+                      const SizedBox(height: 12),
+                      _buildTextField(controller: _lastNameController, label: 'Last Name (Optional)', icon: CupertinoIcons.person),
+                      const SizedBox(height: 12),
+                      _buildTextField(controller: _suffixController, label: 'Suffix (Optional)', icon: CupertinoIcons.person),
                       const SizedBox(height: 20),
-                      _buildTextField(
-                        controller: _emailController,
-                        label: 'Email Address',
-                        icon: CupertinoIcons.mail,
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter your email';
-                          }
-                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                            return 'Please enter a valid email';
-                          }
-                          return null;
-                        },
-                      ),
+                      _buildEmailFields(),
                       const SizedBox(height: 20),
-                      _buildTextField(
-                        controller: _phoneController,
-                        label: 'Phone Number (Optional)',
-                        icon: CupertinoIcons.phone,
-                        keyboardType: TextInputType.phone,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                      ),
+                      _buildMobileFields(),
                     ],
                   ),
                 ),
@@ -271,6 +288,114 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
             },
           ),
         ],
+      ],
+    );
+  }
+
+  Widget _buildEmailFields() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(CupertinoIcons.mail, size: 20, color: CupertinoColors.systemBlue),
+            const SizedBox(width: 8),
+            const Text('Email Addresses', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const Spacer(),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              child: const Icon(CupertinoIcons.add_circled, size: 22),
+              onPressed: () {
+                setState(() {
+                  _emailControllers.add(TextEditingController());
+                });
+              },
+            ),
+          ],
+        ),
+        ...List.generate(_emailControllers.length, (i) => Row(
+          children: [
+            Expanded(
+              child: CupertinoTextField(
+                controller: _emailControllers[i],
+                keyboardType: TextInputType.emailAddress,
+                placeholder: 'Email Address',
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+            ),
+            if (_emailControllers.length > 1)
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                child: const Icon(CupertinoIcons.minus_circled, color: CupertinoColors.systemRed, size: 22),
+                onPressed: () {
+                  setState(() {
+                    _emailControllers.removeAt(i);
+                  });
+                },
+              ),
+          ],
+        )),
+      ],
+    );
+  }
+
+  Widget _buildMobileFields() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(CupertinoIcons.phone, size: 20, color: CupertinoColors.systemBlue),
+            const SizedBox(width: 8),
+            const Text('Mobile Numbers', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const Spacer(),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              child: const Icon(CupertinoIcons.add_circled, size: 22),
+              onPressed: () {
+                setState(() {
+                  _mobileControllers.add({
+                    'countryCode': TextEditingController(text: '+91'),
+                    'number': TextEditingController(),
+                  });
+                });
+              },
+            ),
+          ],
+        ),
+        ...List.generate(_mobileControllers.length, (i) => Row(
+          children: [
+            SizedBox(
+              width: 70,
+              child: CupertinoTextField(
+                controller: _mobileControllers[i]['countryCode'],
+                placeholder: '+91',
+                keyboardType: TextInputType.phone,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: CupertinoTextField(
+                controller: _mobileControllers[i]['number'],
+                placeholder: 'Mobile Number',
+                keyboardType: TextInputType.phone,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+            ),
+            if (_mobileControllers.length > 1)
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                child: const Icon(CupertinoIcons.minus_circled, color: CupertinoColors.systemRed, size: 22),
+                onPressed: () {
+                  setState(() {
+                    _mobileControllers.removeAt(i);
+                  });
+                },
+              ),
+          ],
+        )),
       ],
     );
   }

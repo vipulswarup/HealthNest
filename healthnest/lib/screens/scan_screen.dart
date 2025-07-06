@@ -297,7 +297,7 @@ class _ScanScreenState extends State<ScanScreen> {
                       _loadRecentRecords();
                     },
                     children: _patients.map((patient) => 
-                      Center(child: Text(patient.name))
+                      Center(child: Text(patient.displayName))
                     ).toList(),
                   ),
                 ),

@@ -30,7 +30,12 @@ class HospitalIdentifier {
 
 class Patient {
   final String id;
-  final String name;
+  final String firstName;
+  final String? middleName;
+  final String? lastName;
+  final String? title;
+  final String? suffix;
+  final List<String> emails;
   final DateTime dateOfBirth;
   final String gender;
   final String? abhaNumber; // Ayushman Bharat Health Account Number
@@ -40,11 +45,16 @@ class Patient {
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<HospitalIdentifier> hospitalIdentifiers;
-  final List<String> mobileNumbers;
+  final List<Map<String, String>> mobileNumbers; // [{countryCode: '+91', number: '1234567890'}]
 
   Patient({
     required this.id,
-    required this.name,
+    required this.firstName,
+    this.middleName,
+    this.lastName,
+    this.title,
+    this.suffix,
+    required this.emails,
     required this.dateOfBirth,
     required this.gender,
     this.abhaNumber,
@@ -60,7 +70,12 @@ class Patient {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'name': name,
+      'firstName': firstName,
+      'middleName': middleName,
+      'lastName': lastName,
+      'title': title,
+      'suffix': suffix,
+      'emails': jsonEncode(emails),
       'dateOfBirth': dateOfBirth.toIso8601String(),
       'gender': gender,
       'abhaNumber': abhaNumber,
@@ -77,7 +92,12 @@ class Patient {
   factory Patient.fromJson(Map<String, dynamic> json) {
     return Patient(
       id: json['id'],
-      name: json['name'],
+      firstName: json['firstName'],
+      middleName: json['middleName'],
+      lastName: json['lastName'],
+      title: json['title'],
+      suffix: json['suffix'],
+      emails: json['emails'] != null ? List<String>.from(jsonDecode(json['emails'])) : [],
       dateOfBirth: DateTime.parse(json['dateOfBirth']),
       gender: json['gender'],
       abhaNumber: json['abhaNumber'],
@@ -96,8 +116,19 @@ class Patient {
               .toList()
           : [],
       mobileNumbers: json['mobileNumbers'] != null 
-          ? List<String>.from(jsonDecode(json['mobileNumbers']))
+          ? List<Map<String, String>>.from(jsonDecode(json['mobileNumbers']))
           : [],
     );
+  }
+
+  String get displayName {
+    final parts = [
+      if (title != null && title!.isNotEmpty) title,
+      firstName,
+      if (middleName != null && middleName!.isNotEmpty) middleName,
+      if (lastName != null && lastName!.isNotEmpty) lastName,
+      if (suffix != null && suffix!.isNotEmpty) suffix,
+    ];
+    return parts.whereType<String>().join(' ').replaceAll(RegExp(' +'), ' ').trim();
   }
 } 
