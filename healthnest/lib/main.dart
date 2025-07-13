@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/onboarding/welcome_screen.dart';
@@ -39,23 +40,31 @@ class _AppRouterState extends State<AppRouter> {
   @override
   void initState() {
     super.initState();
-    // Defer initialization until after the first frame is built
+    debugPrint('AppRouter: initState');
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint('AppRouter: post frame callback');
       _initializeApp();
     });
   }
 
   Future<void> _initializeApp() async {
+    debugPrint('Initializing userProvider...');
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     await userProvider.initialize();
+    debugPrint('UserProvider initialized');
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<UserProvider>(
       builder: (context, userProvider, child) {
+        debugPrint('AppRouter build: isLoading=${userProvider.isLoading}, isInitialized=${userProvider.isInitialized}');
+        
         if (userProvider.isLoading) {
           return const CupertinoPageScaffold(
+            navigationBar: CupertinoNavigationBar(
+              middle: Text('Loading'),
+            ),
             child: Center(
               child: CupertinoActivityIndicator(),
             ),
@@ -64,6 +73,9 @@ class _AppRouterState extends State<AppRouter> {
 
         if (!userProvider.isInitialized) {
           return const CupertinoPageScaffold(
+            navigationBar: CupertinoNavigationBar(
+              middle: Text('Initializing'),
+            ),
             child: Center(
               child: CupertinoActivityIndicator(),
             ),

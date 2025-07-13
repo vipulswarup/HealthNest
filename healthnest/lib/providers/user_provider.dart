@@ -23,25 +23,34 @@ class UserProvider with ChangeNotifier {
 
   // Initialize the provider
   Future<void> initialize() async {
-    if (_isInitialized) return;
+    debugPrint('UserProvider: initialize called');
+    if (_isInitialized) {
+      debugPrint('UserProvider: already initialized, returning');
+      return;
+    }
     
     _setLoading(true);
     
     try {
+      debugPrint('UserProvider: initializing storage');
       await _storage.initialize();
       
-      // Check if user exists
+      debugPrint('UserProvider: checking for existing user');
       final user = await _storage.getCurrentUser();
       if (user != null) {
+        debugPrint('UserProvider: found existing user');
         _currentUser = user;
         
-        // Load patients if onboarding is completed
         if (user.onboardingCompleted) {
+          debugPrint('UserProvider: onboarding completed, loading patients');
           await _loadPatients();
         }
+      } else {
+        debugPrint('UserProvider: no existing user found');
       }
       
       _isInitialized = true;
+      debugPrint('UserProvider: initialization complete');
     } catch (e) {
       debugPrint('Error initializing UserProvider: $e');
     } finally {
@@ -196,7 +205,6 @@ class UserProvider with ChangeNotifier {
     try {
       await _storage.syncFromCloud();
       
-      // Reload data after sync
       final user = await _storage.getCurrentUser();
       if (user != null) {
         _currentUser = user;
@@ -219,6 +227,7 @@ class UserProvider with ChangeNotifier {
 
   // Helper methods
   void _setLoading(bool loading) {
+    debugPrint('UserProvider: _setLoading($loading)');
     _isLoading = loading;
     notifyListeners();
   }
