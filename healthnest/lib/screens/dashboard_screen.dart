@@ -10,6 +10,7 @@ import '../models/health_record.dart';
 import 'records_screen.dart';
 import 'scan_screen.dart';
 import 'settings_screen.dart';
+import 'onboarding/patient_setup_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -187,21 +188,16 @@ class DashboardScreen extends StatelessWidget {
                                 CupertinoIcons.add_circled,
                                 color: CupertinoColors.systemBlue,
                               ),
-                              onPressed: () {
-                                // TODO: Add new patient functionality
-                                showCupertinoDialog(
-                                  context: context,
-                                  builder: (context) => CupertinoAlertDialog(
-                                    title: const Text('Coming Soon'),
-                                    content: const Text('Adding new family members will be available soon.'),
-                                    actions: [
-                                      CupertinoDialogAction(
-                                        child: const Text('OK'),
-                                        onPressed: () => Navigator.pop(context),
-                                      ),
-                                    ],
+                              onPressed: () async {
+                                await Navigator.push(
+                                  context,
+                                  CupertinoPageRoute(
+                                    builder: (context) => const PatientSetupScreen(),
+                                    fullscreenDialog: true,
                                   ),
                                 );
+                                final userProvider = Provider.of<UserProvider>(context, listen: false);
+                                await userProvider.loadPatients();
                               },
                             ),
                           ],

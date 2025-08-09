@@ -41,7 +41,8 @@ class User {
       'title': title,
       'suffix': suffix,
       'emails': jsonEncode(emails),
-      'mobileNumbers': jsonEncode(mobileNumbers),
+      // Persist under 'phoneNumbers' to match SQLite schema
+      'phoneNumbers': jsonEncode(mobileNumbers),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'preferences': jsonEncode(preferences),
@@ -58,7 +59,25 @@ class User {
       title: json['title'],
       suffix: json['suffix'],
       emails: json['emails'] != null ? List<String>.from(jsonDecode(json['emails'])) : [],
-      mobileNumbers: json['mobileNumbers'] != null ? List<Map<String, String>>.from(jsonDecode(json['mobileNumbers'])) : [],
+      // Read from either 'mobileNumbers' (cloud) or 'phoneNumbers' (SQLite schema)
+      mobileNumbers: () {
+        final dynamic raw = json['mobileNumbers'] ?? json['phoneNumbers'];
+        if (raw == null) return <Map<String, String>>[];
+        final dynamic decoded = raw is String ? jsonDecode(raw) : raw;
+        if (decoded is List) {
+          return decoded
+              .whereType<dynamic>()
+              .map((e) {
+                final map = Map<String, dynamic>.from(e as Map);
+                return <String, String>{
+                  'countryCode': map['countryCode']?.toString() ?? '',
+                  'number': map['number']?.toString() ?? '',
+                };
+              })
+              .toList();
+        }
+        return <Map<String, String>>[];
+      }(),
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
       preferences: json['preferences'] != null 

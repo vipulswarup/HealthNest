@@ -29,6 +29,7 @@ class _PatientSetupScreenState extends State<PatientSetupScreen> {
   ];
   final _dateController = TextEditingController();
   String _selectedGender = 'Male';
+  bool _showAdvancedNameFields = false;
   final _bloodGroupController = TextEditingController();
   final _abhaController = TextEditingController();
 
@@ -252,12 +253,55 @@ class _PatientSetupScreenState extends State<PatientSetupScreen> {
                   ),
                   child: Column(
                     children: [
-                      _buildTextField(controller: _titleController, label: 'Title (Optional)', icon: CupertinoIcons.person),
-                      const SizedBox(height: 12),
+                      Consumer<UserProvider>(
+                        builder: (context, userProvider, _) {
+                          final user = userProvider.currentUser;
+                          if (user == null) return const SizedBox.shrink();
+                          return Align(
+                            alignment: Alignment.centerLeft,
+                            child: CupertinoButton(
+                              padding: EdgeInsets.zero,
+                              onPressed: () {
+                                setState(() {
+                                  _firstNameController.text = user.firstName;
+                                  _middleNameController.text = user.middleName ?? '';
+                                  _lastNameController.text = user.lastName ?? '';
+                                  _titleController.text = user.title ?? '';
+                                  _suffixController.text = user.suffix ?? '';
+                                  if (user.emails.isNotEmpty) {
+                                    _emailControllers = user.emails
+                                        .map((e) => TextEditingController(text: e))
+                                        .toList();
+                                  }
+                                  if (user.mobileNumbers.isNotEmpty) {
+                                    _mobileControllers = user.mobileNumbers
+                                        .map((m) => {
+                                              'countryCode': TextEditingController(text: m['countryCode'] ?? '+91'),
+                                              'number': TextEditingController(text: m['number'] ?? ''),
+                                            })
+                                        .toList();
+                                  }
+                                });
+                              },
+                              child: const Text('Copy from my profile'),
+                            ),
+                          );
+                        },
+                      ),
+                      if (_showAdvancedNameFields) ...[
+                        _buildTextField(
+                          controller: _titleController,
+                          label: 'Title (Optional)',
+                          icon: CupertinoIcons.person,
+                          textCapitalization: TextCapitalization.words,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       _buildTextField(
                         controller: _firstNameController,
                         label: 'First Name',
                         icon: CupertinoIcons.person,
+                        textCapitalization: TextCapitalization.words,
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'First name is required';
@@ -266,11 +310,43 @@ class _PatientSetupScreenState extends State<PatientSetupScreen> {
                         },
                       ),
                       const SizedBox(height: 12),
-                      _buildTextField(controller: _middleNameController, label: 'Middle Name (Optional)', icon: CupertinoIcons.person),
+                      if (_showAdvancedNameFields) ...[
+                        _buildTextField(
+                          controller: _middleNameController,
+                          label: 'Middle Name (Optional)',
+                          icon: CupertinoIcons.person,
+                          textCapitalization: TextCapitalization.words,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      _buildTextField(
+                        controller: _lastNameController,
+                        label: 'Last Name (Optional)',
+                        icon: CupertinoIcons.person,
+                        textCapitalization: TextCapitalization.words,
+                      ),
                       const SizedBox(height: 12),
-                      _buildTextField(controller: _lastNameController, label: 'Last Name (Optional)', icon: CupertinoIcons.person),
-                      const SizedBox(height: 12),
-                      _buildTextField(controller: _suffixController, label: 'Suffix (Optional)', icon: CupertinoIcons.person),
+                      if (_showAdvancedNameFields) ...[
+                        _buildTextField(
+                          controller: _suffixController,
+                          label: 'Suffix (Optional)',
+                          icon: CupertinoIcons.person,
+                          textCapitalization: TextCapitalization.words,
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: CupertinoButton(
+                          padding: EdgeInsets.zero,
+                          onPressed: () {
+                            setState(() {
+                              _showAdvancedNameFields = !_showAdvancedNameFields;
+                            });
+                          },
+                          child: Text(_showAdvancedNameFields ? 'Hide additional name fields' : 'Add title/middle/suffix'),
+                        ),
+                      ),
                       const SizedBox(height: 20),
                       _buildEmailFields(),
                       const SizedBox(height: 20),
@@ -325,6 +401,7 @@ class _PatientSetupScreenState extends State<PatientSetupScreen> {
     required IconData icon,
     String? Function(String?)? validator,
     String? helperText,
+    TextCapitalization textCapitalization = TextCapitalization.none,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,6 +427,7 @@ class _PatientSetupScreenState extends State<PatientSetupScreen> {
         const SizedBox(height: 8),
         CupertinoTextField(
           controller: controller,
+          textCapitalization: textCapitalization,
           placeholder: 'Enter $label',
           decoration: BoxDecoration(
             border: Border.all(
@@ -540,6 +618,10 @@ class _PatientSetupScreenState extends State<PatientSetupScreen> {
               child: CupertinoTextField(
                 controller: _emailControllers[i],
                 keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                enableSuggestions: true,
+                autocorrect: false,
+                textCapitalization: TextCapitalization.none,
                 placeholder: 'Email Address',
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),

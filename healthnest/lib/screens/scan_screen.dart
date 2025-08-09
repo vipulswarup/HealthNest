@@ -2,6 +2,7 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_doc_scanner/flutter_doc_scanner.dart';
 import 'package:provider/provider.dart';
 import '../models/health_record.dart';
 import '../models/patient.dart';
@@ -49,12 +50,13 @@ class _ScanScreenState extends State<ScanScreen> {
 
   Future<void> _loadRecentRecords() async {
     if (_selectedPatientId == null) return;
-    
+
     try {
-      // For now, we'll use a placeholder implementation
-      // In a real app, you would get records from the storage service
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final records = await userProvider.getHealthRecords(_selectedPatientId!);
+      records.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       setState(() {
-        _recentRecords = []; // Placeholder - no records loaded yet
+        _recentRecords = records.take(5).toList();
       });
     } catch (e) {
       _showError('Failed to load recent records: $e');
@@ -75,6 +77,22 @@ class _ScanScreenState extends State<ScanScreen> {
       }
     } catch (e) {
       _showError('Failed to pick image: $e');
+    }
+  }
+
+  Future<void> _scanWithSystemScanner() async {
+    try {
+      setState(() => _isProcessing = true);
+      final scanner = FlutterDocScanner();
+      final result = await scanner.getScanDocuments(page: 1);
+      if (result is List && result.isNotEmpty) {
+        final path = result.first.toString();
+        await _processDocument(path);
+      }
+    } catch (e) {
+      _showError('Failed to scan document: $e');
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
@@ -156,9 +174,6 @@ class _ScanScreenState extends State<ScanScreen> {
 
   Future<void> _saveHealthRecord(DocumentAnalysisResult result, String imagePath) async {
     try {
-      // For now, we'll use a placeholder implementation
-      // In a real app, you would save to the storage service
-      
       // Create health record
       final HealthRecord record = HealthRecord(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -171,15 +186,10 @@ class _ScanScreenState extends State<ScanScreen> {
         source: 'Document Scan',
         documentPath: imagePath, // Use original path for now
       );
-      
-      // Add to recent records for display
-      setState(() {
-        _recentRecords.insert(0, record);
-        if (_recentRecords.length > 5) {
-          _recentRecords.removeLast();
-        }
-      });
-      
+
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      await userProvider.saveHealthRecord(record);
+      await _loadRecentRecords();
       _showSuccess('Document saved successfully');
     } catch (e) {
       _showError('Failed to save document: $e');
@@ -341,6 +351,21 @@ class _ScanScreenState extends State<ScanScreen> {
                           Icon(CupertinoIcons.photo),
                           SizedBox(width: 8),
                           Text('Gallery'),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: CupertinoButton(
+                      color: CupertinoColors.activeGreen,
+                      onPressed: _isProcessing ? null : _scanWithSystemScanner,
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(CupertinoIcons.doc_text_viewfinder),
+                          SizedBox(width: 8),
+                          Text('Scan'),
                         ],
                       ),
                     ),

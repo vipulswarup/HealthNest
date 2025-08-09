@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import '../models/patient.dart';
+import '../models/health_record.dart';
 import '../services/storage_service.dart';
 import '../services/hybrid_storage_service.dart';
 
@@ -216,6 +217,42 @@ class UserProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('Error syncing from cloud: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Health record operations
+  Future<List<HealthRecord>> getHealthRecords(String patientId) async {
+    try {
+      return await _storage.getHealthRecords(patientId);
+    } catch (e) {
+      debugPrint('Error getting health records: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> saveHealthRecord(HealthRecord record) async {
+    _setLoading(true);
+    try {
+      await _storage.saveHealthRecord(record);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error saving health record: $e');
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> deleteHealthRecord(String id) async {
+    _setLoading(true);
+    try {
+      await _storage.deleteHealthRecord(id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error deleting health record: $e');
+      rethrow;
     } finally {
       _setLoading(false);
     }

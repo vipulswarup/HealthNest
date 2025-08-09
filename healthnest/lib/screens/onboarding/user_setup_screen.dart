@@ -27,6 +27,8 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
     }
   ];
 
+  bool _showAdvancedNameFields = false;
+
   @override
   void dispose() {
     _titleController.dispose();
@@ -176,12 +178,20 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
                   ),
                   child: Column(
                     children: [
-                      _buildTextField(controller: _titleController, label: 'Title (Optional)', icon: CupertinoIcons.person),
-                      const SizedBox(height: 12),
+                      if (_showAdvancedNameFields) ...[
+                        _buildTextField(
+                          controller: _titleController,
+                          label: 'Title (Optional)',
+                          icon: CupertinoIcons.person,
+                          textCapitalization: TextCapitalization.words,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       _buildTextField(
                         controller: _firstNameController,
                         label: 'First Name',
                         icon: CupertinoIcons.person,
+                        textCapitalization: TextCapitalization.words,
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'First name is required';
@@ -190,11 +200,43 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
                         },
                       ),
                       const SizedBox(height: 12),
-                      _buildTextField(controller: _middleNameController, label: 'Middle Name (Optional)', icon: CupertinoIcons.person),
+                      if (_showAdvancedNameFields) ...[
+                        _buildTextField(
+                          controller: _middleNameController,
+                          label: 'Middle Name (Optional)',
+                          icon: CupertinoIcons.person,
+                          textCapitalization: TextCapitalization.words,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      _buildTextField(
+                        controller: _lastNameController,
+                        label: 'Last Name (Optional)',
+                        icon: CupertinoIcons.person,
+                        textCapitalization: TextCapitalization.words,
+                      ),
                       const SizedBox(height: 12),
-                      _buildTextField(controller: _lastNameController, label: 'Last Name (Optional)', icon: CupertinoIcons.person),
-                      const SizedBox(height: 12),
-                      _buildTextField(controller: _suffixController, label: 'Suffix (Optional)', icon: CupertinoIcons.person),
+                      if (_showAdvancedNameFields) ...[
+                        _buildTextField(
+                          controller: _suffixController,
+                          label: 'Suffix (Optional)',
+                          icon: CupertinoIcons.person,
+                          textCapitalization: TextCapitalization.words,
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: CupertinoButton(
+                          padding: EdgeInsets.zero,
+                          onPressed: () {
+                            setState(() {
+                              _showAdvancedNameFields = !_showAdvancedNameFields;
+                            });
+                          },
+                          child: Text(_showAdvancedNameFields ? 'Hide additional name fields' : 'Add title/middle/suffix'),
+                        ),
+                      ),
                       const SizedBox(height: 20),
                       _buildEmailFields(),
                       const SizedBox(height: 20),
@@ -233,6 +275,7 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
+    TextCapitalization textCapitalization = TextCapitalization.none,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,6 +303,7 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
           controller: controller,
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
+          textCapitalization: textCapitalization,
           placeholder: 'Enter your $label',
           decoration: BoxDecoration(
             border: Border.all(
@@ -319,6 +363,10 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
               child: CupertinoTextField(
                 controller: _emailControllers[i],
                 keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                enableSuggestions: true,
+                autocorrect: false,
+                textCapitalization: TextCapitalization.none,
                 placeholder: 'Email Address',
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),

@@ -2,9 +2,108 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
+import '../models/patient.dart';
+import '../models/health_record.dart';
+import '../widgets/health_record_card.dart';
 
-class RecordsScreen extends StatelessWidget {
+class RecordsScreen extends StatefulWidget {
   const RecordsScreen({super.key});
+
+  @override
+  State<RecordsScreen> createState() => _RecordsScreenState();
+}
+
+class _RecordsScreenState extends State<RecordsScreen> {
+  String? _selectedPatientId;
+  List<Patient> _patients = [];
+  List<HealthRecord> _records = [];
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPatientsAndRecords();
+  }
+
+  Future<void> _loadPatientsAndRecords() async {
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final patients = userProvider.patients;
+      setState(() {
+        _patients = patients;
+        if (_selectedPatientId == null && patients.isNotEmpty) {
+          _selectedPatientId = patients.first.id;
+        }
+      });
+      await _loadRecords();
+    } catch (_) {}
+  }
+
+  Future<void> _loadRecords() async {
+    if (_selectedPatientId == null) return;
+    setState(() => _loading = true);
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final records = await userProvider.getHealthRecords(_selectedPatientId!);
+      records.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      setState(() => _records = records);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _deleteRecord(String recordId) async {
+    final confirm = await showCupertinoDialog<bool>(
+          context: context,
+          builder: (context) => CupertinoAlertDialog(
+            title: const Text('Delete Record'),
+            content: const Text('Are you sure you want to delete this record?'),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text('Cancel'),
+                onPressed: () => Navigator.pop(context, false),
+              ),
+              CupertinoDialogAction(
+                isDestructiveAction: true,
+                child: const Text('Delete'),
+                onPressed: () => Navigator.pop(context, true),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirm) return;
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    await userProvider.deleteHealthRecord(recordId);
+    await _loadRecords();
+  }
+
+  void _showRecordDetails(HealthRecord record) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: Text(record.recordType),
+        content: Column(
+          children: [
+            const SizedBox(height: 8),
+            Text('Source: ${record.source}'),
+            const SizedBox(height: 4),
+            Text('Date: ${record.createdAt.toLocal()}'),
+            const SizedBox(height: 8),
+            if (record.tags.isNotEmpty) Text('Tags: ${record.tags.join(', ')}'),
+          ],
+        ),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('Close'),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,252 +114,69 @@ class RecordsScreen extends StatelessWidget {
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Spacer(flex: 2),
-              
-              // Records Icon
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [CupertinoColors.systemGreen, CupertinoColors.systemTeal],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              if (_patients.isNotEmpty) ...[
+                const Text(
+                  'Select Patient:',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: CupertinoColors.systemGrey4),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [
-                    BoxShadow(
-                      color: CupertinoColors.systemGreen.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
+                  child: CupertinoPicker(
+                    itemExtent: 40,
+                    onSelectedItemChanged: (index) async {
+                      setState(() {
+                        _selectedPatientId = _patients[index].id;
+                      });
+                      await _loadRecords();
+                    },
+                    children:
+                        _patients.map((p) => Center(child: Text(p.displayName))).toList(),
+                  ),
                 ),
-                child: const Icon(
-                  CupertinoIcons.doc_text,
-                  size: 60,
-                  color: CupertinoColors.white,
-                ),
-              ),
-              const SizedBox(height: 32),
-              
-              // Title
-              const Text(
-                'Your Health Records',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: CupertinoColors.label,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              
-              Text(
-                'All your medical documents organized and secure',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: CupertinoColors.secondaryLabel,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              
-              // Empty State
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: CupertinoColors.systemBackground,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: CupertinoColors.systemGrey.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: CupertinoColors.systemGrey.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: const Icon(
-                        CupertinoIcons.doc_text,
-                        color: CupertinoColors.systemGrey,
-                        size: 30,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'No records yet',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: CupertinoColors.label,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Start by scanning your first health document',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: CupertinoColors.secondaryLabel,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    CupertinoButton.filled(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      child: const Text('Scan Document'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 32),
-              
-              // Features
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: CupertinoColors.systemBackground,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: CupertinoColors.systemGrey.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    _buildFeatureRow(
-                      CupertinoIcons.search,
-                      'Search & Filter',
-                      'Find records quickly with smart search',
-                    ),
-                    const SizedBox(height: 16),
-                    _buildFeatureRow(
-                      CupertinoIcons.folder,
-                      'Organized Categories',
-                      'Documents automatically categorized',
-                    ),
-                    const SizedBox(height: 16),
-                    _buildFeatureRow(
-                      CupertinoIcons.share,
-                      'Easy Sharing',
-                      'Share records with healthcare providers',
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              
-              // Quick Actions
-              Row(
-                children: [
-                  Expanded(
-                    child: CupertinoButton(
-                      onPressed: () {
-                        showCupertinoDialog(
-                          context: context,
-                          builder: (context) => CupertinoAlertDialog(
-                            title: const Text('Coming Soon'),
-                            content: const Text('Export functionality will be available soon.'),
-                            actions: [
-                              CupertinoDialogAction(
-                                child: const Text('OK'),
-                                onPressed: () => Navigator.pop(context),
-                              ),
-                            ],
+                const SizedBox(height: 16),
+              ],
+
+              Expanded(
+                child: _loading
+                    ? const Center(child: CupertinoActivityIndicator())
+                    : _records.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(CupertinoIcons.doc_text, size: 48, color: CupertinoColors.systemGrey),
+                                const SizedBox(height: 12),
+                                const Text('No records yet'),
+                                const SizedBox(height: 8),
+                                const Text('Scan a document from the Dashboard'),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: _records.length,
+                            itemBuilder: (context, index) {
+                              final record = _records[index];
+                              return HealthRecordCard(
+                                record: record,
+                                onTap: () => _showRecordDetails(record),
+                                onDelete: () => _deleteRecord(record.id),
+                              );
+                            },
                           ),
-                        );
-                      },
-                      child: const Text('Export'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: CupertinoButton(
-                      onPressed: () {
-                        showCupertinoDialog(
-                          context: context,
-                          builder: (context) => CupertinoAlertDialog(
-                            title: const Text('Coming Soon'),
-                            content: const Text('Backup functionality will be available soon.'),
-                            actions: [
-                              CupertinoDialogAction(
-                                child: const Text('OK'),
-                                onPressed: () => Navigator.pop(context),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      child: const Text('Backup'),
-                    ),
-                  ),
-                ],
               ),
-              const SizedBox(height: 24),
             ],
           ),
         ),
       ),
     );
   }
-
-  Widget _buildFeatureRow(IconData icon, String title, String subtitle) {
-    return Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: CupertinoColors.systemGreen.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            icon,
-            color: CupertinoColors.systemGreen,
-            size: 20,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: CupertinoColors.label,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: CupertinoColors.secondaryLabel,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-} 
+}

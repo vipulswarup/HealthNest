@@ -68,14 +68,10 @@ class Patient {
   });
 
   Map<String, dynamic> toJson() {
+    // Persist using SQLite schema defined in LocalStorageService
     return {
       'id': id,
-      'firstName': firstName,
-      'middleName': middleName,
-      'lastName': lastName,
-      'title': title,
-      'suffix': suffix,
-      'emails': jsonEncode(emails),
+      'name': displayName,
       'dateOfBirth': dateOfBirth.toIso8601String(),
       'gender': gender,
       'abhaNumber': abhaNumber,
@@ -90,9 +86,11 @@ class Patient {
   }
 
   factory Patient.fromJson(Map<String, dynamic> json) {
+    // Read from SQLite schema; name is a single field
+    final String name = json['name'] ?? '';
     return Patient(
       id: json['id'],
-      firstName: json['firstName'],
+      firstName: name.isNotEmpty ? name : (json['firstName'] ?? ''),
       middleName: json['middleName'],
       lastName: json['lastName'],
       title: json['title'],
