@@ -37,6 +37,7 @@ dependencies:
   
   # Local storage and database
   sqflite: ^2.3.0
+  sqflite_common_ffi: ^2.3.2
   path: ^1.8.3
   
   # Google Drive/Sheets integration

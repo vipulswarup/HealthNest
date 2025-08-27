@@ -1,5 +1,5 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
@@ -71,7 +71,7 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
         
         Navigator.push(
           context,
-          CupertinoPageRoute(
+          MaterialPageRoute(
             builder: (context) => const PatientSetupScreen(),
             fullscreenDialog: true,
           ),
@@ -96,13 +96,13 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
-      backgroundColor: CupertinoColors.systemGroupedBackground,
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('Setup Your Profile'),
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        title: const Text('Setup Your Profile'),
         automaticallyImplyLeading: false,
       ),
-      child: SafeArea(
+      body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Form(
@@ -114,11 +114,11 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: CupertinoColors.systemBackground,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: CupertinoColors.systemGrey.withOpacity(0.1),
+                        color: Colors.grey.withOpacity(0.1),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -130,13 +130,13 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
                         width: 60,
                         height: 60,
                         decoration: BoxDecoration(
-                          color: CupertinoColors.systemBlue.withOpacity(0.1),
+                          color: Colors.blue.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(15),
                         ),
                         child: const Icon(
-                          CupertinoIcons.person_circle,
+                          Icons.person,
                           size: 30,
-                          color: CupertinoColors.systemBlue,
+                          color: Colors.blue,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -145,7 +145,7 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: CupertinoColors.label,
+                          color: Colors.black87,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -153,7 +153,7 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
                         'This information helps us personalize your experience',
                         style: TextStyle(
                           fontSize: 16,
-                          color: CupertinoColors.secondaryLabel,
+                          color: Colors.grey[600],
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -166,11 +166,11 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: CupertinoColors.systemBackground,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: CupertinoColors.systemGrey.withOpacity(0.1),
+                        color: Colors.grey.withOpacity(0.1),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -182,7 +182,7 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
                         _buildTextField(
                           controller: _titleController,
                           label: 'Title (Optional)',
-                          icon: CupertinoIcons.person,
+                          icon: Icons.person,
                           textCapitalization: TextCapitalization.words,
                         ),
                         const SizedBox(height: 12),
@@ -190,7 +190,7 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
                       _buildTextField(
                         controller: _firstNameController,
                         label: 'First Name',
-                        icon: CupertinoIcons.person,
+                        icon: Icons.person,
                         textCapitalization: TextCapitalization.words,
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
@@ -204,7 +204,7 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
                         _buildTextField(
                           controller: _middleNameController,
                           label: 'Middle Name (Optional)',
-                          icon: CupertinoIcons.person,
+                          icon: Icons.person,
                           textCapitalization: TextCapitalization.words,
                         ),
                         const SizedBox(height: 12),
@@ -212,7 +212,7 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
                       _buildTextField(
                         controller: _lastNameController,
                         label: 'Last Name (Optional)',
-                        icon: CupertinoIcons.person,
+                        icon: Icons.person,
                         textCapitalization: TextCapitalization.words,
                       ),
                       const SizedBox(height: 12),
@@ -220,15 +220,14 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
                         _buildTextField(
                           controller: _suffixController,
                           label: 'Suffix (Optional)',
-                          icon: CupertinoIcons.person,
+                          icon: Icons.person,
                           textCapitalization: TextCapitalization.words,
                         ),
                       ],
                       const SizedBox(height: 8),
                       Align(
                         alignment: Alignment.centerLeft,
-                        child: CupertinoButton(
-                          padding: EdgeInsets.zero,
+                        child: TextButton(
                           onPressed: () {
                             setState(() {
                               _showAdvancedNameFields = !_showAdvancedNameFields;
@@ -293,26 +292,24 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: CupertinoColors.label,
+                color: Colors.black87,
               ),
             ),
           ],
         ),
         const SizedBox(height: 8),
-        CupertinoTextField(
+        TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
           textCapitalization: textCapitalization,
-          placeholder: 'Enter your $label',
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: CupertinoColors.systemGrey4,
-              width: 1,
+          decoration: InputDecoration(
+            hintText: 'Enter your $label',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
             ),
-            borderRadius: BorderRadius.circular(8),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
         if (validator != null) ...[
           const SizedBox(height: 4),
@@ -324,7 +321,7 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
                   error,
                   style: const TextStyle(
                     fontSize: 12,
-                    color: CupertinoColors.systemRed,
+                    color: Colors.red,
                   ),
                 );
               }
@@ -342,13 +339,12 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
       children: [
         Row(
           children: [
-            Icon(CupertinoIcons.mail, size: 20, color: CupertinoColors.systemBlue),
+            Icon(Icons.email, size: 20, color: Colors.blue),
             const SizedBox(width: 8),
             const Text('Email Addresses', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const Spacer(),
-            CupertinoButton(
-              padding: EdgeInsets.zero,
-              child: const Icon(CupertinoIcons.add_circled, size: 22),
+            IconButton(
+              icon: const Icon(Icons.add_circle, size: 22),
               onPressed: () {
                 setState(() {
                   _emailControllers.add(TextEditingController());
@@ -360,21 +356,22 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
         ...List.generate(_emailControllers.length, (i) => Row(
           children: [
             Expanded(
-              child: CupertinoTextField(
+              child: TextFormField(
                 controller: _emailControllers[i],
                 keyboardType: TextInputType.emailAddress,
                 autofillHints: const [AutofillHints.email],
                 enableSuggestions: true,
                 autocorrect: false,
                 textCapitalization: TextCapitalization.none,
-                placeholder: 'Email Address',
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: const InputDecoration(
+                  hintText: 'Email Address',
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
               ),
             ),
             if (_emailControllers.length > 1)
-              CupertinoButton(
-                padding: EdgeInsets.zero,
-                child: const Icon(CupertinoIcons.minus_circled, color: CupertinoColors.systemRed, size: 22),
+              IconButton(
+                icon: const Icon(Icons.remove_circle, color: Colors.red, size: 22),
                 onPressed: () {
                   setState(() {
                     _emailControllers.removeAt(i);
@@ -393,13 +390,12 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
       children: [
         Row(
           children: [
-            Icon(CupertinoIcons.phone, size: 20, color: CupertinoColors.systemBlue),
+            Icon(Icons.phone, size: 20, color: Colors.blue),
             const SizedBox(width: 8),
             const Text('Mobile Numbers', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const Spacer(),
-            CupertinoButton(
-              padding: EdgeInsets.zero,
-              child: const Icon(CupertinoIcons.add_circled, size: 22),
+            IconButton(
+              icon: const Icon(Icons.add_circle, size: 22),
               onPressed: () {
                 setState(() {
                   _mobileControllers.add({
@@ -415,27 +411,30 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
           children: [
             SizedBox(
               width: 70,
-              child: CupertinoTextField(
+              child: TextFormField(
                 controller: _mobileControllers[i]['countryCode'],
-                placeholder: '+91',
+                decoration: const InputDecoration(
+                  hintText: '+91',
+                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                ),
                 keyboardType: TextInputType.phone,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: CupertinoTextField(
+              child: TextFormField(
                 controller: _mobileControllers[i]['number'],
-                placeholder: 'Mobile Number',
+                decoration: const InputDecoration(
+                  hintText: 'Mobile Number',
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
                 keyboardType: TextInputType.phone,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
             ),
             if (_mobileControllers.length > 1)
-              CupertinoButton(
-                padding: EdgeInsets.zero,
-                child: const Icon(CupertinoIcons.minus_circled, color: CupertinoColors.systemRed, size: 22),
+              IconButton(
+                icon: const Icon(Icons.remove_circle, color: Colors.red, size: 22),
                 onPressed: () {
                   setState(() {
                     _mobileControllers.removeAt(i);

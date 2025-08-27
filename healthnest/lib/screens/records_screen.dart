@@ -1,7 +1,7 @@
 // Health records screen for viewing and managing health records
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import '../models/patient.dart';
@@ -96,7 +96,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
           ],
         ),
         actions: [
-          CupertinoDialogAction(
+          TextButton(
             child: const Text('Close'),
             onPressed: () => Navigator.pop(context),
           ),
@@ -107,12 +107,12 @@ class _RecordsScreenState extends State<RecordsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
-      backgroundColor: CupertinoColors.systemGroupedBackground,
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('Health Records'),
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        title: const Text('Health Records'),
       ),
-      child: SafeArea(
+      body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -127,19 +127,27 @@ class _RecordsScreenState extends State<RecordsScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    border: Border.all(color: CupertinoColors.systemGrey4),
+                    border: Border.all(color: Colors.grey[300]!),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: CupertinoPicker(
-                    itemExtent: 40,
-                    onSelectedItemChanged: (index) async {
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedPatientId,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    items: _patients.map((p) => 
+                      DropdownMenuItem(
+                        value: p.id,
+                        child: Text(p.displayName),
+                      )
+                    ).toList(),
+                    onChanged: (value) async {
                       setState(() {
-                        _selectedPatientId = _patients[index].id;
+                        _selectedPatientId = value;
                       });
                       await _loadRecords();
                     },
-                    children:
-                        _patients.map((p) => Center(child: Text(p.displayName))).toList(),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -147,13 +155,13 @@ class _RecordsScreenState extends State<RecordsScreen> {
 
               Expanded(
                 child: _loading
-                    ? const Center(child: CupertinoActivityIndicator())
+                    ? const Center(child: CircularProgressIndicator())
                     : _records.isEmpty
                         ? Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(CupertinoIcons.doc_text, size: 48, color: CupertinoColors.systemGrey),
+                                const Icon(Icons.description, size: 48, color: Colors.grey),
                                 const SizedBox(height: 12),
                                 const Text('No records yet'),
                                 const SizedBox(height: 8),

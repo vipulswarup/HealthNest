@@ -25,7 +25,7 @@ class MainFlutterWindow: NSWindow {
     
     self.isReleasedWhenClosed = false
     
-    // Force window to be visible
+    // Force window to be visible and active
     self.makeKeyAndOrderFront(nil)
     self.orderFrontRegardless()
     
@@ -34,5 +34,10 @@ class MainFlutterWindow: NSWindow {
     RegisterGeneratedPlugins(registry: flutterViewController)
 
     super.awakeFromNib()
+    
+    // Ensure window is properly configured
+    self.isOpaque = true
+    self.hasShadow = true
+    self.isMovableByWindowBackground = true
   }
 }

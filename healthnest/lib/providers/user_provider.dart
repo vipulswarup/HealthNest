@@ -54,6 +54,12 @@ class UserProvider with ChangeNotifier {
       debugPrint('UserProvider: initialization complete');
     } catch (e) {
       debugPrint('Error initializing UserProvider: $e');
+      // For web platform or other issues, we'll still mark as initialized
+      // so the app can continue with onboarding
+      if (kIsWeb) {
+        debugPrint('Web platform detected, continuing without database');
+        _isInitialized = true;
+      }
     } finally {
       _setLoading(false);
     }

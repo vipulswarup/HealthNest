@@ -1,7 +1,6 @@
 // Main dashboard screen for HealthNest
 // Shows overview of health records, recent activities, and quick actions
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
@@ -17,24 +16,25 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
-      backgroundColor: CupertinoColors.systemGroupedBackground,
-      navigationBar: CupertinoNavigationBar(
-        middle: const Text('HealthNest'),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          child: const Icon(CupertinoIcons.settings),
-          onPressed: () {
-            Navigator.push(
-              context,
-              CupertinoPageRoute(
-                builder: (context) => const SettingsScreen(),
-              ),
-            );
-          },
-        ),
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        title: const Text('HealthNest'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
-      child: SafeArea(
+      body: SafeArea(
         child: Consumer<UserProvider>(
           builder: (context, userProvider, child) {
             final user = userProvider.currentUser;
@@ -42,7 +42,7 @@ class DashboardScreen extends StatelessWidget {
             
             if (user == null) {
               return const Center(
-                child: CupertinoActivityIndicator(),
+                child: CircularProgressIndicator(),
               );
             }
 
@@ -60,14 +60,14 @@ class DashboardScreen extends StatelessWidget {
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [CupertinoColors.systemBlue, CupertinoColors.systemTeal],
+                              colors: [Colors.blue, Colors.teal],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                color: CupertinoColors.systemBlue.withOpacity(0.3),
+                                color: Colors.blue.withOpacity(0.3),
                                 blurRadius: 15,
                                 offset: const Offset(0, 5),
                               ),
@@ -79,12 +79,12 @@ class DashboardScreen extends StatelessWidget {
                                 width: 50,
                                 height: 50,
                                 decoration: BoxDecoration(
-                                  color: CupertinoColors.white.withOpacity(0.2),
+                                  color: Colors.white.withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(25),
                                 ),
                                 child: const Icon(
-                                  CupertinoIcons.person_circle_fill,
-                                  color: CupertinoColors.white,
+                                  Icons.person,
+                                  color: Colors.white,
                                   size: 30,
                                 ),
                               ),
@@ -97,7 +97,7 @@ class DashboardScreen extends StatelessWidget {
                                       'Welcome back,',
                                       style: TextStyle(
                                         fontSize: 16,
-                                        color: CupertinoColors.white.withOpacity(0.8),
+                                        color: Colors.white.withOpacity(0.8),
                                       ),
                                     ),
                                     Text(
@@ -105,7 +105,7 @@ class DashboardScreen extends StatelessWidget {
                                       style: const TextStyle(
                                         fontSize: 24,
                                         fontWeight: FontWeight.bold,
-                                        color: CupertinoColors.white,
+                                        color: Colors.white,
                                       ),
                                     ),
                                   ],
@@ -122,7 +122,7 @@ class DashboardScreen extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: CupertinoColors.label,
+                            color: Colors.black87,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -130,13 +130,13 @@ class DashboardScreen extends StatelessWidget {
                           children: [
                             Expanded(
                               child: _buildQuickActionCard(
-                                icon: CupertinoIcons.camera,
+                                icon: Icons.camera_alt,
                                 title: 'Scan Record',
                                 subtitle: 'Add new document',
-                                color: CupertinoColors.systemBlue,
+                                color: Colors.blue,
                                 onTap: () => Navigator.push(
                                   context,
-                                  CupertinoPageRoute(
+                                  MaterialPageRoute(
                                     builder: (context) => const ScanScreen(),
                                   ),
                                 ),
@@ -145,13 +145,13 @@ class DashboardScreen extends StatelessWidget {
                             const SizedBox(width: 12),
                             Expanded(
                               child: _buildQuickActionCard(
-                                icon: CupertinoIcons.doc_text,
+                                icon: Icons.description,
                                 title: 'View Records',
                                 subtitle: 'Browse documents',
-                                color: CupertinoColors.systemGreen,
+                                color: Colors.green,
                                 onTap: () => Navigator.push(
                                   context,
-                                  CupertinoPageRoute(
+                                  MaterialPageRoute(
                                     builder: (context) => const RecordsScreen(),
                                   ),
                                 ),
@@ -179,19 +179,18 @@ class DashboardScreen extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: CupertinoColors.label,
+                                color: Colors.black87,
                               ),
                             ),
-                            CupertinoButton(
-                              padding: EdgeInsets.zero,
-                              child: const Icon(
-                                CupertinoIcons.add_circled,
-                                color: CupertinoColors.systemBlue,
+                            IconButton(
+                              icon: const Icon(
+                                Icons.add_circle,
+                                color: Colors.blue,
                               ),
                               onPressed: () async {
                                 await Navigator.push(
                                   context,
-                                  CupertinoPageRoute(
+                                  MaterialPageRoute(
                                     builder: (context) => const PatientSetupScreen(),
                                     fullscreenDialog: true,
                                   ),
@@ -234,18 +233,18 @@ class DashboardScreen extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: CupertinoColors.label,
+                            color: Colors.black87,
                           ),
                         ),
                         const SizedBox(height: 16),
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: CupertinoColors.systemBackground,
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                color: CupertinoColors.systemGrey.withOpacity(0.1),
+                                color: Colors.grey.withOpacity(0.1),
                                 blurRadius: 10,
                                 offset: const Offset(0, 2),
                               ),
@@ -254,13 +253,13 @@ class DashboardScreen extends StatelessWidget {
                           child: Column(
                             children: [
                               _buildEmptyState(
-                                icon: CupertinoIcons.doc_text,
+                                icon: Icons.description,
                                 title: 'No records yet',
                                 subtitle: 'Start by scanning your first health document',
                                 actionText: 'Scan Document',
                                 onAction: () => Navigator.push(
                                   context,
-                                  CupertinoPageRoute(
+                                  MaterialPageRoute(
                                     builder: (context) => const ScanScreen(),
                                   ),
                                 ),
@@ -296,11 +295,11 @@ class DashboardScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: CupertinoColors.systemBackground,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: CupertinoColors.systemGrey.withOpacity(0.1),
+              color: Colors.grey.withOpacity(0.1),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -327,7 +326,7 @@ class DashboardScreen extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: CupertinoColors.label,
+                color: Colors.black87,
               ),
               textAlign: TextAlign.center,
             ),
@@ -336,7 +335,7 @@ class DashboardScreen extends StatelessWidget {
               subtitle,
               style: TextStyle(
                 fontSize: 12,
-                color: CupertinoColors.secondaryLabel,
+                color: Colors.grey[600],
               ),
               textAlign: TextAlign.center,
             ),
@@ -353,11 +352,11 @@ class DashboardScreen extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: CupertinoColors.systemBackground,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: CupertinoColors.systemGrey.withOpacity(0.1),
+            color: Colors.grey.withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -369,12 +368,12 @@ class DashboardScreen extends StatelessWidget {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: CupertinoColors.systemBlue.withOpacity(0.1),
+              color: Colors.blue.withOpacity(0.1),
               borderRadius: BorderRadius.circular(25),
             ),
             child: const Icon(
-              CupertinoIcons.person_fill,
-              color: CupertinoColors.systemBlue,
+              Icons.person,
+              color: Colors.blue,
               size: 25,
             ),
           ),
@@ -388,7 +387,7 @@ class DashboardScreen extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                    color: CupertinoColors.label,
+                    color: Colors.black87,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -396,7 +395,7 @@ class DashboardScreen extends StatelessWidget {
                   '${patient.gender} • $age years',
                   style: TextStyle(
                     fontSize: 14,
-                    color: CupertinoColors.secondaryLabel,
+                    color: Colors.grey[600],
                   ),
                 ),
                 if (patient.bloodGroup != null) ...[
@@ -405,18 +404,17 @@ class DashboardScreen extends StatelessWidget {
                     'Blood Group: ${patient.bloodGroup}',
                     style: TextStyle(
                       fontSize: 12,
-                      color: CupertinoColors.tertiaryLabel,
+                      color: Colors.grey[500],
                     ),
                   ),
                 ],
               ],
             ),
           ),
-          CupertinoButton(
-            padding: EdgeInsets.zero,
-            child: const Icon(
-              CupertinoIcons.chevron_right,
-              color: CupertinoColors.systemGrey,
+          IconButton(
+            icon: const Icon(
+              Icons.chevron_right,
+              color: Colors.grey,
             ),
             onPressed: () {
               // TODO: Navigate to patient details
@@ -440,12 +438,12 @@ class DashboardScreen extends StatelessWidget {
           width: 60,
           height: 60,
           decoration: BoxDecoration(
-            color: CupertinoColors.systemGrey.withOpacity(0.1),
+            color: Colors.grey.withOpacity(0.1),
             borderRadius: BorderRadius.circular(30),
           ),
           child: Icon(
             icon,
-            color: CupertinoColors.systemGrey,
+            color: Colors.grey,
             size: 30,
           ),
         ),
@@ -455,7 +453,7 @@ class DashboardScreen extends StatelessWidget {
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: CupertinoColors.label,
+            color: Colors.black87,
           ),
         ),
         const SizedBox(height: 8),
@@ -463,12 +461,12 @@ class DashboardScreen extends StatelessWidget {
           subtitle,
           style: TextStyle(
             fontSize: 14,
-            color: CupertinoColors.secondaryLabel,
+            color: Colors.grey[600],
           ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 20),
-        CupertinoButton.filled(
+        ElevatedButton(
           onPressed: onAction,
           child: Text(actionText),
         ),

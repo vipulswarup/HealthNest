@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 import 'user_setup_screen.dart';
@@ -8,9 +7,9 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
-      backgroundColor: CupertinoColors.systemGroupedBackground,
-      child: SafeArea(
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
           child: SingleChildScrollView(
@@ -23,23 +22,23 @@ class WelcomeScreen extends StatelessWidget {
                   height: 120,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [CupertinoColors.systemBlue, CupertinoColors.systemTeal],
+                      colors: [Colors.blue, Colors.teal],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(30),
                     boxShadow: [
                       BoxShadow(
-                        color: CupertinoColors.systemBlue.withOpacity(0.3),
+                        color: Colors.blue.withOpacity(0.3),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
                     ],
                   ),
                   child: const Icon(
-                    CupertinoIcons.heart_fill,
+                    Icons.favorite,
                     size: 60,
-                    color: CupertinoColors.white,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -50,7 +49,7 @@ class WelcomeScreen extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: CupertinoColors.label,
+                    color: Colors.black87,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -61,7 +60,7 @@ class WelcomeScreen extends StatelessWidget {
                   'Your personal health record manager',
                   style: TextStyle(
                     fontSize: 18,
-                    color: CupertinoColors.secondaryLabel,
+                    color: Colors.grey[600],
                     fontWeight: FontWeight.w500,
                   ),
                   textAlign: TextAlign.center,
@@ -72,11 +71,11 @@ class WelcomeScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: CupertinoColors.systemBackground,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: CupertinoColors.systemGrey.withOpacity(0.1),
+                        color: Colors.grey.withOpacity(0.1),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -85,19 +84,19 @@ class WelcomeScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       _buildFeatureRow(
-                        CupertinoIcons.doc_text,
+                        Icons.description,
                         'Organize health records',
                         'Keep all your medical documents in one place',
                       ),
                       const SizedBox(height: 16),
                       _buildFeatureRow(
-                        CupertinoIcons.person_2,
+                        Icons.people,
                         'Family management',
                         'Manage health records for your entire family',
                       ),
                       const SizedBox(height: 16),
                       _buildFeatureRow(
-                        CupertinoIcons.lock_shield,
+                        Icons.security,
                         'Privacy first',
                         'Your data stays on your device, always secure',
                       ),
@@ -109,11 +108,11 @@ class WelcomeScreen extends StatelessWidget {
                 // Get Started Button
                 SizedBox(
                   width: double.infinity,
-                  child: CupertinoButton.filled(
+                  child: ElevatedButton(
                     onPressed: () {
                       Navigator.push(
                         context,
-                        CupertinoPageRoute(
+                        MaterialPageRoute(
                           builder: (context) => const UserSetupScreen(),
                           fullscreenDialog: true,
                         ),
@@ -135,7 +134,7 @@ class WelcomeScreen extends StatelessWidget {
                   'Your data stays on your device\nNo cloud storage required',
                   style: TextStyle(
                     fontSize: 14,
-                    color: CupertinoColors.tertiaryLabel,
+                    color: Colors.grey[500],
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -155,12 +154,12 @@ class WelcomeScreen extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: CupertinoColors.systemBlue.withOpacity(0.1),
+            color: Colors.blue.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
             icon,
-            color: CupertinoColors.systemBlue,
+            color: Colors.blue,
             size: 20,
           ),
         ),
@@ -169,22 +168,22 @@ class WelcomeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: CupertinoColors.label,
+                              Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: CupertinoColors.secondaryLabel,
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
                 ),
-              ),
             ],
           ),
         ),

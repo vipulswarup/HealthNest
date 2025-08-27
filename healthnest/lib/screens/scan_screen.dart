@@ -1,5 +1,6 @@
 // Document scanning screen for AI-powered document processing
 
+import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_doc_scanner/flutter_doc_scanner.dart';
@@ -146,7 +147,7 @@ class _ScanScreenState extends State<ScanScreen> {
               height: 100,
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                border: Border.all(color: CupertinoColors.systemGrey4),
+                border: Border.all(color: Colors.grey[300]!),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: SingleChildScrollView(
@@ -272,11 +273,11 @@ class _ScanScreenState extends State<ScanScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('Scan Documents'),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Scan Documents'),
       ),
-      child: SafeArea(
+      body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -295,20 +296,27 @@ class _ScanScreenState extends State<ScanScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    border: Border.all(color: CupertinoColors.systemGrey4),
+                    border: Border.all(color: Colors.grey[300]!),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: CupertinoPicker(
-                    itemExtent: 40,
-                    onSelectedItemChanged: (index) {
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedPatientId,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    items: _patients.map((patient) => 
+                      DropdownMenuItem(
+                        value: patient.id,
+                        child: Text(patient.displayName),
+                      )
+                    ).toList(),
+                    onChanged: (value) {
                       setState(() {
-                        _selectedPatientId = _patients[index].id;
+                        _selectedPatientId = value;
                       });
                       _loadRecentRecords();
                     },
-                    children: _patients.map((patient) => 
-                      Center(child: Text(patient.displayName))
-                    ).toList(),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -327,13 +335,12 @@ class _ScanScreenState extends State<ScanScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: CupertinoButton(
-                      color: CupertinoColors.systemBlue,
+                    child: ElevatedButton(
                       onPressed: _isProcessing ? null : () => _pickImage(ImageSource.camera),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(CupertinoIcons.camera),
+                          Icon(Icons.camera_alt),
                           SizedBox(width: 8),
                           Text('Camera'),
                         ],
@@ -342,13 +349,15 @@ class _ScanScreenState extends State<ScanScreen> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: CupertinoButton(
-                      color: CupertinoColors.systemGrey,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey,
+                      ),
                       onPressed: _isProcessing ? null : () => _pickImage(ImageSource.gallery),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(CupertinoIcons.photo),
+                          Icon(Icons.photo_library),
                           SizedBox(width: 8),
                           Text('Gallery'),
                         ],
@@ -357,13 +366,15 @@ class _ScanScreenState extends State<ScanScreen> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: CupertinoButton(
-                      color: CupertinoColors.activeGreen,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                      ),
                       onPressed: _isProcessing ? null : _scanWithSystemScanner,
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(CupertinoIcons.doc_text_viewfinder),
+                          Icon(Icons.document_scanner),
                           SizedBox(width: 8),
                           Text('Scan'),
                         ],
@@ -378,7 +389,7 @@ class _ScanScreenState extends State<ScanScreen> {
                 const Center(
                   child: Column(
                     children: [
-                      CupertinoActivityIndicator(),
+                      CircularProgressIndicator(),
                       SizedBox(height: 8),
                       Text('Processing document...'),
                     ],

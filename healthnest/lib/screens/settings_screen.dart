@@ -1,7 +1,7 @@
 // Settings screen for app configuration and privacy settings
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 
@@ -10,12 +10,12 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
-      backgroundColor: CupertinoColors.systemGroupedBackground,
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('Settings'),
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        title: const Text('Settings'),
       ),
-      child: SafeArea(
+      body: SafeArea(
         child: Consumer<UserProvider>(
           builder: (context, userProvider, child) {
             final user = userProvider.currentUser;
@@ -45,13 +45,13 @@ class SettingsScreen extends StatelessWidget {
                         width: 80,
                         height: 80,
                         decoration: BoxDecoration(
-                          color: CupertinoColors.systemBlue.withOpacity(0.1),
+                          color: Colors.blue.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(40),
                         ),
                         child: const Icon(
-                          CupertinoIcons.person_circle_fill,
+                          Icons.person,
                           size: 50,
-                          color: CupertinoColors.systemBlue,
+                          color: Colors.blue,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -60,14 +60,14 @@ class SettingsScreen extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: CupertinoColors.label,
+                          color: Colors.black87,
                         ),
                       ),
                       if (user?.emails != null && user!.emails.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         ...user!.emails.map((email) => Row(
                           children: [
-                            const Icon(CupertinoIcons.mail, size: 18, color: CupertinoColors.systemBlue),
+                            const Icon(Icons.email, size: 18, color: Colors.blue),
                             const SizedBox(width: 8),
                             Text(
                               email,
@@ -85,11 +85,11 @@ class SettingsScreen extends StatelessWidget {
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 20),
                   decoration: BoxDecoration(
-                    color: CupertinoColors.systemBackground,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: CupertinoColors.systemGrey.withOpacity(0.1),
+                        color: Colors.grey.withOpacity(0.1),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -98,7 +98,7 @@ class SettingsScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       _buildSettingsRow(
-                        icon: CupertinoIcons.person_2,
+                        icon: Icons.people,
                         title: 'Family Members',
                         subtitle: 'Manage family profiles',
                         onTap: () {
@@ -120,7 +120,7 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       _buildDivider(),
                       _buildSettingsRow(
-                        icon: CupertinoIcons.cloud_upload,
+                        icon: Icons.cloud_upload,
                         title: 'Sync Settings',
                         subtitle: 'Manage cloud synchronization',
                         onTap: () {
@@ -142,7 +142,7 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       _buildDivider(),
                       _buildSettingsRow(
-                        icon: CupertinoIcons.lock_shield,
+                        icon: Icons.security,
                         title: 'Privacy & Security',
                         subtitle: 'Manage data privacy',
                         onTap: () {
@@ -171,11 +171,11 @@ class SettingsScreen extends StatelessWidget {
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 20),
                   decoration: BoxDecoration(
-                    color: CupertinoColors.systemBackground,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: CupertinoColors.systemGrey.withOpacity(0.1),
+                        color: Colors.grey.withOpacity(0.1),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -184,7 +184,7 @@ class SettingsScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       _buildSettingsRow(
-                        icon: CupertinoIcons.info_circle,
+                        icon: Icons.info,
                         title: 'About HealthNest',
                         subtitle: 'Version 1.0.0',
                         onTap: () {
@@ -207,7 +207,7 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       _buildDivider(),
                       _buildSettingsRow(
-                        icon: CupertinoIcons.question_circle,
+                        icon: Icons.help,
                         title: 'Help & Support',
                         subtitle: 'Get help and contact support',
                         onTap: () {
@@ -246,9 +246,8 @@ class SettingsScreen extends StatelessWidget {
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    return CupertinoButton(
-      padding: EdgeInsets.zero,
-      onPressed: onTap,
+    return InkWell(
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -257,12 +256,12 @@ class SettingsScreen extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: CupertinoColors.systemBlue.withOpacity(0.1),
+                color: Colors.blue.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 icon,
-                color: CupertinoColors.systemBlue,
+                color: Colors.blue,
                 size: 20,
               ),
             ),
@@ -276,7 +275,7 @@ class SettingsScreen extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: CupertinoColors.label,
+                      color: Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -284,15 +283,15 @@ class SettingsScreen extends StatelessWidget {
                     subtitle,
                     style: TextStyle(
                       fontSize: 14,
-                      color: CupertinoColors.secondaryLabel,
+                      color: Colors.grey[600],
                     ),
                   ),
                 ],
               ),
             ),
             const Icon(
-              CupertinoIcons.chevron_right,
-              color: CupertinoColors.systemGrey,
+              Icons.chevron_right,
+              color: Colors.grey,
               size: 16,
             ),
           ],
@@ -304,7 +303,7 @@ class SettingsScreen extends StatelessWidget {
   Widget _buildDivider() {
     return Container(
       height: 1,
-      color: CupertinoColors.systemGrey5,
+      color: Colors.grey[300],
       margin: const EdgeInsets.only(left: 72),
     );
   }
