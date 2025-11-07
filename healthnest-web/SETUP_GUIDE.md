@@ -25,7 +25,7 @@ This guide will help you set up and test the foundation of HealthNest.
 - `MONGODB_DB_NAME`: Use `healthnest` (or any name you prefer)
 
 **NextAuth:**
-- `NEXTAUTH_URL`: Use `http://localhost:3000` for local development
+- `NEXTAUTH_URL`: Use `http://localhost:3001` for local development
 - `NEXTAUTH_SECRET`: Paste the secret you generated above
 
 ### Optional (can skip for initial testing):
@@ -102,11 +102,11 @@ npm run dev
 **Expected output:**
 ```
   ▲ Next.js 16.0.1
-  - Local:        http://localhost:3000
+  - Local:        http://localhost:3001
   - Ready in 2.3s
 ```
 
-Open http://localhost:3000 in your browser. You should see the default Next.js page.
+Open http://localhost:3001 in your browser. You should see the default Next.js page.
 
 ## Step 5: Test MongoDB Connection
 
@@ -117,18 +117,18 @@ Let's create a simple test endpoint to verify MongoDB is working.
    # This will be created in the next step
    ```
 
-2. Visit: http://localhost:3000/api/test/db
+2. Visit: http://localhost:3001/api/test/db
 
 You should see a JSON response indicating the connection status.
 
 ## Step 6: Test Authentication Setup
 
 1. **Check NextAuth is configured:**
-   - Visit: http://localhost:3000/api/auth/signin
+   - Visit: http://localhost:3001/api/auth/signin
    - You should see the NextAuth sign-in page (or redirect)
 
 2. **Test session endpoint:**
-   - Visit: http://localhost:3000/api/auth/session
+   - Visit: http://localhost:3001/api/auth/session
    - Should return `{"user":null}` (no user logged in)
 
 ## Step 7: Verify Project Structure
@@ -206,8 +206,8 @@ We can proceed to implement the API layer (Task #8) which will include:
 - [ ] MongoDB Atlas cluster created and accessible
 - [ ] `npm run init-db` completed successfully
 - [ ] `npm run dev` starts without errors
-- [ ] http://localhost:3000 loads
-- [ ] http://localhost:3000/api/auth/session returns JSON
+- [ ] http://localhost:3001 loads
+- [ ] http://localhost:3001/api/auth/session returns JSON
 
 Let me know if you encounter any issues or if everything works!
 

@@ -40,7 +40,7 @@ Required environment variables:
 
 - `MONGODB_URI`: Your MongoDB Atlas connection string
 - `MONGODB_DB_NAME`: Database name (default: `healthnest`)
-- `NEXTAUTH_URL`: Your app URL (e.g., `http://localhost:3000`)
+- `NEXTAUTH_URL`: Your app URL (e.g., `http://localhost:3001`)
 - `NEXTAUTH_SECRET`: Generate with `openssl rand -base64 32`
 - `R2_ACCOUNT_ID`: Cloudflare R2 account ID
 - `R2_ACCESS_KEY_ID`: Cloudflare R2 access key
@@ -68,7 +68,7 @@ npm run init-db
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3001](http://localhost:3001) in your browser.
 
 ## Project Structure
 

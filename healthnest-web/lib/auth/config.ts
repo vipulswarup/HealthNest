@@ -38,6 +38,7 @@ export const authOptions: NextAuthOptions = {
           id: user._id.toString(),
           email: credentials.email,
           name: user.firstName,
+          firstName: user.firstName,
         };
       },
     }),
@@ -61,9 +62,11 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!existingUser) {
+          const nameParts = user.name?.split(' ') || [];
+          const firstName = nameParts[0] || 'User';
           await usersCollection.insertOne({
-            firstName: user.name?.split(' ')[0] || 'User',
-            lastName: user.name?.split(' ').slice(1).join(' ') || '',
+            firstName,
+            lastName: nameParts.slice(1).join(' ') || '',
             emails: [user.email || ''],
             mobileNumbers: [],
             createdAt: new Date(),
@@ -73,6 +76,11 @@ export const authOptions: NextAuthOptions = {
             authProvider: 'google',
             authProviderId: account.providerAccountId,
           });
+          // Add firstName to user object for JWT token
+          (user as any).firstName = firstName;
+        } else {
+          // Add firstName to user object for JWT token
+          (user as any).firstName = existingUser.firstName;
         }
       }
       return true;
@@ -80,12 +88,18 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user && token.sub) {
         session.user.id = token.sub;
+        if (token.firstName) {
+          session.user.firstName = token.firstName as string;
+        }
       }
       return session;
     },
     async jwt({ token, user }) {
       if (user) {
         token.sub = user.id;
+        if ('firstName' in user) {
+          token.firstName = user.firstName;
+        }
       }
       return token;
     },
