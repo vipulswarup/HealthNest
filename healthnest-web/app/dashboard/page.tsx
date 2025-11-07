@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { signOut } from 'next-auth/react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
@@ -77,16 +78,16 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-blue-100">
+              <Link href="/health-records" className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-blue-100">
                 <div className="text-4xl mb-3">📋</div>
                 <h3 className="font-semibold text-gray-900 text-lg mb-2">Health Records</h3>
                 <p className="text-sm text-gray-600">Manage your health records and documents</p>
-              </div>
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-green-100">
+              </Link>
+              <Link href="/patients" className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-green-100">
                 <div className="text-4xl mb-3">👥</div>
                 <h3 className="font-semibold text-gray-900 text-lg mb-2">Patients</h3>
                 <p className="text-sm text-gray-600">Manage family members' health profiles</p>
-              </div>
+              </Link>
               <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-purple-100">
                 <div className="text-4xl mb-3">💊</div>
                 <h3 className="font-semibold text-gray-900 text-lg mb-2">Medications</h3>
