@@ -1,18 +1,20 @@
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../models/user.dart';
 import '../models/patient.dart';
 import '../models/health_record.dart';
 import '../services/storage_service.dart';
-import '../services/hybrid_storage_service.dart';
+import '../services/supabase_storage_service.dart';
+import '../config/supabase_config.dart';
 
 class UserProvider with ChangeNotifier {
-  final StorageService _storage;
+  StorageService? _storage;
   User? _currentUser;
   List<Patient> _patients = [];
   bool _isLoading = false;
   bool _isInitialized = false;
 
-  UserProvider() : _storage = HybridStorageService();
+  UserProvider();
 
   // Getters
   User? get currentUser => _currentUser;
@@ -24,43 +26,66 @@ class UserProvider with ChangeNotifier {
 
   // Initialize the provider
   Future<void> initialize() async {
+    print('HealthNest: UserProvider.initialize() called');
     debugPrint('UserProvider: initialize called');
     if (_isInitialized) {
+      print('HealthNest: UserProvider already initialized, returning');
       debugPrint('UserProvider: already initialized, returning');
       return;
     }
     
+    print('HealthNest: UserProvider setting loading state');
     _setLoading(true);
     
     try {
-      debugPrint('UserProvider: initializing storage');
-      await _storage.initialize();
+      // Initialize storage service first
+      print('HealthNest: UserProvider creating storage service...');
+      _storage = SupabaseStorageService();
       
+      // Initialize Supabase first
+      print('HealthNest: Initializing Supabase...');
+      await Supabase.initialize(
+        url: SupabaseConfig.url,
+        anonKey: SupabaseConfig.anonKey,
+      );
+      print('HealthNest: Supabase initialization successful');
+      
+      print('HealthNest: UserProvider initializing storage service...');
+      debugPrint('UserProvider: initializing storage');
+      await _storage!.initialize();
+      print('HealthNest: UserProvider storage service initialized successfully');
+      
+      print('HealthNest: UserProvider checking for existing user...');
       debugPrint('UserProvider: checking for existing user');
-      final user = await _storage.getCurrentUser();
+      final user = await _storage!.getCurrentUser();
       if (user != null) {
+        print('HealthNest: UserProvider found existing user: ${user.firstName}');
         debugPrint('UserProvider: found existing user');
         _currentUser = user;
         
         if (user.onboardingCompleted) {
+          print('HealthNest: UserProvider onboarding completed, loading patients...');
           debugPrint('UserProvider: onboarding completed, loading patients');
           await _loadPatients();
         }
       } else {
+        print('HealthNest: UserProvider no existing user found');
         debugPrint('UserProvider: no existing user found');
+        
+        // No user exists - this is normal for first-time setup
+        print('HealthNest: No user found - user will need to complete onboarding');
       }
       
       _isInitialized = true;
+      print('HealthNest: UserProvider initialization complete');
       debugPrint('UserProvider: initialization complete');
     } catch (e) {
+      print('HealthNest: ERROR initializing UserProvider: $e');
       debugPrint('Error initializing UserProvider: $e');
-      // For web platform or other issues, we'll still mark as initialized
-      // so the app can continue with onboarding
-      if (kIsWeb) {
-        debugPrint('Web platform detected, continuing without database');
-        _isInitialized = true;
-      }
+      // Re-throw the error so it can be handled by the UI
+      rethrow;
     } finally {
+      print('HealthNest: UserProvider setting loading state to false');
       _setLoading(false);
     }
   }
@@ -93,7 +118,7 @@ class UserProvider with ChangeNotifier {
         onboardingCompleted: false,
       );
       
-      await _storage.saveUser(user);
+      await _storage!.saveUser(user);
       _currentUser = user;
       notifyListeners();
     } catch (e) {
@@ -115,7 +140,7 @@ class UserProvider with ChangeNotifier {
         updatedAt: DateTime.now(),
       );
       
-      await _storage.saveUser(updatedUser);
+      await _storage!.saveUser(updatedUser);
       _currentUser = updatedUser;
       notifyListeners();
     } catch (e) {
@@ -131,7 +156,7 @@ class UserProvider with ChangeNotifier {
     _setLoading(true);
     
     try {
-      await _storage.savePatient(patient);
+      await _getStorage().savePatient(patient);
       _patients.add(patient);
       notifyListeners();
     } catch (e) {
@@ -146,7 +171,7 @@ class UserProvider with ChangeNotifier {
     _setLoading(true);
     
     try {
-      await _storage.savePatient(patient);
+      await _getStorage().savePatient(patient);
       final index = _patients.indexWhere((p) => p.id == patient.id);
       if (index != -1) {
         _patients[index] = patient;
@@ -164,7 +189,7 @@ class UserProvider with ChangeNotifier {
     _setLoading(true);
     
     try {
-      await _storage.deletePatient(patientId);
+      await _getStorage().deletePatient(patientId);
       _patients.removeWhere((p) => p.id == patientId);
       notifyListeners();
     } catch (e) {
@@ -184,7 +209,7 @@ class UserProvider with ChangeNotifier {
     _setLoading(true);
     
     try {
-      _patients = await _storage.getPatients();
+      _patients = await _getStorage().getPatients();
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading patients: $e');
@@ -198,7 +223,7 @@ class UserProvider with ChangeNotifier {
     _setLoading(true);
     
     try {
-      await _storage.syncToCloud();
+      await _getStorage().syncToCloud();
     } catch (e) {
       debugPrint('Error syncing to cloud: $e');
     } finally {
@@ -210,9 +235,9 @@ class UserProvider with ChangeNotifier {
     _setLoading(true);
     
     try {
-      await _storage.syncFromCloud();
+      await _getStorage().syncFromCloud();
       
-      final user = await _storage.getCurrentUser();
+      final user = await _getStorage().getCurrentUser();
       if (user != null) {
         _currentUser = user;
         if (user.onboardingCompleted) {
@@ -231,7 +256,7 @@ class UserProvider with ChangeNotifier {
   // Health record operations
   Future<List<HealthRecord>> getHealthRecords(String patientId) async {
     try {
-      return await _storage.getHealthRecords(patientId);
+      return await _getStorage().getHealthRecords(patientId);
     } catch (e) {
       debugPrint('Error getting health records: $e');
       rethrow;
@@ -241,7 +266,7 @@ class UserProvider with ChangeNotifier {
   Future<void> saveHealthRecord(HealthRecord record) async {
     _setLoading(true);
     try {
-      await _storage.saveHealthRecord(record);
+      await _getStorage().saveHealthRecord(record);
       notifyListeners();
     } catch (e) {
       debugPrint('Error saving health record: $e');
@@ -254,7 +279,7 @@ class UserProvider with ChangeNotifier {
   Future<void> deleteHealthRecord(String id) async {
     _setLoading(true);
     try {
-      await _storage.deleteHealthRecord(id);
+      await _getStorage().deleteHealthRecord(id);
       notifyListeners();
     } catch (e) {
       debugPrint('Error deleting health record: $e');
@@ -265,7 +290,7 @@ class UserProvider with ChangeNotifier {
   }
 
   Future<bool> isCloudConnected() async {
-    return await _storage.isCloudConnected();
+    return await _getStorage().isCloudConnected();
   }
 
   // Helper methods
@@ -275,10 +300,23 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  StorageService _getStorage() {
+    if (_storage == null) {
+      throw Exception('Storage service not initialized. Call initialize() first.');
+    }
+    return _storage!;
+  }
+
+
+
+
+
+
+
   // Cleanup
   @override
   Future<void> dispose() async {
-    await _storage.close();
+    await _getStorage().close();
     super.dispose();
   }
 } 

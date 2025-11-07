@@ -38,10 +38,11 @@ By participating in this project, you agree to abide by our Code of Conduct. Ple
 - Keep functions small and focused
 
 ### Privacy and Security
-- All data must remain local-first
+- All data must remain local-first with optional cloud sync
 - No telemetry or analytics without explicit user consent
 - Follow HIPAA, GDPR, and Indian privacy regulations
 - Encrypt sensitive data at rest and in transit
+- Use Supabase for secure cloud storage and synchronization
 
 ### Testing
 - Write unit tests for business logic
@@ -59,8 +60,10 @@ By participating in this project, you agree to abide by our Code of Conduct. Ple
 1. Clone the repository
 2. Install Flutter SDK
 3. Run `flutter pub get`
-4. Run `flutter test` to ensure everything works
-5. Start developing!
+4. Set up Supabase (see [SUPABASE_SETUP.md](SUPABASE_SETUP.md))
+5. Configure environment variables in `.env` file
+6. Run `flutter test` to ensure everything works
+7. Start developing!
 
 ## Questions?
 

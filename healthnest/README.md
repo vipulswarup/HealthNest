@@ -4,7 +4,7 @@ A local-first, privacy-compliant health record management application built with
 
 ## Overview
 
-HealthNest addresses the critical need for a unified health record management system for patients with complex medical conditions who receive care from multiple providers, hospitals, and systems. The app provides AI-powered document scanning, automatic categorization, and comprehensive health tracking while maintaining complete user control over their data.
+HealthNest addresses the critical need for a unified health record management system for patients with complex medical conditions who receive care from multiple providers, hospitals, and systems. The app provides AI-powered document scanning, automatic categorization, and comprehensive health tracking while maintaining complete user control over their data. Built with Supabase for cloud storage and real-time synchronization.
 
 ## Key Features
 
@@ -39,9 +39,9 @@ HealthNest addresses the critical need for a unified health record management sy
 - **ABHA Integration**: Support for Ayushman Bharat Health Account numbers
 
 ### 🔒 Privacy & Security
-- **Local-First Architecture**: All data stored locally on device
-- **User-Controlled Cloud**: Optional Google Drive/Sheets integration
-- **No Backend Costs**: Zero hosting fees, user owns their data
+- **Local-First Architecture**: All data stored locally on device with cloud sync
+- **Supabase Cloud Storage**: Secure cloud backup with real-time synchronization
+- **User-Controlled Data**: Complete control over data sharing and access
 - **Privacy Compliance**: Designed for HIPAA, GDPR, and Indian regulations
 
 ### 📱 Cross-Platform Support
@@ -62,8 +62,8 @@ HealthNest addresses the critical need for a unified health record management sy
 ### Services
 - **MLService**: AI-powered document analysis and text extraction
 - **VoiceService**: Voice recording and transcription
-- **StorageService**: Local and cloud data management
-- **GoogleSheetsService**: Google Sheets integration for cloud storage
+- **StorageService**: Local and Supabase cloud data management
+- **SupabaseStorageService**: Supabase integration for cloud storage and sync
 
 ### Standards Compliance
 - **openEHR**: Archetypes, templates, and compositions for health records
@@ -99,10 +99,10 @@ HealthNest addresses the critical need for a unified health record management sy
      - `ios/Runner/GoogleService-Info.plist` (iOS)
      - `android/app/google-services.json` (Android)
 
-4. **Set up Google Sheets Integration**
-   - Create a Google Sheets document
-   - Update `lib/services/google_sheets_service.dart` with your spreadsheet ID
-   - Configure Google Sheets API credentials
+4. **Set up Supabase Integration**
+   - Create a Supabase project at [supabase.com](https://supabase.com)
+   - Set up database tables (see [SUPABASE_SETUP.md](SUPABASE_SETUP.md))
+   - Configure environment variables in `.env` file
 
 5. **Run the application**
    ```bash
@@ -164,9 +164,9 @@ lib/
 │   └── voice_note.dart
 ├── services/                 # Business logic
 │   ├── storage_service.dart
+│   ├── supabase_storage_service.dart
 │   ├── ml_service.dart
-│   ├── voice_service.dart
-│   └── google_sheets_service.dart
+│   └── voice_service.dart
 ├── providers/                # State management
 │   └── user_provider.dart
 ├── screens/                  # UI screens
@@ -215,6 +215,7 @@ lib/
 - [x] Document scanning and OCR
 - [x] Patient profile management
 - [x] Local data storage
+- [x] Supabase cloud integration
 
 ### Phase 2: AI & ML Integration ✅
 - [x] AI-powered document classification

@@ -40,6 +40,12 @@ dependencies:
   sqflite_common_ffi: ^2.3.2
   path: ^1.8.3
   
+  # Supabase
+  supabase_flutter: ^2.3.4
+  
+  # Environment variables
+  flutter_dotenv: ^5.1.0
+  
   # Google Drive/Sheets integration
   googleapis: ^13.0.0
   googleapis_auth: ^1.4.1

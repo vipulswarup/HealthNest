@@ -39,6 +39,15 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Generated SQL files
+healthnest_setup.sql
+
+
 # Android Studio will place build artifacts here
 /android/app/debug
 /android/app/profile

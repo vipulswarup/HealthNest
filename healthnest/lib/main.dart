@@ -1,26 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/onboarding/welcome_screen.dart';
+import 'screens/error_screen.dart';
 import 'providers/user_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() async {
+  print('HealthNest: Starting application initialization...');
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize database for desktop platforms
-  if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.macOS || 
-                  defaultTargetPlatform == TargetPlatform.windows || 
-                  defaultTargetPlatform == TargetPlatform.linux)) {
-    // Initialize sqflite_common_ffi for desktop
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
+
+  // Load environment variables
+  try {
+    print('HealthNest: Loading environment variables...');
+    await dotenv.load(fileName: ".env");
+    print('HealthNest: Environment variables loaded successfully');
+  } catch (e) {
+    // If .env file is not found, we'll use the fallback values
+    print('HealthNest: Warning: .env file not found, using fallback configuration');
+    print('HealthNest: Error details: $e');
   }
   
-  // For web, we'll use a different storage approach
-  // The app will handle this gracefully by showing appropriate UI
+    // Initialize database for desktop platforms (fallback)
+  if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.macOS ||
+                  defaultTargetPlatform == TargetPlatform.windows ||
+                  defaultTargetPlatform == TargetPlatform.linux)) {
+    print('HealthNest: Initializing SQLite for desktop platform...');
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    print('HealthNest: SQLite initialization complete');
+  }
+
+  // Note: Supabase initialization will be handled by AppRouter with proper error handling
   
+  print('HealthNest: Starting Flutter app...');
   runApp(const HealthNestApp());
 }
 
@@ -53,6 +68,9 @@ class AppRouter extends StatefulWidget {
 }
 
 class _AppRouterState extends State<AppRouter> {
+  String? _errorMessage;
+  String? _errorDetails;
+
   @override
   void initState() {
     super.initState();
@@ -64,14 +82,42 @@ class _AppRouterState extends State<AppRouter> {
   }
 
   Future<void> _initializeApp() async {
-    debugPrint('Initializing userProvider...');
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    await userProvider.initialize();
-    debugPrint('UserProvider initialized');
+    try {
+      debugPrint('Initializing userProvider...');
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      await userProvider.initialize();
+      debugPrint('UserProvider initialized');
+    } catch (e) {
+      debugPrint('Error during initialization: $e');
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _errorDetails = e.toString();
+        });
+      }
+    }
+  }
+
+  void _retryInitialization() {
+    setState(() {
+      _errorMessage = null;
+      _errorDetails = null;
+    });
+    _initializeApp();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Show error screen if there's an error
+    if (_errorMessage != null) {
+      return ErrorScreen(
+        title: 'Configuration Error',
+        message: 'Failed to load application configuration. Please check your environment variables and database connection.',
+        details: _errorDetails,
+        onRetry: _retryInitialization,
+      );
+    }
+
     return Consumer<UserProvider>(
       builder: (context, userProvider, child) {
         debugPrint('AppRouter build: isLoading=${userProvider.isLoading}, isInitialized=${userProvider.isInitialized}');
