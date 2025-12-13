@@ -6,6 +6,12 @@ export interface HospitalIdentifier {
   value: string;
 }
 
+export interface EmergencyContact {
+  name: string;
+  phone: string;
+  relation: string;
+}
+
 export interface Patient {
   _id?: string;
   id?: string;
@@ -20,7 +26,7 @@ export interface Patient {
   gender: string;
   abhaNumber?: string;
   bloodGroup?: string;
-  emergencyContacts: string[];
+  emergencyContacts: EmergencyContact[];
   preferences: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -40,7 +46,7 @@ export interface CreatePatientInput {
   gender: string;
   abhaNumber?: string;
   bloodGroup?: string;
-  emergencyContacts?: string[];
+  emergencyContacts?: EmergencyContact[];
   preferences?: Record<string, any>;
   hospitalIdentifiers?: HospitalIdentifier[];
   mobileNumbers?: MobileNumber[];
@@ -57,7 +63,7 @@ export interface UpdatePatientInput {
   gender?: string;
   abhaNumber?: string;
   bloodGroup?: string;
-  emergencyContacts?: string[];
+  emergencyContacts?: EmergencyContact[];
   preferences?: Record<string, any>;
   hospitalIdentifiers?: HospitalIdentifier[];
   mobileNumbers?: MobileNumber[];

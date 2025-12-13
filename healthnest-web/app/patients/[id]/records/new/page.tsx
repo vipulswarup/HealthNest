@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { getRecordTypeOptions } from '@/lib/constants/labels';
 
 export default function NewHealthRecordPage() {
   const { data: session, status } = useSession();
@@ -176,12 +177,11 @@ export default function NewHealthRecordPage() {
                   onChange={(e) => setFormData({ ...formData, recordType: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
                 >
-                  <option value="openEHR-EHR-OBSERVATION.lab_test.v1">Lab Test</option>
-                  <option value="openEHR-EHR-OBSERVATION.vital_signs.v2">Vital Signs</option>
-                  <option value="openEHR-EHR-EVALUATION.problem_diagnosis.v1">Problem/Diagnosis</option>
-                  <option value="openEHR-EHR-INSTRUCTION.medication_order.v1">Medication Order</option>
-                  <option value="openEHR-EHR-ACTION.medication.v1">Medication</option>
-                  <option value="openEHR-EHR-EVALUATION.clinical_synopsis.v1">Clinical Synopsis</option>
+                  {getRecordTypeOptions().map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 

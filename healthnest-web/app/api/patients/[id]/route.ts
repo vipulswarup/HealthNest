@@ -17,7 +17,11 @@ const updatePatientSchema = z.object({
   gender: z.string().optional(),
   abhaNumber: z.string().optional(),
   bloodGroup: z.string().optional(),
-  emergencyContacts: z.array(z.string()).optional(),
+  emergencyContacts: z.array(z.object({
+    name: z.string().min(1, 'Emergency contact name is required'),
+    phone: z.string().min(1, 'Emergency contact phone is required'),
+    relation: z.string().min(1, 'Emergency contact relation is required'),
+  })).optional(),
   preferences: z.record(z.string(), z.any()).optional(),
   hospitalIdentifiers: z.array(z.object({
     systemName: z.string(),

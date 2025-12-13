@@ -9,8 +9,15 @@ function getMongoConfig() {
     throw new Error('Please add your Mongo DB name to .env');
   }
 
+  const uri = process.env.MONGODB_URI.trim();
+  
+  // Validate connection string format
+  if (!uri.startsWith('mongodb://') && !uri.startsWith('mongodb+srv://')) {
+    throw new Error('MONGODB_URI must start with mongodb:// or mongodb+srv://');
+  }
+
   return {
-    uri: process.env.MONGODB_URI,
+    uri,
     dbName: process.env.MONGODB_DB_NAME,
   };
 }
@@ -31,12 +38,16 @@ function getClientPromise(): Promise<MongoClient> {
     };
 
     if (!globalWithMongo._mongoClientPromise) {
-      client = new MongoClient(config.uri);
+      client = new MongoClient(config.uri, {
+        serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+      });
       globalWithMongo._mongoClientPromise = client.connect();
     }
     clientPromise = globalWithMongo._mongoClientPromise;
   } else {
-    client = new MongoClient(config.uri);
+    client = new MongoClient(config.uri, {
+      serverSelectionTimeoutMS: 5000,
+    });
     clientPromise = client.connect();
   }
 

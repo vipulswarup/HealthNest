@@ -19,7 +19,7 @@ export default function NewPatientPage() {
     gender: '',
     abhaNumber: '',
     bloodGroup: '',
-    emergencyContacts: '',
+    emergencyContacts: [] as Array<{ name: string; phone: string; relation: string }>,
   });
 
   useEffect(() => {
@@ -37,8 +37,12 @@ export default function NewPatientPage() {
 
     try {
       const emergencyContactsArray = formData.emergencyContacts
-        ? formData.emergencyContacts.split(',').map((c) => c.trim()).filter(Boolean)
-        : [];
+        .filter((contact) => contact.name.trim() && contact.phone.trim() && contact.relation.trim())
+        .map((contact) => ({
+          name: contact.name.trim(),
+          phone: contact.phone.trim(),
+          relation: contact.relation.trim(),
+        }));
 
       const response = await fetch('/api/patients', {
         method: 'POST',
@@ -52,7 +56,7 @@ export default function NewPatientPage() {
           gender: formData.gender,
           abhaNumber: formData.abhaNumber || undefined,
           bloodGroup: formData.bloodGroup || undefined,
-          emergencyContacts: emergencyContactsArray,
+          emergencyContacts: emergencyContactsArray.length > 0 ? emergencyContactsArray : undefined,
         }),
       });
 
@@ -225,18 +229,125 @@ export default function NewPatientPage() {
               </div>
 
               <div>
-                <label htmlFor="emergencyContacts" className="block text-sm font-medium text-gray-700 mb-2">
-                  Emergency Contacts
-                </label>
-                <input
-                  type="text"
-                  id="emergencyContacts"
-                  value={formData.emergencyContacts}
-                  onChange={(e) => setFormData({ ...formData, emergencyContacts: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
-                  placeholder="Comma-separated phone numbers"
-                />
-                <p className="mt-1 text-sm text-gray-500">Separate multiple contacts with commas</p>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Emergency Contacts
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({
+                        ...formData,
+                        emergencyContacts: [
+                          ...formData.emergencyContacts,
+                          { name: '', phone: '', relation: '' },
+                        ],
+                      });
+                    }}
+                    className="text-sm text-[#0175C2] hover:text-[#015a96] font-medium transition-colors"
+                  >
+                    + Add Contact
+                  </button>
+                </div>
+                {formData.emergencyContacts.length === 0 ? (
+                  <div className="text-sm text-gray-500 py-4 text-center border border-gray-200 rounded-lg bg-gray-50">
+                    No emergency contacts added. Click "Add Contact" to add one.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {formData.emergencyContacts.map((contact, index) => (
+                      <div
+                        key={index}
+                        className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <h4 className="text-sm font-medium text-gray-700">
+                            Contact {index + 1}
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData({
+                                ...formData,
+                                emergencyContacts: formData.emergencyContacts.filter(
+                                  (_, i) => i !== index
+                                ),
+                              });
+                            }}
+                            className="text-sm text-red-600 hover:text-red-800 transition-colors"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label
+                              htmlFor={`contact-name-${index}`}
+                              className="block text-xs font-medium text-gray-600 mb-1"
+                            >
+                              Name *
+                            </label>
+                            <input
+                              type="text"
+                              id={`contact-name-${index}`}
+                              required
+                              value={contact.name}
+                              onChange={(e) => {
+                                const updated = [...formData.emergencyContacts];
+                                updated[index].name = e.target.value;
+                                setFormData({ ...formData, emergencyContacts: updated });
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent text-sm"
+                              placeholder="Full name"
+                            />
+                          </div>
+                          <div>
+                            <label
+                              htmlFor={`contact-phone-${index}`}
+                              className="block text-xs font-medium text-gray-600 mb-1"
+                            >
+                              Phone Number *
+                            </label>
+                            <input
+                              type="tel"
+                              id={`contact-phone-${index}`}
+                              required
+                              value={contact.phone}
+                              onChange={(e) => {
+                                const updated = [...formData.emergencyContacts];
+                                updated[index].phone = e.target.value;
+                                setFormData({ ...formData, emergencyContacts: updated });
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent text-sm"
+                              placeholder="Phone number"
+                            />
+                          </div>
+                          <div>
+                            <label
+                              htmlFor={`contact-relation-${index}`}
+                              className="block text-xs font-medium text-gray-600 mb-1"
+                            >
+                              Relation *
+                            </label>
+                            <input
+                              type="text"
+                              id={`contact-relation-${index}`}
+                              required
+                              value={contact.relation}
+                              onChange={(e) => {
+                                const updated = [...formData.emergencyContacts];
+                                updated[index].relation = e.target.value;
+                                setFormData({ ...formData, emergencyContacts: updated });
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent text-sm"
+                              placeholder="e.g., Spouse, Parent, Sibling"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end space-x-4 pt-4">

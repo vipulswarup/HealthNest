@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { getRecordTypeLabel } from '@/lib/constants/labels';
 
 interface HealthRecord {
   id: string;
@@ -139,17 +140,6 @@ export default function HealthRecordsPage() {
     }
   };
 
-  const getRecordTypeLabel = (recordType: string) => {
-    const labels: Record<string, string> = {
-      'openEHR-EHR-OBSERVATION.lab_test.v1': 'Lab Test',
-      'openEHR-EHR-OBSERVATION.vital_signs.v2': 'Vital Signs',
-      'openEHR-EHR-EVALUATION.problem_diagnosis.v1': 'Diagnosis',
-      'openEHR-EHR-INSTRUCTION.medication_order.v1': 'Medication Order',
-      'openEHR-EHR-ACTION.medication.v1': 'Medication',
-      'openEHR-EHR-EVALUATION.clinical_synopsis.v1': 'Clinical Synopsis',
-    };
-    return labels[recordType] || recordType;
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">

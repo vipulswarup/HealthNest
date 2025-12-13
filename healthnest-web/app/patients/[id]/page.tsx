@@ -5,6 +5,13 @@ import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { getRecordTypeLabel } from '@/lib/constants/labels';
+
+interface EmergencyContact {
+  name: string;
+  phone: string;
+  relation: string;
+}
 
 interface Patient {
   id: string;
@@ -14,7 +21,7 @@ interface Patient {
   gender: string;
   abhaNumber?: string;
   bloodGroup?: string;
-  emergencyContacts: string[];
+  emergencyContacts: EmergencyContact[] | string[];
 }
 
 interface HealthRecord {
@@ -206,9 +213,29 @@ export default function PatientDetailPage() {
               )}
 
               {patient.emergencyContacts.length > 0 && (
-                <div>
+                <div className="md:col-span-2">
                   <h3 className="text-sm font-medium text-gray-500 mb-2">Emergency Contacts</h3>
-                  <p className="text-gray-900">{patient.emergencyContacts.join(', ')}</p>
+                  <div className="space-y-2">
+                    {patient.emergencyContacts.map((contact, index) => {
+                      const isStructured = typeof contact === 'object' && 'name' in contact;
+                      if (isStructured) {
+                        const structuredContact = contact as EmergencyContact;
+                        return (
+                          <div key={index} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                            <p className="text-gray-900 font-medium">{structuredContact.name}</p>
+                            <p className="text-sm text-gray-600">{structuredContact.phone}</p>
+                            <p className="text-sm text-gray-500">{structuredContact.relation}</p>
+                          </div>
+                        );
+                      } else {
+                        return (
+                          <div key={index} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                            <p className="text-sm text-gray-600">{contact as string}</p>
+                          </div>
+                        );
+                      }
+                    })}
+                  </div>
                 </div>
               )}
             </div>
@@ -251,7 +278,7 @@ export default function PatientDetailPage() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
                           <h4 className="font-semibold text-gray-900">
-                            {record.recordType.split('.').pop()?.replace(/_/g, ' ')}
+                            {getRecordTypeLabel(record.recordType)}
                           </h4>
                           <span className="text-sm text-gray-500">•</span>
                           <span className="text-sm text-gray-600">{record.source}</span>
@@ -272,14 +299,12 @@ export default function PatientDetailPage() {
                           </div>
                         )}
                         {record.documentPath && (
-                          <a
-                            href={record.documentPath}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-[#0175C2] hover:text-[#015a96] inline-flex items-center"
+                          <Link
+                            href={`/health-records/${record.id}/document`}
+                            className="text-sm text-[#0175C2] hover:text-[#015a96] inline-flex items-center cursor-pointer"
                           >
                             📄 View Document
-                          </a>
+                          </Link>
                         )}
                       </div>
                     </div>

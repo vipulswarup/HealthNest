@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { DEFAULT_TAGS, RECORD_TYPES } from '@/lib/constants/tags';
+import { getRecordTypeOptions } from '@/lib/constants/labels';
 
 export default function NewHealthRecordPage() {
   const { data: session, status } = useSession();
@@ -189,9 +190,9 @@ export default function NewHealthRecordPage() {
                   onChange={(e) => setFormData({ ...formData, recordType: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
                 >
-                  {RECORD_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type.replace('openEHR-EHR-', '').replace('.v1', '').replace('.v2', '')}
+                  {getRecordTypeOptions().map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                 </select>
