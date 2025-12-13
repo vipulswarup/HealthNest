@@ -142,6 +142,44 @@ healthnest-web/
 - `medication_doses` - Medication dose logs
 - `medication_reminders` - Medication reminders
 
+## Deployment
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
+
+### Quick Deploy to Vercel (Recommended)
+
+1. Push your code to GitHub
+2. Go to [vercel.com](https://vercel.com) and sign up
+3. Click "New Project" and import your repository
+4. Add environment variables in project settings
+5. Deploy!
+
+Vercel automatically:
+- Detects Next.js configuration
+- Sets up CI/CD from your Git repository
+- Deploys on every push to main branch
+- Creates preview deployments for pull requests
+- Provides SSL certificates
+
+### Environment Variables
+
+Set these in your deployment platform:
+
+**Required:**
+- `MONGODB_URI` - MongoDB Atlas connection string
+- `MONGODB_DB_NAME` - Database name (default: `healthnest`)
+- `NEXTAUTH_URL` - Your production URL (auto-set by Vercel)
+- `NEXTAUTH_SECRET` - Generate with `openssl rand -base64 32`
+- `R2_ACCOUNT_ID` - Cloudflare R2 account ID
+- `R2_ACCESS_KEY_ID` - Cloudflare R2 access key
+- `R2_SECRET_ACCESS_KEY` - Cloudflare R2 secret key
+- `R2_BUCKET_NAME` - R2 bucket name
+
+**Optional:**
+- `R2_PUBLIC_URL` - Public URL for R2 bucket
+- `GOOGLE_CLIENT_ID` - Google OAuth client ID
+- `GOOGLE_CLIENT_SECRET` - Google OAuth client secret
+
 ## License
 
 See LICENSE file in the root directory.
