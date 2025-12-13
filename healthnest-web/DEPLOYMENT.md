@@ -206,6 +206,105 @@ Vercel auto-detects Next.js. Verify these settings:
 
 ---
 
+## Troubleshooting
+
+### "404 NOT_FOUND" on Home Page
+
+**Problem:** Home page shows 404 error after deployment.
+
+**Step-by-Step Debugging:**
+
+1. **Check Vercel Build Logs**
+   - Go to Vercel Dashboard → Your Project → Deployments
+   - Click on latest deployment → "Build Logs" tab
+   - Look for errors during build
+   - Verify build completes successfully (should see "Build Completed")
+
+2. **Verify Critical Environment Variables**
+   - Go to Vercel Dashboard → Project Settings → Environment Variables
+   - **CRITICAL:** Ensure `NEXTAUTH_SECRET` is set
+     - Generate: `openssl rand -base64 32`
+     - If missing, NextAuth will fail and app won't work
+     - This is the #1 cause of 404 errors
+   - **CRITICAL:** Ensure `NEXTAUTH_URL` matches your production URL
+     - Format: `https://your-app.vercel.app` (no trailing slash)
+     - Vercel auto-sets this, but verify it's correct
+   - Verify `MONGODB_URI` is set correctly
+
+3. **Check Root Directory**
+   - Go to Vercel Dashboard → Project Settings → General
+   - **Root Directory:** Should be empty (if `package.json` is at repo root)
+   - **Framework Preset:** Should show "Next.js"
+   - **Build Command:** Should be `npm run build` (or auto-detected)
+   - **Output Directory:** Should be `.next` (or auto-detected)
+
+4. **Test Build Locally**
+   ```bash
+   npm run build
+   npm run start
+   ```
+   - Visit `http://localhost:3001`
+   - If it works locally but not on Vercel, it's an environment/config issue
+
+5. **Check Runtime Logs**
+   - Go to Vercel Dashboard → Your Project → Functions
+   - Check logs for runtime errors
+   - Look for:
+     - "NEXTAUTH_SECRET is not set"
+     - MongoDB connection errors
+     - NextAuth initialization errors
+
+6. **Verify Page Structure**
+   - Ensure `app/page.tsx` exists and exports default component
+   - Check `app/layout.tsx` exists
+   - Verify no syntax errors in these files
+
+**Most Common Fix:**
+The #1 cause is missing `NEXTAUTH_SECRET`. Set it in Vercel environment variables and redeploy.
+
+**Quick Fix Checklist:**
+- [ ] `NEXTAUTH_SECRET` is set in Vercel environment variables
+- [ ] `NEXTAUTH_URL` matches production URL (check auto-set value)
+- [ ] Build completes successfully (check build logs)
+- [ ] Root Directory is empty or correct
+- [ ] `app/page.tsx` exists and exports default component
+
+### "No Next.js version detected"
+
+**Problem:** Vercel can't detect Next.js framework.
+
+**Solutions:**
+1. Check Root Directory setting in Vercel (should be empty or correct subdirectory)
+2. Ensure `package.json` has `"next"` in dependencies (not devDependencies)
+3. Verify `vercel.json` doesn't override framework detection incorrectly
+4. Try removing `vercel.json` temporarily to let auto-detection work
+5. Re-import the project in Vercel
+
+### Build Errors
+
+**Common issues:**
+- Missing environment variables → Add them in Vercel project settings
+- TypeScript errors → Fix locally first, then redeploy
+- Missing dependencies → Check `package.json` includes all required packages
+- MongoDB connection → Verify IP whitelist includes Vercel IPs (or use `0.0.0.0/0`)
+
+### Runtime Errors
+
+**Check function logs:**
+1. Go to Vercel Dashboard → Your Project → Functions
+2. Click on a function → View Logs
+3. Look for:
+   - Environment variable access errors
+   - Database connection timeouts
+   - API route errors
+
+**Common fixes:**
+- Verify all environment variables are set
+- Check MongoDB Atlas IP whitelist
+- Verify API routes are correctly structured
+
+---
+
 ## Monitoring & Analytics
 
 ### Vercel Analytics (Free)
