@@ -3,7 +3,7 @@ import "./globals.css";
 import Providers from "./providers";
 
 export const metadata: Metadata = {
-  title: "HealthNest - Your Health Record Management",
+  title: "SanoVault - Your Health Record Management",
   description: "Manage your health records, medications, and family health information",
   icons: {
     icon: [

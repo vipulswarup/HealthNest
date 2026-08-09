@@ -1,64 +1,27 @@
-# HealthNest
+# SanoVault
 
-A privacy-first, cloud-enabled personal health record app with AI-powered document management and analytics for comprehensive patient-owned care.
+SanoVault is a privacy-first personal health-record application. It brings medical documents, family profiles, OCR-assisted organization, and doctor-ready blood-report summaries into one secure place.
 
-## Overview
+The active web application is in [`sanovault-web`](./sanovault-web). It is built with Next.js, MongoDB, Cloudflare R2, and optional AI-assisted document processing.
 
-HealthNest is a modern health record management application built with Flutter that helps patients manage their health data across multiple healthcare providers. The app features AI-powered document scanning, automatic categorization, and comprehensive health tracking while maintaining user control over their data.
+## Highlights
 
-## Key Features
+- Secure health-record management for individuals and families
+- Upload, OCR, and organize medical documents
+- AI-assisted classification, tagging, and source extraction
+- Searchable patient and health-record timelines
+- Blood-report comparisons and printable doctor summaries
 
-- **🔍 AI-Powered Document Scanning**: Extract and categorize medical documents using Google ML Kit
-- **📊 Health Data Visualization**: Interactive charts and trend analysis
-- **🎤 Voice Notes & Transcription**: Record and transcribe medical consultations
-- **💊 Medication Management**: Track medications and adherence
-- **👨‍👩‍👧‍👦 Family Management**: Manage health records for multiple family members
-- **☁️ Cloud Sync**: Supabase-powered cloud storage with real-time synchronization
-- **🔒 Privacy & Security**: Local-first with optional cloud backup
-- **📱 Cross-Platform**: iOS, Android, macOS, Windows, Linux, and Web
+## Getting started
 
-## Quick Start
+```bash
+cd sanovault-web
+npm install
+npm run dev
+```
 
-### Prerequisites
-- Flutter SDK 3.8.1 or higher
-- Dart SDK 3.8.1 or higher
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/healthnest.git
-   cd healthnest
-   ```
-
-2. **Install dependencies**
-   ```bash
-   flutter pub get
-   ```
-
-3. **Set up Supabase** (see [SUPABASE_SETUP.md](healthnest/SUPABASE_SETUP.md))
-   - Create a Supabase project
-   - Set up database tables
-   - Configure environment variables
-
-4. **Run the application**
-   ```bash
-   flutter run
-   ```
-
-## Architecture
-
-- **Frontend**: Flutter with Material Design
-- **Backend**: Supabase (PostgreSQL + Real-time + Auth)
-- **AI/ML**: Google ML Kit for document processing
-- **Storage**: Local SQLite + Supabase Cloud Storage
-
-## Documentation
-
-- [Detailed Setup Guide](healthnest/README.md)
-- [Supabase Configuration](healthnest/SUPABASE_SETUP.md)
-- [Contributing Guidelines](healthnest/CONTRIBUTING.md)
+See the [web application README](./sanovault-web/README.md) for setup, required environment variables, and deployment details.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See [LICENSE](./LICENSE).

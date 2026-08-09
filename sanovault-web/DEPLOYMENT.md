@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide covers free, serverless deployment options with CI/CD for HealthNest Web.
+This guide covers free, serverless deployment options with CI/CD for SanoVault Web.
 
 ## Recommended Options
 

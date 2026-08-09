@@ -44,12 +44,12 @@ export default function Dashboard() {
             <div className="flex items-center space-x-3">
               <Image
                 src="/android-chrome-512x512.png"
-                alt="HealthNest Logo"
+                alt="SanoVault Logo"
                 width={40}
                 height={40}
                 className="rounded-full"
               />
-              <h1 className="text-xl font-bold text-gray-900">HealthNest</h1>
+              <h1 className="text-xl font-bold text-gray-900">SanoVault</h1>
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-700">

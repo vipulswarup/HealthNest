@@ -88,7 +88,7 @@ export default function SignUpPage() {
           <div className="flex justify-center mb-4">
             <Image
               src="/android-chrome-512x512.png"
-              alt="HealthNest Logo"
+              alt="SanoVault Logo"
               width={80}
               height={80}
               className="rounded-full"
@@ -99,7 +99,7 @@ export default function SignUpPage() {
             Create your account
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Start managing your health records with HealthNest
+            Start managing your health records with SanoVault
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

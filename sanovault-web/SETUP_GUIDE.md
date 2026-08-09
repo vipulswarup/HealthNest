@@ -1,12 +1,12 @@
-# HealthNest Setup & Testing Guide
+# SanoVault Setup & Testing Guide
 
-This guide will help you set up and test the foundation of HealthNest.
+This guide will help you set up and test the foundation of SanoVault.
 
 ## Step 1: Environment Variables Setup
 
 1. Copy the example environment file:
    ```bash
-   cd healthnest-web
+   cd sanovault-web
    cp .env.example .env
    ```
 
@@ -22,7 +22,7 @@ This guide will help you set up and test the foundation of HealthNest.
 
 **MongoDB:**
 - `MONGODB_URI`: Get this from MongoDB Atlas (see Step 2)
-- `MONGODB_DB_NAME`: Use `healthnest` (or any name you prefer)
+- `MONGODB_DB_NAME`: Use `sanovault` (or any name you prefer)
 
 **NextAuth:**
 - `NEXTAUTH_URL`: Use `http://localhost:3001` for local development
@@ -51,7 +51,7 @@ This guide will help you set up and test the foundation of HealthNest.
 2. **Create a Cluster:**
    - Choose a cloud provider and region
    - Select M0 (Free) tier
-   - Name your cluster (e.g., "HealthNest")
+   - Name your cluster (e.g., "SanoVault")
 
 3. **Create Database User:**
    - Go to "Database Access" → "Add New Database User"
@@ -69,8 +69,8 @@ This guide will help you set up and test the foundation of HealthNest.
    - Choose "Connect your application"
    - Copy the connection string
    - Replace `<password>` with your database user password
-   - Replace `<dbname>` with `healthnest` (or your chosen DB name)
-   - Example: `mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/healthnest?retryWrites=true&w=majority`
+   - Replace `<dbname>` with `sanovault` (or your chosen DB name)
+   - Example: `mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/sanovault?retryWrites=true&w=majority`
    - Paste this into `.env.local` as `MONGODB_URI`
 
 ## Step 3: Initialize Database

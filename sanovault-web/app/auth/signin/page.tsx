@@ -79,7 +79,7 @@ function SignInContent() {
           <div className="flex justify-center mb-4">
             <Image
               src="/android-chrome-512x512.png"
-              alt="HealthNest Logo"
+              alt="SanoVault Logo"
               width={80}
               height={80}
               className="rounded-full"
@@ -90,7 +90,7 @@ function SignInContent() {
             Welcome back
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Sign in to your HealthNest account
+            Sign in to your SanoVault account
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

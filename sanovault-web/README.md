@@ -1,4 +1,4 @@
-# HealthNest Web Application
+# SanoVault Web Application
 
 A web-first health record management system built with Next.js, MongoDB, and React.
 
@@ -39,7 +39,7 @@ cp .env.example .env
 Required environment variables:
 
 - `MONGODB_URI`: Your MongoDB Atlas connection string
-- `MONGODB_DB_NAME`: Database name (default: `healthnest`)
+- `MONGODB_DB_NAME`: Database name (default: `sanovault`)
 - `NEXTAUTH_URL`: Your app URL (e.g., `http://localhost:3001`)
 - `NEXTAUTH_SECRET`: Generate with `openssl rand -base64 32`
 - `R2_ACCOUNT_ID`: Cloudflare R2 account ID
@@ -73,7 +73,7 @@ Open [http://localhost:3001](http://localhost:3001) in your browser.
 ## Project Structure
 
 ```
-healthnest-web/
+sanovault-web/
 ├── app/                    # Next.js app router
 │   ├── api/               # API routes
 │   └── ...
@@ -167,7 +167,7 @@ Set these in your deployment platform:
 
 **Required:**
 - `MONGODB_URI` - MongoDB Atlas connection string
-- `MONGODB_DB_NAME` - Database name (default: `healthnest`)
+- `MONGODB_DB_NAME` - Database name (default: `sanovault`)
 - `NEXTAUTH_URL` - Your production URL (auto-set by Vercel)
 - `NEXTAUTH_SECRET` - Generate with `openssl rand -base64 32`
 - `R2_ACCOUNT_ID` - Cloudflare R2 account ID

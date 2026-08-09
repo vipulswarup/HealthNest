@@ -1,6 +1,6 @@
 {
-    "name": "HealthNest - Health Record Management",
-    "short_name": "HealthNest",
+    "name": "SanoVault - Health Record Management",
+    "short_name": "SanoVault",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#0175C2",
