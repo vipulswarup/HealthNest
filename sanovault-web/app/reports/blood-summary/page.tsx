@@ -32,13 +32,13 @@ function BloodSummaryContent() {
   }, [session?.user?.id, status, router]);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session?.user?.id) return;
     fetch('/api/patients').then((response) => response.ok ? response.json() : Promise.reject(new Error('Could not load patients')))
       .then(setPatients).catch((err) => setError(err.message));
-  }, [session]);
+  }, [session?.user?.id]);
 
   useEffect(() => {
-    if (!patientId || !session) return;
+    if (!patientId || !session?.user?.id) return;
     const selectedPatientId = patientId;
     let cancelled = false;
     async function loadSummary() {
@@ -57,7 +57,7 @@ function BloodSummaryContent() {
     }
     void loadSummary();
     return () => { cancelled = true; };
-  }, [patientId, session]);
+  }, [patientId, session?.user?.id]);
 
   const selectPatient = (id: string) => router.push(`/reports/blood-summary?patientId=${id}`);
 
