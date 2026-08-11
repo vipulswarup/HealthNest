@@ -202,14 +202,20 @@ export function parseBloodResults(ocrText = ''): LabResult[] {
       if (matchedAt === null) continue;
 
       const start = matchedAt + alias.length;
-      const window = text.slice(start, start + 160).replace(/^\s*[:=\-–—]?\s*/, '');
-      const valueMatch = window.match(new RegExp(`^${numberPattern}`));
+      // Skip common OCR/label noise: "(HB)", ":", "=", method notes, then read the first number.
+      const window = text
+        .slice(start, start + 220)
+        .replace(/^\s*(?:\([^)]{1,24}\)|\[[^\]]{1,24}\])?\s*[:=\-–—]?\s*/i, '');
+      const valueMatch = window.match(new RegExp(`^${numberPattern}`))
+        || window.match(new RegExp(`(?:^|\\s)${numberPattern}`));
       if (!valueMatch) continue;
+      const valueToken = valueMatch[1] || valueMatch[0];
 
-      const value = Number(valueMatch[1].replace(',', '.'));
+      const value = Number(String(valueToken).replace(',', '.'));
       if (!Number.isFinite(value)) continue;
 
-      const afterValue = window.slice(valueMatch[0].length).trim();
+      const valueIndex = window.search(new RegExp(escapeRegex(String(valueToken))));
+      const afterValue = window.slice(valueIndex + String(valueToken).length).trim();
       const unitMatch = afterValue.match(/^([a-zA-Zμµ/%][a-zA-Z0-9μµ/%^.-]{0,18})/);
       const rangeMatch = afterValue.match(rangePattern)
         || window.match(rangePattern);

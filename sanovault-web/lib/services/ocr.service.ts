@@ -201,8 +201,7 @@ async function extractViaExternalService(
 ): Promise<string | null> {
   const base = process.env.OCR_SERVICE_URL?.replace(/\/$/, '');
   if (!base) return null;
-  if (process.env.VERCEL && /localhost|127\.0\.0\.1/.test(base)) {
-    console.warn('Skipping OCR_SERVICE_URL on Vercel because it points at localhost');
+  if (/localhost|127\.0\.0\.1/.test(base)) {
     return null;
   }
 
