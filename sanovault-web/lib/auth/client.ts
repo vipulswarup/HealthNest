@@ -6,13 +6,14 @@ export const authClient = createAuthClient();
 
 export function useSession() {
   const { data, isPending } = authClient.useSession();
+  const fullName = data?.user.name?.trim() || data?.user.email || 'User';
 
   return {
     data: data ? { user: {
       id: data.user.id,
       email: data.user.email,
-      name: data.user.name,
-      firstName: data.user.name.split(/\s+/)[0] || 'User',
+      name: fullName,
+      firstName: fullName.split(/\s+/)[0] || 'User',
     } } : null,
     status: isPending ? 'loading' : data ? 'authenticated' : 'unauthenticated',
   } as const;

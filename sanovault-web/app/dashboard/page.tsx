@@ -42,7 +42,7 @@ export default function Dashboard() {
           <div className="flex justify-between h-16">
             <div className="flex items-center space-x-3">
               <Image
-                src="/android-chrome-512x512.png"
+                src="/logo.png"
                 alt="SanoVault Logo"
                 width={40}
                 height={40}

@@ -5,6 +5,7 @@ import Providers from "./providers";
 export const metadata: Metadata = {
   title: "SanoVault - Your Health Record Management",
   description: "Manage your health records, medications, and family health information",
+  manifest: "/manifest.json",
   icons: {
     icon: [
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },

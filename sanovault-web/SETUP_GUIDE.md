@@ -39,8 +39,10 @@ This guide will help you set up and test the foundation of SanoVault.
 **OCR Service:**
 - Leave empty for now - we'll set this up in Sprint 1
 
-**Google OAuth:**
-- Leave empty for now - email/password auth will work
+**Social SSO (Neon Console, not app env vars):**
+- Enable Google under Neon Console → Auth → Configuration
+- Add trusted domains for `http://localhost:3001` and your production URL
+- Register the Google redirect URI as `{NEON_AUTH_BASE_URL}/callback/google`
 
 ## Step 2: Neon and R2 Setup
 
@@ -48,6 +50,7 @@ This guide will help you set up and test the foundation of SanoVault.
 2. Copy the pooled and direct Postgres connection strings into `.env.local`.
 3. Copy Neon Auth's Auth URL and add it as `NEON_AUTH_BASE_URL`.
 4. Create a Cloudflare R2 bucket and an S3 API token restricted to that bucket; add the four R2 variables to `.env.local`.
+5. For Google social login in production, confirm Google is enabled in Neon Auth and add your app origins as trusted domains.
 
 ## Step 3: Initialize Database
 

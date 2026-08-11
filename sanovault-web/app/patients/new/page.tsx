@@ -97,7 +97,7 @@ export default function NewPatientPage() {
             <div className="flex items-center space-x-3">
               <Link href="/dashboard">
                 <Image
-                  src="/android-chrome-512x512.png"
+                  src="/logo.png"
                   alt="SanoVault Logo"
                   width={40}
                   height={40}
