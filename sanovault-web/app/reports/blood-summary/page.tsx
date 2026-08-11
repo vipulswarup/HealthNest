@@ -5,10 +5,17 @@ import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from '@/lib/auth/client';
+import { LabResultsEditor } from '@/components/lab/LabResultsEditor';
+import { LabResult } from '@/lib/reports/blood-summary';
 
 interface ResultPoint {
+  metric: string;
+  label: string;
+  panel: string;
   value: number;
   unit: string | null;
+  referenceLow: number | null;
+  referenceHigh: number | null;
   status: string;
   date: string;
   reportId: string;
@@ -32,13 +39,22 @@ interface PanelBlock {
   comparisons: Comparison[];
 }
 
+interface SummaryReport {
+  id: string;
+  date: string;
+  source: string;
+  documentPath?: string;
+  useManualResults?: boolean;
+  results: LabResult[];
+}
+
 interface SummaryResponse {
   patient: { id: string; firstName: string; lastName: string };
   periodStart: string;
   periodEnd: string;
   lookbackDays?: number;
   candidateReportCount: number;
-  reports: Array<{ id: string; date: string; source: string; documentPath?: string; results: Array<{ metric: string }> }>;
+  reports: SummaryReport[];
   comparisons: Comparison[];
   panels: PanelBlock[];
   keyFindings: Array<{ severity: string; text: string }>;
@@ -93,6 +109,10 @@ function BloodSummaryContent() {
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [editingReport, setEditingReport] = useState<SummaryReport | null>(null);
+  const [draftResults, setDraftResults] = useState<LabResult[]>([]);
+  const [savingEdits, setSavingEdits] = useState(false);
+  const [editError, setEditError] = useState('');
 
   useEffect(() => {
     if (status !== 'loading' && !session) router.replace('/auth/signin');
@@ -106,15 +126,29 @@ function BloodSummaryContent() {
       .catch((err) => setError(err.message));
   }, [session?.user?.id]);
 
+  const loadSummary = async (selectedPatientId: string) => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch(`/api/reports/blood-summary?patientId=${encodeURIComponent(selectedPatientId)}`);
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Could not generate the report');
+      setSummary(payload);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not generate the report');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!patientId || !session?.user?.id) return;
-    const selectedPatientId = patientId;
     let cancelled = false;
-    async function loadSummary() {
+    async function run() {
       setLoading(true);
       setError('');
       try {
-        const response = await fetch(`/api/reports/blood-summary?patientId=${encodeURIComponent(selectedPatientId)}`);
+        const response = await fetch(`/api/reports/blood-summary?patientId=${encodeURIComponent(patientId!)}`);
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || 'Could not generate the report');
         if (!cancelled) setSummary(payload);
@@ -124,13 +158,64 @@ function BloodSummaryContent() {
         if (!cancelled) setLoading(false);
       }
     }
-    void loadSummary();
+    void run();
     return () => {
       cancelled = true;
     };
   }, [patientId, session?.user?.id]);
 
   const selectPatient = (id: string) => router.push(`/reports/blood-summary?patientId=${id}`);
+
+  const openEditor = (report: SummaryReport) => {
+    setEditingReport(report);
+    setDraftResults(report.results || []);
+    setEditError('');
+  };
+
+  const closeEditor = () => {
+    if (savingEdits) return;
+    setEditingReport(null);
+    setDraftResults([]);
+    setEditError('');
+  };
+
+  const saveManualResults = async (clearOverride = false) => {
+    if (!editingReport || !patientId) return;
+    setSavingEdits(true);
+    setEditError('');
+    try {
+      const currentRes = await fetch(`/api/health-records/${editingReport.id}`);
+      const current = await currentRes.json();
+      if (!currentRes.ok) throw new Error(current.error || 'Could not load health record');
+
+      const nextData = { ...(current.data || {}) };
+      if (clearOverride) {
+        delete nextData.labResultsManual;
+        delete nextData.labResults;
+        delete nextData.labResultsEditedAt;
+      } else {
+        nextData.labResultsManual = true;
+        nextData.labResults = draftResults;
+        nextData.labResultsEditedAt = new Date().toISOString();
+      }
+
+      const saveRes = await fetch(`/api/health-records/${editingReport.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: nextData }),
+      });
+      const saved = await saveRes.json();
+      if (!saveRes.ok) throw new Error(saved.error || 'Could not save lab values');
+
+      setEditingReport(null);
+      setDraftResults([]);
+      await loadSummary(patientId);
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Could not save lab values');
+    } finally {
+      setSavingEdits(false);
+    }
+  };
 
   if (status === 'loading' || !session) {
     return <div className="min-h-screen grid place-items-center text-gray-600">Loading…</div>;
@@ -178,8 +263,8 @@ function BloodSummaryContent() {
           <select
             id="patient"
             value={patientId || ''}
-            onChange={(event) => selectPatient(event.target.value)}
-            className="w-full max-w-md rounded-lg border border-slate-300 px-3 py-2 print:hidden"
+            onChange={(e) => selectPatient(e.target.value)}
+            className="w-full max-w-md rounded-lg border border-slate-300 px-3 py-2"
           >
             <option value="">Select a patient</option>
             {patients.map((patient) => (
@@ -188,65 +273,49 @@ function BloodSummaryContent() {
               </option>
             ))}
           </select>
-          {summary && (
-            <p className="hidden print:block text-lg font-semibold">
-              {summary.patient.firstName} {summary.patient.lastName}
-            </p>
-          )}
         </section>
 
+        {error && (
+          <div className="mb-6 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-rose-800">{error}</div>
+        )}
+
         {!patientId && (
-          <div className="rounded-xl bg-white p-8 text-slate-600 shadow-sm">
-            Choose a patient to generate their report.
+          <div className="rounded-xl bg-white p-8 text-center text-slate-600 shadow-sm">
+            Choose a patient to generate the blood work summary.
           </div>
         )}
-        {loading && (
-          <div className="rounded-xl bg-white p-8 text-slate-600 shadow-sm">Building 90-day comparison…</div>
-        )}
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-red-800">{error}</div>
+
+        {patientId && loading && (
+          <div className="rounded-xl bg-white p-8 text-center text-slate-600 shadow-sm">Building summary…</div>
         )}
 
-        {summary && !loading && (
+        {patientId && !loading && summary && (
           <>
-            <header className="mb-6 rounded-xl bg-white p-6 shadow-sm print:shadow-none">
-              <h2 className="text-2xl font-bold text-slate-900">Blood work summary</h2>
-              <p className="mt-1 text-slate-700">
-                <strong>Patient:</strong> {summary.patient.firstName} {summary.patient.lastName}
-              </p>
-              <p className="text-sm text-slate-600">
-                Reporting period: {formatDate(summary.periodStart)} – {formatDate(summary.periodEnd)} · Generated{' '}
-                {formatDate(new Date().toISOString())}
-              </p>
-              <p className="mt-1 text-sm text-slate-500">
-                {summary.reports.length} report{summary.reports.length === 1 ? '' : 's'} with extractable values ·{' '}
-                {summary.comparisons.length} tracked metric{summary.comparisons.length === 1 ? '' : 's'}
-              </p>
-            </header>
-
-            {summary.reports.length === 0 ? (
-              <section className="rounded-xl bg-white p-8 shadow-sm">
-                <h3 className="text-lg font-semibold text-slate-900">No extractable blood results found</h3>
-                <p className="mt-2 text-slate-600">
-                  {summary.candidateReportCount > 0
-                    ? 'Lab reports were found in the last 90 days, but OCR text did not contain supported values. Re-process those documents or upload clearer copies.'
-                    : 'No blood/lab reports dated within the last 90 days were found.'}
-                </p>
-              </section>
+            {summary.comparisons.length === 0 ? (
+              <div className="rounded-xl bg-white p-8 text-center text-slate-600 shadow-sm">
+                No extractable lab values found in the last {summary.lookbackDays || 90} days.
+              </div>
             ) : (
               <>
                 <section className="mb-6 rounded-xl bg-white p-6 shadow-sm print:shadow-none">
-                  <h3 className="text-lg font-semibold text-slate-900">Key findings</h3>
-                  <ul className="mt-3 space-y-3">
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    {summary.patient.firstName} {summary.patient.lastName}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {formatDate(summary.periodStart)} – {formatDate(summary.periodEnd)} · {summary.candidateReportCount} report
+                    {summary.candidateReportCount === 1 ? '' : 's'} considered
+                  </p>
+                  <h3 className="mt-5 text-base font-semibold text-slate-900">Key findings</h3>
+                  <ul className="mt-3 space-y-2">
                     {summary.keyFindings.map((finding, index) => (
                       <li
                         key={index}
-                        className={`rounded-lg border p-3 text-sm ${
+                        className={`rounded-md px-3 py-2 text-sm ${
                           finding.severity === 'attention'
-                            ? 'border-amber-200 bg-amber-50 text-amber-950'
+                            ? 'bg-amber-50 text-amber-950'
                             : finding.severity === 'change'
-                              ? 'border-blue-200 bg-blue-50 text-blue-950'
-                              : 'border-slate-200 bg-slate-50 text-slate-700'
+                              ? 'bg-sky-50 text-sky-950'
+                              : 'bg-slate-50 text-slate-700'
                         }`}
                       >
                         {finding.text}
@@ -254,7 +323,7 @@ function BloodSummaryContent() {
                     ))}
                   </ul>
                   <p className="mt-4 text-xs text-slate-500">
-                    Derived from uploaded OCR text for clinician review. Not a diagnosis.
+                    Derived from uploaded OCR text for clinician review. Not a diagnosis. You can correct values per report below.
                   </p>
                 </section>
 
@@ -287,7 +356,7 @@ function BloodSummaryContent() {
                                 <div className="flex flex-wrap gap-2">
                                   {comparison.results.map((result) => (
                                     <Link
-                                      key={`${result.reportId}-${result.date}`}
+                                      key={`${result.reportId}-${result.date}-${result.value}`}
                                       href={result.documentPath || `/health-records/${result.reportId}`}
                                       className={`rounded-md px-2 py-1 hover:underline ${
                                         result.status === 'high' || result.status === 'low'
@@ -303,7 +372,7 @@ function BloodSummaryContent() {
                               </td>
                               <td className="px-5 py-4 text-slate-700">
                                 {comparison.change === null
-                                  ? 'Not comparable'
+                                  ? 'Not comparable (mixed/missing units)'
                                   : `${comparison.change > 0 ? '+' : ''}${comparison.change.toFixed(2)}${
                                       comparison.unit ? ` ${comparison.unit}` : ''
                                     } (${comparison.direction})`}
@@ -316,17 +385,30 @@ function BloodSummaryContent() {
                   </section>
                 ))}
 
-                <section className="rounded-xl bg-white p-6 shadow-sm print:shadow-none">
+                <section className="rounded-xl bg-white p-6 shadow-sm print:shadow-none print:hidden">
                   <h3 className="text-lg font-semibold text-slate-900">Reports included</h3>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Edit values only when auto-extraction is wrong. Unedited reports keep using OCR.
+                  </p>
                   <ul className="mt-3 divide-y divide-slate-100">
                     {summary.reports.map((report) => (
-                      <li key={report.id} className="flex items-center justify-between gap-3 py-3 text-sm">
-                        <Link href={report.documentPath || `/health-records/${report.id}`} className="text-[#0175C2] hover:underline">
-                          {formatDate(report.date)} · {report.source}
-                        </Link>
-                        <span className="text-slate-500">
-                          {report.results.length} extracted test{report.results.length === 1 ? '' : 's'}
-                        </span>
+                      <li key={report.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+                        <div>
+                          <Link href={report.documentPath || `/health-records/${report.id}`} className="text-[#0175C2] hover:underline">
+                            {formatDate(report.date)} · {report.source}
+                          </Link>
+                          <div className="mt-1 text-slate-500">
+                            {report.results.length} extracted test{report.results.length === 1 ? '' : 's'}
+                            {report.useManualResults ? ' · manual override' : ''}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => openEditor(report)}
+                          className="rounded-md border border-slate-300 px-3 py-1.5 text-slate-700 hover:bg-slate-50"
+                        >
+                          Edit values
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -336,6 +418,58 @@ function BloodSummaryContent() {
           </>
         )}
       </main>
+
+      {editingReport && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 sm:items-center print:hidden">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl bg-white p-5 shadow-xl">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Edit lab values</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  {formatDate(editingReport.date)} · {editingReport.source}
+                </p>
+              </div>
+              <button type="button" onClick={closeEditor} className="text-sm text-slate-600 hover:underline">
+                Close
+              </button>
+            </div>
+            {editError && (
+              <div className="mb-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+                {editError}
+              </div>
+            )}
+            <LabResultsEditor results={draftResults} onChange={setDraftResults} disabled={savingEdits} />
+            <div className="mt-5 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={savingEdits}
+                onClick={() => void saveManualResults(false)}
+                className="rounded-lg bg-[#0175C2] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              >
+                {savingEdits ? 'Saving…' : 'Save corrections'}
+              </button>
+              {editingReport.useManualResults && (
+                <button
+                  type="button"
+                  disabled={savingEdits}
+                  onClick={() => void saveManualResults(true)}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Revert to auto-extract
+                </button>
+              )}
+              <button
+                type="button"
+                disabled={savingEdits}
+                onClick={closeEditor}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

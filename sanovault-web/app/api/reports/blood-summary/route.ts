@@ -3,7 +3,11 @@ import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth/session';
 import { sql } from '@/lib/db/neon';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
-import { buildBloodReportSummary } from '@/lib/reports/blood-summary';
+import {
+  buildBloodReportSummary,
+  hasManualLabOverride,
+  readManualLabResults,
+} from '@/lib/reports/blood-summary';
 
 const LOOKBACK_DAYS = 90;
 
@@ -37,6 +41,7 @@ export async function GET(request: NextRequest) {
         hr.source,
         hr.record_type,
         hr.tags,
+        hr.data,
         hr.ocr_text,
         hr.document_id,
         hr.document_date,
@@ -53,20 +58,27 @@ export async function GET(request: NextRequest) {
             WHERE tag ~* '(blood|lab|pathology|haemat|hemat|cbc|lipid|thyroid|kidney|liver|iron|urine|diabetes|glucose)'
           )
           OR hr.ocr_text ~* '(hemoglobin|haemoglobin|creatinine|hba1c|triglyceride|cholesterol|tsh|platelet|ferritin)'
+          OR (hr.data ? 'labResultsManual' AND (hr.data->>'labResultsManual') = 'true')
         )
       ORDER BY effective_date DESC, hr.created_at DESC
     `;
 
     const summary = buildBloodReportSummary(
-      records.map((record) => ({
-        id: String(record.id),
-        date: new Date(record.effective_date || record.document_date || record.created_at),
-        source: String(record.source || 'Unknown source'),
-        documentPath: record.document_id
-          ? `/health-records/${record.id}/document`
-          : `/health-records/${record.id}`,
-        ocrText: record.ocr_text ? String(record.ocr_text) : undefined,
-      })),
+      records.map((record) => {
+        const data = record.data || {};
+        const useManualResults = hasManualLabOverride(data);
+        return {
+          id: String(record.id),
+          date: new Date(record.effective_date || record.document_date || record.created_at),
+          source: String(record.source || 'Unknown source'),
+          documentPath: record.document_id
+            ? `/health-records/${record.id}/document`
+            : `/health-records/${record.id}`,
+          ocrText: record.ocr_text ? String(record.ocr_text) : undefined,
+          useManualResults,
+          manualResults: useManualResults ? readManualLabResults(data) : undefined,
+        };
+      }),
     );
 
     return NextResponse.json({

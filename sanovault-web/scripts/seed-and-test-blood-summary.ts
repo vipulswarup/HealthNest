@@ -114,7 +114,19 @@ ALT (SGPT) 32
   assert(byMetric.tsh?.panel === 'thyroid', 'tsh panel');
   assert(byMetric.ferritin?.panel === 'iron', 'ferritin panel');
   assert(byMetric.alt?.panel === 'liver', 'alt panel');
-  console.log(`Parser OK (${parsed.length} metrics)`);
+
+  const kidneySample = `
+PROTEIN, URINE 21.6 High < 15 mg/dL
+CREATININE, URINE 50 39 - 259 mg/dL
+PROTEIN/CREATININE RATIO 0.43 High < 0.2 mg/mg creat
+SERUM CREATININE 1.16 0.7 - 1.3 mg/dL
+`;
+  const kidney = Object.fromEntries(parseBloodResults(kidneySample).map((item) => [item.metric, item]));
+  assert(kidney.creatinine?.value === 1.16, 'serum creatinine not clubbed with PCR');
+  assert(kidney.pcr?.value === 0.43, 'protein/creatinine ratio parsed separately');
+  assert(kidney.urine_creatinine?.value === 50, 'urine creatinine parsed separately');
+  assert(kidney.urine_protein?.value === 21.6, 'urine protein parsed separately');
+  console.log(`Parser OK (${parsed.length} metrics + kidney disambiguation)`);
 }
 
 async function seedUsers(pool: Pool) {

@@ -28,10 +28,19 @@ export interface BloodReportInput {
   source: string;
   documentPath?: string;
   ocrText?: string;
+  /** When true, use manualResults instead of OCR parse for this report. */
+  useManualResults?: boolean;
+  manualResults?: LabResult[];
 }
 
 export interface BloodReport extends BloodReportInput {
   results: LabResult[];
+}
+
+export interface LabMetricOption {
+  metric: string;
+  label: string;
+  panel: LabPanel;
 }
 
 export interface MetricComparison {
@@ -112,12 +121,13 @@ const METRICS: Array<{ metric: string; label: string; panel: LabPanel; aliases: 
 
   // Kidney
   { metric: 'urea', label: 'Urea', panel: 'kidney', aliases: ['blood urea nitrogen', 'blood urea', 'urea nitrogen', 'urea', 'bun'] },
-  { metric: 'creatinine', label: 'Creatinine', panel: 'kidney', aliases: ['serum creatinine', 'creatinine'] },
-  { metric: 'egfr', label: 'eGFR', panel: 'kidney', aliases: ['estimated gfr', 'egfr', 'gfr'] },
-  { metric: 'uric_acid', label: 'Uric acid', panel: 'kidney', aliases: ['serum uric acid', 'uric acid'] },
+  // Parse ratio / urine forms before bare "creatinine" so labels are not clubbed.
+  { metric: 'pcr', label: 'Protein/Creatinine ratio', panel: 'kidney', aliases: ['urinary protein creatinine ratio', 'protein/creatinine ratio', 'protein creatinine ratio', 'protein/creatinine', 'pcr'] },
   { metric: 'urine_protein', label: 'Urine protein', panel: 'kidney', aliases: ['protein, urine', 'urine protein', 'protein urine'] },
   { metric: 'urine_creatinine', label: 'Urine creatinine', panel: 'kidney', aliases: ['creatinine, urine', 'urine creatinine', 'creatinine urine'] },
-  { metric: 'pcr', label: 'Protein/Creatinine ratio', panel: 'kidney', aliases: ['protein/creatinine ratio', 'protein creatinine ratio', 'pcr'] },
+  { metric: 'creatinine', label: 'Serum creatinine', panel: 'kidney', aliases: ['serum creatinine', 'creatinine'] },
+  { metric: 'egfr', label: 'eGFR', panel: 'kidney', aliases: ['estimated gfr', 'egfr', 'gfr'] },
+  { metric: 'uric_acid', label: 'Uric acid', panel: 'kidney', aliases: ['serum uric acid', 'uric acid'] },
   { metric: 'sodium', label: 'Sodium', panel: 'kidney', aliases: ['serum sodium', 'sodium'] },
   { metric: 'potassium', label: 'Potassium', panel: 'kidney', aliases: ['serum potassium', 'potassium'] },
   { metric: 'calcium', label: 'Calcium', panel: 'kidney', aliases: ['serum calcium', 'calcium'] },
@@ -162,15 +172,114 @@ function escapeRegex(value: string): string {
 }
 
 function normaliseUnit(unit: string | null): string | null {
-  return unit?.toLowerCase().replace(/[\s.]/g, '').replace('μ', 'u').replace('µ', 'u') || null;
+  if (!unit) return null;
+  return unit
+    .toLowerCase()
+    .replace(/[\s.]/g, '')
+    .replace('μ', 'u')
+    .replace('µ', 'u')
+    .replace('mg\/mgcreat', 'mg/mg')
+    .replace('mgmgcreat', 'mg/mg');
 }
 
-function valueStatus(value: number, low: number | null, high: number | null): RangeStatus {
+/** Null/missing OCR units are treated as compatible with a known unit. */
+function unitsCompatible(a: string | null, b: string | null): boolean {
+  const na = normaliseUnit(a);
+  const nb = normaliseUnit(b);
+  if (!na || !nb) return true;
+  return na === nb;
+}
+
+function pickTrendEndpoints<T extends { date: Date; unit: string | null; value: number }>(
+  results: T[],
+): { oldest: T; newest: T } | null {
+  if (results.length < 2) return null;
+
+  const unitCounts = new Map<string, number>();
+  for (const result of results) {
+    const key = normaliseUnit(result.unit);
+    if (!key) continue;
+    unitCounts.set(key, (unitCounts.get(key) || 0) + 1);
+  }
+  const dominantUnit = [...unitCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+  const comparable = dominantUnit
+    ? results.filter((result) => unitsCompatible(result.unit, dominantUnit))
+    : results;
+  if (comparable.length < 2) return null;
+  return { oldest: comparable[0], newest: comparable[comparable.length - 1] };
+}
+
+export function valueStatus(value: number, low: number | null, high: number | null): RangeStatus {
   if (low === null && high === null) return 'unknown';
   if (low !== null && value < low) return 'low';
   if (high !== null && value > high) return 'high';
   if (low !== null || high !== null) return 'normal';
   return 'unknown';
+}
+
+export const LAB_METRIC_OPTIONS: LabMetricOption[] = METRICS.map((item) => ({
+  metric: item.metric,
+  label: item.label,
+  panel: item.panel,
+}));
+
+const PANEL_SET = new Set<string>(Object.keys(PANEL_LABELS));
+
+function asNumberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const n = typeof value === 'number' ? value : Number(String(value).replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Accepts stored JSON / editor payloads and returns validated LabResult rows. */
+export function sanitizeLabResults(raw: unknown): LabResult[] {
+  if (!Array.isArray(raw)) return [];
+  const byMetric = new Map<string, LabResult>();
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    const metric = String(row.metric || '').trim();
+    const value = asNumberOrNull(row.value);
+    if (!metric || value === null) continue;
+    const option = LAB_METRIC_OPTIONS.find((entry) => entry.metric === metric);
+    const panelRaw = String(row.panel || option?.panel || 'other');
+    const panel = (PANEL_SET.has(panelRaw) ? panelRaw : 'other') as LabPanel;
+    const label = String(row.label || option?.label || metric).trim() || metric;
+    const unitRaw = row.unit === null || row.unit === undefined || row.unit === '' ? null : String(row.unit).trim();
+    const referenceLow = asNumberOrNull(row.referenceLow);
+    const referenceHigh = asNumberOrNull(row.referenceHigh);
+    const statusRaw = String(row.status || '');
+    const status: RangeStatus = ['low', 'normal', 'high', 'unknown'].includes(statusRaw)
+      ? (statusRaw as RangeStatus)
+      : valueStatus(value, referenceLow, referenceHigh);
+    byMetric.set(metric, {
+      metric,
+      label,
+      panel,
+      value,
+      unit: unitRaw,
+      referenceLow,
+      referenceHigh,
+      status,
+    });
+  }
+  return [...byMetric.values()];
+}
+
+export function resolveReportResults(input: BloodReportInput): LabResult[] {
+  if (input.useManualResults) return sanitizeLabResults(input.manualResults || []);
+  return parseBloodResults(input.ocrText);
+}
+
+/** True when health_record.data marks lab values as manually curated. */
+export function hasManualLabOverride(data: unknown): boolean {
+  if (!data || typeof data !== 'object') return false;
+  return (data as Record<string, unknown>).labResultsManual === true;
+}
+
+export function readManualLabResults(data: unknown): LabResult[] {
+  if (!data || typeof data !== 'object') return [];
+  return sanitizeLabResults((data as Record<string, unknown>).labResults);
 }
 
 /**
@@ -189,23 +298,50 @@ export function parseBloodResults(ocrText = ''): LabResult[] {
       let aliasMatch: RegExpExecArray | null;
       let matchedAt: number | null = null;
       while ((aliasMatch = aliasRegex.exec(text)) !== null) {
-        const around = text.slice(Math.max(0, aliasMatch.index - 24), aliasMatch.index + alias.length + 24).toLowerCase();
-        // Keep serum vs urine creatinine distinct.
-        if (definition.metric === 'creatinine' && /urine/.test(around)) continue;
-        if (definition.metric === 'urine_creatinine' && !/urine/.test(around)) continue;
-        if (definition.metric === 'urine_protein' && !/urine|protein\s*,/.test(around)) continue;
+        // Use a tight local window so neighbouring lines do not leak (e.g. "RATIO" above serum creatinine).
+        const labelStart = aliasMatch.index + (aliasMatch[1] ? aliasMatch[1].length : 0);
+        const labelEnd = labelStart + alias.length;
+        const around = text.slice(Math.max(0, labelStart - 18), labelEnd + 18).toLowerCase();
+        const matchedLabel = text.slice(labelStart, labelEnd).toLowerCase();
+
+        // Keep serum creatinine, urine creatinine, and protein/creatinine ratio distinct.
+        if (definition.metric === 'creatinine') {
+          if (/urine/.test(around)) continue;
+          if (/protein\s*\/|\/\s*creatinine|protein\s*creatinine|creatinine\s*ratio|\bpcr\b/.test(around)) {
+            continue;
+          }
+        }
+        if (definition.metric === 'urine_creatinine') {
+          if (!/urine/.test(around) && !/urine/.test(matchedLabel)) continue;
+          if (/protein\s*\/|protein\s*creatinine|creatinine\s*ratio|\bpcr\b/.test(matchedLabel + around.slice(0, 12))) {
+            continue;
+          }
+        }
+        if (definition.metric === 'pcr') {
+          if (!/(protein|ratio|pcr)/.test(matchedLabel) && !/(protein\s*\/|ratio|\bpcr\b)/.test(around)) {
+            continue;
+          }
+        }
+        if (definition.metric === 'urine_protein') {
+          if (!/urine|protein\s*,/.test(around) && !/urine/.test(matchedLabel)) continue;
+          if (/creatinine/.test(matchedLabel) || /protein\s*\/\s*creatinine|creatinine\s*ratio/.test(around)) {
+            continue;
+          }
+        }
         if (definition.metric === 'total_cholesterol' && /(hdl|ldl|vldl|non)/.test(around)) continue;
-        if ((definition.metric === 'hdl' || definition.metric === 'ldl') && /non[\s-]*hdl|non[\s-]*ldl/.test(around)) continue;
-        matchedAt = aliasMatch.index + (aliasMatch[1] ? aliasMatch[1].length : 0);
+        if ((definition.metric === 'hdl' || definition.metric === 'ldl') && /non[\s-]*hdl|non[\s-]*ldl/.test(around)) {
+          continue;
+        }
+        matchedAt = labelStart;
         break;
       }
       if (matchedAt === null) continue;
 
       const start = matchedAt + alias.length;
-      // Skip common OCR/label noise: "(HB)", ":", "=", method notes, then read the first number.
-      const window = text
-        .slice(start, start + 220)
-        .replace(/^\s*(?:\([^)]{1,24}\)|\[[^\]]{1,24}\])?\s*[:=\-–—]?\s*/i, '');
+      // Limit to the remainder of this line so the next analyte is not pulled into the window.
+      const lineEnd = text.indexOf('\n', start);
+      const rawWindow = text.slice(start, lineEnd === -1 ? start + 160 : lineEnd);
+      const window = rawWindow.replace(/^\s*(?:\([^)]{1,24}\)|\[[^\]]{1,24}\])?\s*[:=\-–—]?\s*/i, '');
       const valueMatch = window.match(new RegExp(`^${numberPattern}`))
         || window.match(new RegExp(`(?:^|\\s)${numberPattern}`));
       if (!valueMatch) continue;
@@ -216,14 +352,26 @@ export function parseBloodResults(ocrText = ''): LabResult[] {
 
       const valueIndex = window.search(new RegExp(escapeRegex(String(valueToken))));
       const afterValue = window.slice(valueIndex + String(valueToken).length).trim();
-      const unitMatch = afterValue.match(/^([a-zA-Zμµ/%][a-zA-Z0-9μµ/%^.-]{0,18})/);
-      const rangeMatch = afterValue.match(rangePattern)
-        || window.match(rangePattern);
-      const referenceLow = rangeMatch ? Number(rangeMatch[1].replace(',', '.')) : null;
-      const referenceHigh = rangeMatch ? Number(rangeMatch[2].replace(',', '.')) : null;
+      // Support "< 0.2 mg/mg" style ceilings and "0.7 - 1.3 mg/dL" ranges on the same line.
+      const ceilingMatch = afterValue.match(new RegExp(`(?:<|>|<=|>=)\\s*${numberPattern}`, 'i'));
+      const rangeMatch = afterValue.match(rangePattern);
+      let referenceLow: number | null = rangeMatch ? Number(rangeMatch[1].replace(',', '.')) : null;
+      let referenceHigh: number | null = rangeMatch ? Number(rangeMatch[2].replace(',', '.')) : null;
+      if (!rangeMatch && ceilingMatch) {
+        const bound = Number(ceilingMatch[1].replace(',', '.'));
+        if (Number.isFinite(bound)) {
+          if (/</.test(ceilingMatch[0])) referenceHigh = bound;
+          else referenceLow = bound;
+        }
+      }
+
+      // Prefer real units; skip status words (High/Low) and single-letter flags.
+      const unitMatch = afterValue.match(
+        /(?:^|\s)((?:mg\/(?:dL|dl|L|l|mg(?:\s*creat)?)|g\/(?:dL|dl|L|l)|mmol\/L|umol\/L|µmol\/L|μmol\/L|ng\/(?:mL|ml|dL|dl)|pg\/(?:mL|ml)|ug\/(?:mL|ml|dL|dl)|IU\/L|U\/L|mIU\/L|%|fL|fl|pg|mm\/hr|mm))(?=\s|$)/i,
+      )
+        || afterValue.match(/(?:^|\s)([a-zA-Zμµ][a-zA-Z0-9μµ/%^.-]{1,18})(?=\s|$)/);
       let unit = unitMatch?.[1] || null;
-      // Ignore OCR noise like "L" / "H" flags mistaken for units.
-      if (unit && /^[lh]$/i.test(unit)) unit = null;
+      if (unit && /^(high|low|normal|h|l|final|method)$/i.test(unit)) unit = null;
 
       results.set(definition.metric, {
         metric: definition.metric,
@@ -244,7 +392,11 @@ export function parseBloodResults(ocrText = ''): LabResult[] {
 
 export function buildBloodReportSummary(inputs: BloodReportInput[]) {
   const reports: BloodReport[] = inputs
-    .map((input) => ({ ...input, results: parseBloodResults(input.ocrText) }))
+    .map((input) => ({
+      ...input,
+      useManualResults: !!input.useManualResults,
+      results: resolveReportResults(input),
+    }))
     .filter((report) => report.results.length > 0)
     .sort((a, b) => b.date.getTime() - a.date.getTime());
 
@@ -275,13 +427,14 @@ export function buildBloodReportSummary(inputs: BloodReportInput[]) {
 
   const comparisons = [...metrics.values()].map((comparison) => {
     comparison.results.sort((a, b) => a.date.getTime() - b.date.getTime());
-    const oldest = comparison.results[0];
-    const newest = comparison.results[comparison.results.length - 1];
-    if (comparison.results.length > 1 && normaliseUnit(oldest.unit) === normaliseUnit(newest.unit)) {
+    const endpoints = pickTrendEndpoints(comparison.results);
+    if (endpoints) {
+      const { oldest, newest } = endpoints;
       const change = newest.value - oldest.value;
       comparison.change = change;
       comparison.changePercent = oldest.value === 0 ? null : (change / Math.abs(oldest.value)) * 100;
       comparison.direction = Math.abs(change) < 0.000001 ? 'unchanged' : change > 0 ? 'increased' : 'decreased';
+      comparison.unit = newest.unit || oldest.unit || comparison.unit;
     }
     return comparison;
   }).sort((a, b) => a.label.localeCompare(b.label));

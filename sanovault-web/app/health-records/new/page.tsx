@@ -8,9 +8,11 @@ import Link from 'next/link';
 import { DEFAULT_TAGS } from '@/lib/constants/tags';
 import { DocumentUploader } from '@/components/documents/DocumentUploader';
 import { OCRProgress } from '@/components/documents/OCRProgress';
+import { LabResultsEditor } from '@/components/lab/LabResultsEditor';
 import { HealthRecordCategory } from '@/lib/types/health-record-category.types';
 import { HealthcareSource } from '@/lib/types/healthcare-source.types';
 import { Doctor } from '@/lib/types/doctor.types';
+import { LabResult, parseBloodResults } from '@/lib/reports/blood-summary';
 
 function NewHealthRecordContent() {
   const { data: session, status } = useSession();
@@ -47,6 +49,10 @@ function NewHealthRecordContent() {
   // Processing states
   const [ocrStatus, setOcrStatus] = useState<'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'>('PENDING');
   const [aiStatus, setAiStatus] = useState<'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'>('PENDING');
+  const [ocrText, setOcrText] = useState('');
+  const [labEditorOpen, setLabEditorOpen] = useState(false);
+  const [labResults, setLabResults] = useState<LabResult[]>([]);
+  const [labResultsTouched, setLabResultsTouched] = useState(false);
   
   // AI extraction results
   const [aiResults, setAiResults] = useState<{
@@ -284,6 +290,10 @@ function NewHealthRecordContent() {
     setOcrStatus('PENDING');
     setAiStatus('PENDING');
     setAiResults(null);
+    setOcrText('');
+    setLabEditorOpen(false);
+    setLabResults([]);
+    setLabResultsTouched(false);
     setSourceInput('');
     setDoctorInput('');
     setFormData((prev) => ({
@@ -412,6 +422,13 @@ function NewHealthRecordContent() {
         setOcrStatus('FAILED');
         throw new Error('OCR failed');
       }
+
+      const ocrPayload = await ocrRes.json();
+      const extractedText = typeof ocrPayload.text === 'string' ? ocrPayload.text : '';
+      setOcrText(extractedText);
+      setLabResults(parseBloodResults(extractedText));
+      setLabResultsTouched(false);
+      setLabEditorOpen(false);
       
       setOcrStatus('COMPLETED');
 
@@ -562,6 +579,13 @@ function NewHealthRecordContent() {
     }
 
     try {
+      const recordData = { ...(formData.data || {}) };
+      if (labResultsTouched) {
+        recordData.labResultsManual = true;
+        recordData.labResults = labResults;
+        recordData.labResultsEditedAt = new Date().toISOString();
+      }
+
       const response = await fetch('/api/health-records', {
         method: 'POST',
         headers: {
@@ -570,8 +594,9 @@ function NewHealthRecordContent() {
         body: JSON.stringify({
           ...formData,
           source: finalSource,
-          data: formData.data || {},
+          data: recordData,
           documentId: uploadedDocument?.id,
+          ocrText: ocrText || undefined,
         }),
       });
 
@@ -1028,6 +1053,76 @@ function NewHealthRecordContent() {
             ))}
           </div>
         </div>
+
+        {(ocrText || labResults.length > 0 || labEditorOpen) && (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900">Lab values (optional)</h4>
+                <p className="mt-1 text-xs text-slate-600">
+                  Auto-extraction feeds the blood work summary by default. Open this only if you need to correct or add values.
+                </p>
+                {!labEditorOpen && labResults.length > 0 && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    {labResults.length} test{labResults.length === 1 ? '' : 's'} detected from OCR.
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {!labEditorOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (labResults.length === 0 && ocrText) {
+                        setLabResults(parseBloodResults(ocrText));
+                      }
+                      setLabEditorOpen(true);
+                    }}
+                    className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-[#0175C2] ring-1 ring-slate-300 hover:bg-slate-100"
+                  >
+                    Review / edit lab values
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLabResults(parseBloodResults(ocrText));
+                        setLabResultsTouched(false);
+                      }}
+                      className="rounded-md bg-white px-3 py-1.5 text-sm text-slate-700 ring-1 ring-slate-300 hover:bg-slate-100"
+                    >
+                      Reset to auto-extract
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLabEditorOpen(false)}
+                      className="rounded-md bg-white px-3 py-1.5 text-sm text-slate-700 ring-1 ring-slate-300 hover:bg-slate-100"
+                    >
+                      Hide
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+            {labEditorOpen && (
+              <div className="mt-4">
+                {labResultsTouched && (
+                  <p className="mb-2 text-xs font-medium text-amber-800">
+                    Manual corrections will be saved and used instead of OCR for this report.
+                  </p>
+                )}
+                <LabResultsEditor
+                  results={labResults}
+                  onChange={(next) => {
+                    setLabResults(next);
+                    setLabResultsTouched(true);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-3 pt-4">
           <button
