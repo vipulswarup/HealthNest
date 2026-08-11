@@ -9,7 +9,10 @@ const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_VISION_MODEL = process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b';
 const MIN_USEFUL_TEXT_CHARS = 80;
 const MAX_VISION_PAGES = 3;
+/** qwen/qwen3.6-27b rejects more than 3 images per request. */
+const MAX_VISION_IMAGES = 3;
 const MAX_VISION_IMAGE_EDGE = 1600;
+const MIN_USEFUL_IMAGE_PIXELS = 80_000;
 
 type ImagePayload = { mime: string; dataUrl: string };
 
@@ -129,20 +132,32 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
 async function extractPdfImagesForVision(buffer: Buffer): Promise<ImagePayload[]> {
   const pdf = await getDocumentProxy(new Uint8Array(buffer));
   const pageCount = Math.min(pdf.numPages || 1, MAX_VISION_PAGES);
-  const images: ImagePayload[] = [];
+  const all: Array<{
+    pixels: number;
+    image: { data: Uint8ClampedArray; width: number; height: number; channels: 1 | 3 | 4 };
+  }> = [];
 
   for (let page = 1; page <= pageCount; page += 1) {
-    const pageImages = await extractImages(pdf, page);
-    for (const image of pageImages) {
-      images.push({
-        mime: 'image/png',
-        dataUrl: encodeRawImageToPngDataUrl(image),
-      });
-      if (images.length >= 5) return images;
+    for (const image of await extractImages(pdf, page)) {
+      all.push({ pixels: image.width * image.height, image });
     }
   }
 
-  return images;
+  all.sort((a, b) => b.pixels - a.pixels);
+  const largeEnough = all.filter((item) => item.pixels >= MIN_USEFUL_IMAGE_PIXELS);
+  const selected = (largeEnough.length > 0 ? largeEnough : all).slice(0, MAX_VISION_IMAGES);
+
+  console.log('Vision image candidates:', {
+    pages: pageCount,
+    found: all.length,
+    kept: selected.length,
+    sizes: selected.map((c) => `${c.image.width}x${c.image.height}`),
+  });
+
+  return selected.map(({ image }) => ({
+    mime: 'image/png',
+    dataUrl: encodeRawImageToPngDataUrl(image),
+  }));
 }
 
 async function extractViaExternalService(
@@ -193,7 +208,7 @@ async function extractViaGroqVision(images: ImagePayload[]): Promise<string> {
         'Preserve labels, values, dates, doctor names, facility/hospital names, and table structure. ' +
         'Return plain text only, with line breaks.',
     },
-    ...images.slice(0, 5).map((image) => ({
+    ...images.slice(0, MAX_VISION_IMAGES).map((image) => ({
       type: 'image_url',
       image_url: { url: image.dataUrl },
     })),
