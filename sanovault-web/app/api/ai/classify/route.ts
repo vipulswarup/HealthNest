@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/config';
+import { getCurrentUser } from '@/lib/auth/session';
 import { getDocumentById, updateDocumentStatus } from '@/lib/services/document.service';
 import { classifyDocument } from '@/lib/services/ai.service';
 import { handleError, AppError } from '@/lib/middleware/error-handler';
@@ -20,8 +19,8 @@ function limitToFirstNWords(text: string, maxWords: number): string {
 
 export async function POST(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
+        const user = await getCurrentUser();
+        if (!user) {
             throw new AppError('Unauthorized', 401);
         }
 
@@ -36,7 +35,7 @@ export async function POST(request: NextRequest) {
             throw new AppError('Document not found', 404);
         }
 
-        if (document.userId !== session.user.id) {
+        if (document.userId !== user.id) {
             throw new AppError('Forbidden', 403);
         }
 

@@ -10,7 +10,7 @@ export interface HealthRecord {
   source: string;
   doctorName?: string;
   documentDate?: Date | string;
-  documentPath?: string;
+  documentId?: string;
   ocrText?: string;
   hospitalSystemName?: string;
   hospitalIdentifierType?: string;
@@ -25,7 +25,7 @@ export interface CreateHealthRecordInput {
   source: string;
   doctorName?: string;
   documentDate?: string;
-  documentPath?: string;
+  documentId?: string;
   ocrText?: string;
   hospitalSystemName?: string;
   hospitalIdentifierType?: string;
@@ -39,9 +39,8 @@ export interface UpdateHealthRecordInput {
   source?: string;
   doctorName?: string;
   documentDate?: string;
-  documentPath?: string;
+  documentId?: string;
   hospitalSystemName?: string;
   hospitalIdentifierType?: string;
   hospitalIdentifierValue?: string;
 }
-

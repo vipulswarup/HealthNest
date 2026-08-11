@@ -5,30 +5,17 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 interface DocumentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  documentPath: string;
+  documentId: string;
   fileName?: string;
 }
 
-export default function DocumentModal({ isOpen, onClose, documentPath, fileName }: DocumentModalProps) {
+export default function DocumentModal({ isOpen, onClose, documentId, fileName }: DocumentModalProps) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pdfLoadError, setPdfLoadError] = useState(false);
+  const [documentFileType, setDocumentFileType] = useState<string | null>(null);
 
-  const getFileType = (path: string) => {
-    const extension = path.split('.').pop()?.toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'gif', 'heic', 'heif'].includes(extension || '')) {
-      return 'image';
-    }
-    if (extension === 'pdf') {
-      return 'pdf';
-    }
-    return 'unknown';
-  };
-
-  const fileType = useMemo(() => {
-    return documentPath ? getFileType(documentPath) : 'unknown';
-  }, [documentPath]);
+  const fileType = useMemo(() => documentFileType?.startsWith('image/') ? 'image' : documentFileType === 'application/pdf' ? 'pdf' : 'unknown', [documentFileType]);
 
   const fetchSignedUrl = useCallback(async () => {
     try {
@@ -39,7 +26,7 @@ export default function DocumentModal({ isOpen, onClose, documentPath, fileName 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ documentPath }),
+        body: JSON.stringify({ documentId }),
       });
 
       if (!response.ok) {
@@ -48,48 +35,22 @@ export default function DocumentModal({ isOpen, onClose, documentPath, fileName 
 
       const data = await response.json();
       setSignedUrl(data.url);
+      setDocumentFileType(data.fileType || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load document');
     } finally {
       setLoading(false);
     }
-  }, [documentPath]);
+  }, [documentId]);
 
   useEffect(() => {
-    if (isOpen && documentPath) {
+    if (isOpen && documentId) {
       fetchSignedUrl();
-      setPdfLoadError(false);
     } else {
       setSignedUrl(null);
       setError(null);
-      setPdfLoadError(false);
     }
-  }, [isOpen, documentPath, fetchSignedUrl]);
-
-  useEffect(() => {
-    if (signedUrl && fileType === 'pdf' && !pdfLoadError) {
-      // Set a timeout to detect if PDF doesn't load (likely CORS issue)
-      const timeout = setTimeout(() => {
-        // Check if iframe is still blank/empty
-        const iframe = document.querySelector('iframe[title="' + (fileName || 'PDF Document') + '"]') as HTMLIFrameElement;
-        if (iframe) {
-          try {
-            // Try to access iframe content
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-            // If we can't access it and it's been 3 seconds, likely CORS issue
-            if (!iframeDoc) {
-              setPdfLoadError(true);
-            }
-          } catch (e) {
-            // CORS error - PDF can't be displayed in iframe
-            setPdfLoadError(true);
-          }
-        }
-      }, 3000);
-
-      return () => clearTimeout(timeout);
-    }
-  }, [signedUrl, fileType, pdfLoadError, fileName]);
+  }, [isOpen, documentId, fetchSignedUrl]);
 
   if (!isOpen) return null;
 
@@ -165,36 +126,14 @@ export default function DocumentModal({ isOpen, onClose, documentPath, fileName 
                     />
                   ) : fileType === 'pdf' ? (
                     <div className="w-full">
-                      {pdfLoadError ? (
-                        <div className="text-center py-12 border border-gray-300 rounded-lg bg-gray-50">
-                          <p className="text-gray-600 mb-4">
-                            PDF cannot be displayed in the modal due to browser security restrictions.
-                          </p>
-                          <a
-                            href={signedUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-block px-6 py-2 bg-[#0175C2] text-white rounded-lg hover:bg-[#015a96] transition-colors"
-                          >
-                            Open PDF in New Tab
-                          </a>
-                        </div>
-                      ) : (
                         <div className="w-full h-[600px] border border-gray-300 rounded-lg overflow-hidden bg-gray-100 relative">
                           <iframe
                             key={signedUrl}
-                            src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true`}
+                            src={signedUrl}
                             className="w-full h-full"
                             title={fileName || 'PDF Document'}
                             allow="fullscreen"
                             style={{ border: 'none' }}
-                            onError={() => {
-                              // Fallback to direct URL if Google viewer fails
-                              const iframe = document.querySelector('iframe[title="' + (fileName || 'PDF Document') + '"]') as HTMLIFrameElement;
-                              if (iframe) {
-                                iframe.src = `${signedUrl}#toolbar=1&navpanes=1&scrollbar=1`;
-                              }
-                            }}
                           />
                           <div className="absolute top-2 right-2 z-10">
                             <a
@@ -208,7 +147,6 @@ export default function DocumentModal({ isOpen, onClose, documentPath, fileName 
                             </a>
                           </div>
                         </div>
-                      )}
                     </div>
                   ) : (
                     <div className="text-center py-12">
@@ -252,4 +190,3 @@ export default function DocumentModal({ isOpen, onClose, documentPath, fileName 
     </div>
   );
 }
-

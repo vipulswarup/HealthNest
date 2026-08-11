@@ -1,6 +1,6 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/auth/client';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
@@ -16,7 +16,7 @@ export default function NewHealthRecordPage() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
-  const [uploadedFile, setUploadedFile] = useState<{ url: string; name: string } | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<{ id: string; name: string } | null>(null);
   const [categories, setCategories] = useState<HealthRecordCategory[]>([]);
 
   const [formData, setFormData] = useState({
@@ -74,7 +74,7 @@ export default function NewHealthRecordPage() {
       }
 
       setUploadedFile({
-        url: data.url,
+        id: data.id,
         name: file.name,
       });
     } catch (err) {
@@ -110,7 +110,7 @@ export default function NewHealthRecordPage() {
           data: {
             notes: formData.notes,
           },
-          documentPath: uploadedFile?.url || undefined,
+          documentId: uploadedFile?.id,
         }),
       });
 
@@ -294,4 +294,3 @@ export default function NewHealthRecordPage() {
     </div>
   );
 }
-

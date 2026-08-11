@@ -1,6 +1,6 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/auth/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
@@ -17,7 +17,7 @@ interface HealthRecord {
   documentDate?: string;
   createdAt: string;
   tags: string[];
-  documentPath?: string;
+  documentId?: string;
 }
 
 interface Patient {
@@ -575,7 +575,7 @@ export default function HealthRecordsPage() {
                             <h3 className="text-lg font-semibold text-gray-900">
                               {getRecordTypeLabel(record.recordType)}
                             </h3>
-                            {record.documentPath && (
+                            {record.documentId && (
                               <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                                 Has Document
                               </span>

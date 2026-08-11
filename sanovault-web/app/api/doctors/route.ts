@@ -1,47 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb';
-import { handleError, AppError } from '@/lib/middleware/error-handler';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/config';
-import { getAllDoctors, findDoctorByName, createDoctor } from '@/lib/services/doctor.service';
+import { z } from 'zod';
+import { getCurrentUser } from '@/lib/auth/session';
+import { sql } from '@/lib/db/neon';
+import { AppError, handleError } from '@/lib/middleware/error-handler';
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      throw new AppError('Unauthorized', 401);
-    }
-
-    const doctors = await getAllDoctors();
-    return NextResponse.json(doctors);
-  } catch (error) {
-    return handleError(error);
-  }
+const doctorSchema = z.object({ name: z.string().trim().min(1) });
+async function authorize() { if (!await getCurrentUser()) throw new AppError('Unauthorized', 401); }
+export async function GET() {
+  try { await authorize(); return NextResponse.json(await sql`SELECT id, preferred_name AS "preferredName", aliases, is_active AS "isActive", created_at AS "createdAt", updated_at AS "updatedAt" FROM doctors WHERE is_active = TRUE ORDER BY preferred_name`); }
+  catch (error) { return handleError(error); }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      throw new AppError('Unauthorized', 401);
-    }
-
-    const { name } = await request.json();
-    if (!name || !name.trim()) {
-      throw new AppError('Doctor name is required', 400);
-    }
-
-    // Check if doctor already exists
-    const existing = await findDoctorByName(name);
-    if (existing) {
-      return NextResponse.json(existing);
-    }
-
-    // Create new doctor
-    const newDoctor = await createDoctor(name);
-    return NextResponse.json(newDoctor, { status: 201 });
-  } catch (error) {
-    return handleError(error);
-  }
+    await authorize();
+    const parsed = doctorSchema.safeParse(await request.json());
+    if (!parsed.success) throw new AppError(parsed.error.issues[0].message, 400, 'VALIDATION_ERROR');
+    const [doctor] = await sql`
+      INSERT INTO doctors (preferred_name) VALUES (${parsed.data.name})
+      ON CONFLICT (preferred_name) DO UPDATE SET updated_at = NOW()
+      RETURNING id, preferred_name AS "preferredName", aliases, is_active AS "isActive", created_at AS "createdAt", updated_at AS "updatedAt"
+    `;
+    return NextResponse.json(doctor, { status: 201 });
+  } catch (error) { return handleError(error); }
 }
-

@@ -1,6 +1,6 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/auth/client';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
@@ -30,7 +30,7 @@ interface HealthRecord {
   source: string;
   tags: string[];
   createdAt: string;
-  documentPath?: string;
+  documentId?: string;
   data: any;
 }
 
@@ -317,7 +317,7 @@ export default function PatientDetailPage() {
                             ))}
                           </div>
                         )}
-                        {record.documentPath && (
+                        {record.documentId && (
                           <Link
                             href={`/health-records/${record.id}/document`}
                             className="text-sm text-[#0175C2] hover:text-[#015a96] inline-flex items-center cursor-pointer"
@@ -337,4 +337,3 @@ export default function PatientDetailPage() {
     </div>
   );
 }
-

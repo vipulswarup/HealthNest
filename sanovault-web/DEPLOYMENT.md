@@ -30,17 +30,16 @@ This guide covers free, serverless deployment options with CI/CD for SanoVault W
 6. Deploy!
 
 **Environment Variables to Set:**
-- `MONGODB_URI`
-- `MONGODB_DB_NAME`
-- `NEXTAUTH_URL` (auto-set by Vercel, but verify)
-- `NEXTAUTH_SECRET`
+- `DATABASE_URL`
+- `DIRECT_URL`
+- `NEON_AUTH_BASE_URL`
+- `NEON_AUTH_COOKIE_SECRET`
 - `R2_ACCOUNT_ID`
 - `R2_ACCESS_KEY_ID`
 - `R2_SECRET_ACCESS_KEY`
 - `R2_BUCKET_NAME`
-- `R2_PUBLIC_URL` (optional)
-- `GOOGLE_CLIENT_ID` (optional)
-- `GOOGLE_CLIENT_SECRET` (optional)
+
+Keep the R2 bucket private. SanoVault generates short-lived signed download URLs, so no public bucket URL is required.
 
 **Custom Domain:**
 - Add your domain in Project Settings → Domains
@@ -341,4 +340,3 @@ The #1 cause is missing `NEXTAUTH_SECRET`. Set it in Vercel environment variable
 5. Automatic CI/CD
 6. Preview deployments
 7. Easy environment variable management
-

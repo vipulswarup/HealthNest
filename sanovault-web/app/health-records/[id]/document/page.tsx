@@ -1,6 +1,6 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/auth/client';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
@@ -15,7 +15,7 @@ interface HealthRecord {
   createdAt: string;
   updatedAt: string;
   tags: string[];
-  documentPath?: string;
+  documentId?: string;
   data: Record<string, any>;
   hospitalSystemName?: string;
   hospitalIdentifierType?: string;
@@ -38,6 +38,7 @@ export default function DocumentPreviewPage() {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [categories, setCategories] = useState<HealthRecordCategory[]>([]);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [documentFileType, setDocumentFileType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -84,8 +85,8 @@ export default function DocumentPreviewPage() {
         fetchPatient(data.patientId);
       }
 
-      if (data.documentPath) {
-        fetchSignedUrl(data.documentPath);
+      if (data.documentId) {
+        fetchSignedUrl(data.documentId);
       } else {
         setError('No document attached to this health record');
       }
@@ -108,14 +109,14 @@ export default function DocumentPreviewPage() {
     }
   };
 
-  const fetchSignedUrl = async (documentPath: string) => {
+  const fetchSignedUrl = async (documentId: string) => {
     try {
       const response = await fetch('/api/documents/view', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ documentPath }),
+        body: JSON.stringify({ documentId }),
       });
 
       if (!response.ok) {
@@ -124,20 +125,10 @@ export default function DocumentPreviewPage() {
 
       const data = await response.json();
       setSignedUrl(data.url);
+      setDocumentFileType(data.fileType || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load document');
     }
-  };
-
-  const getFileType = (path: string) => {
-    const extension = path.split('.').pop()?.toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'gif', 'heic', 'heif'].includes(extension || '')) {
-      return 'image';
-    }
-    if (extension === 'pdf') {
-      return 'pdf';
-    }
-    return 'unknown';
   };
 
 
@@ -202,7 +193,7 @@ export default function DocumentPreviewPage() {
     );
   }
 
-  const fileType = getFileType(record.documentPath || '');
+  const fileType = documentFileType?.startsWith('image/') ? 'image' : documentFileType === 'application/pdf' ? 'pdf' : 'unknown';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -287,17 +278,10 @@ export default function DocumentPreviewPage() {
             ) : fileType === 'pdf' ? (
               <div className="w-full" style={{ height: 'calc(100vh - 200px)' }}>
                 <iframe
-                  src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true`}
+                  src={signedUrl}
                   className="w-full h-full border-0"
                   title="PDF Document"
                   allow="fullscreen"
-                  onError={() => {
-                    // Fallback to direct URL if Google viewer fails
-                    const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
-                    if (iframe) {
-                      iframe.src = `${signedUrl}#toolbar=1&navpanes=1&scrollbar=1`;
-                    }
-                  }}
                 />
               </div>
             ) : (
@@ -319,4 +303,3 @@ export default function DocumentPreviewPage() {
     </div>
   );
 }
-

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/config';
+import { getCurrentUser } from '@/lib/auth/session';
 import { getDocumentById, updateDocumentStatus } from '@/lib/services/document.service';
 import { analyzeDocument } from '@/lib/services/ai.service';
 import { handleError, AppError } from '@/lib/middleware/error-handler';
-import { findDoctorByName } from '@/lib/services/doctor.service';
+import { sql } from '@/lib/db/neon';
 
 function limitToFirstNWords(text: string, maxWords: number): string {
     if (!text || text.trim().length === 0) {
@@ -21,8 +20,8 @@ function limitToFirstNWords(text: string, maxWords: number): string {
 
 export async function POST(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
+        const user = await getCurrentUser();
+        if (!user) {
             throw new AppError('Unauthorized', 401);
         }
 
@@ -37,7 +36,7 @@ export async function POST(request: NextRequest) {
             throw new AppError('Document not found', 404);
         }
 
-        if (document.userId !== session.user.id) {
+        if (document.userId !== user.id) {
             throw new AppError('Forbidden', 403);
         }
 
@@ -72,9 +71,9 @@ export async function POST(request: NextRequest) {
             let normalizedDoctorName = result.doctorName || null;
             if (normalizedDoctorName) {
                 try {
-                    const matchedDoctor = await findDoctorByName(normalizedDoctorName);
+                    const [matchedDoctor] = await sql`SELECT preferred_name FROM doctors WHERE preferred_name ILIKE ${normalizedDoctorName} OR ${normalizedDoctorName} ILIKE ANY(aliases) LIMIT 1`;
                     if (matchedDoctor) {
-                        normalizedDoctorName = matchedDoctor.preferredName;
+                        normalizedDoctorName = matchedDoctor.preferred_name;
                     }
                 } catch (err) {
                     console.warn('Failed to normalize doctor name:', err);

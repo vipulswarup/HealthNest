@@ -1,91 +1,46 @@
+import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/config';
-import { uploadToR2 } from '@/lib/r2';
+import { getCurrentUser } from '@/lib/auth/session';
+import { deleteFromR2, uploadToR2 } from '@/lib/r2';
 import { createDocument } from '@/lib/services/document.service';
 import { handleError, AppError } from '@/lib/middleware/error-handler';
-import { randomUUID } from 'crypto';
+
+const ALLOWED_TYPES = new Set([
+  'application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/heic', 'image/heif',
+]);
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
 export async function POST(request: NextRequest) {
+  let r2Key: string | undefined;
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      throw new AppError('Unauthorized', 401);
-    }
+    const user = await getCurrentUser();
+    if (!user) throw new AppError('Unauthorized', 401);
 
     const formData = await request.formData();
-    const file = formData.get('file') as File;
-
-    if (!file) {
-      throw new AppError('No file provided', 400);
+    const file = formData.get('file');
+    if (!(file instanceof File)) throw new AppError('No file provided', 400);
+    if (!ALLOWED_TYPES.has(file.type)) {
+      throw new AppError('Invalid file type. Allowed: PDF, JPEG, PNG, HEIC, HEIF', 400);
     }
+    if (file.size > MAX_FILE_SIZE) throw new AppError('File size exceeds 50MB limit', 400);
 
-    // Validate file type
-    const allowedTypes = [
-      'application/pdf',
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'image/heic',
-      'image/heif',
-    ];
+    const extension = file.name.split('.').pop()?.toLowerCase() || 'bin';
+    r2Key = `${user.id}/${randomUUID()}.${extension}`;
+    await uploadToR2(r2Key, Buffer.from(await file.arrayBuffer()), file.type);
 
-    if (!allowedTypes.includes(file.type)) {
-      throw new AppError(
-        'Invalid file type. Allowed: PDF, JPEG, PNG, HEIC, HEIF',
-        400
-      );
+    const document = await createDocument({
+      userId: user.id,
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      r2Key,
+    });
+    return NextResponse.json(document, { status: 201 });
+  } catch (error: any) {
+    if (r2Key) await deleteFromR2(r2Key).catch(() => undefined);
+    if (error?.name === 'AccessDenied' || error?.Code === 'AccessDenied') {
+      return handleError(new AppError('Access denied to file storage. Check the R2 credentials and bucket permissions.', 403));
     }
-
-    // Validate file size (max 50MB)
-    const maxSize = 50 * 1024 * 1024; // 50MB
-    if (file.size > maxSize) {
-      throw new AppError('File size exceeds 50MB limit', 400);
-    }
-
-    // Check if R2 is configured
-    if (!process.env.R2_ACCOUNT_ID || !process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY) {
-      throw new AppError(
-        'File storage is not configured. Please set up Cloudflare R2 credentials in your .env file.',
-        503
-      );
-    }
-
-    // Generate unique file path
-    const fileExtension = file.name.split('.').pop();
-    const r2Key = `${session.user.id}/${randomUUID()}.${fileExtension}`;
-
-    // Convert file to buffer
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    try {
-      // Upload to R2
-      const url = await uploadToR2(r2Key, buffer, file.type);
-
-      // Save metadata to MongoDB
-      const document = await createDocument({
-        userId: session.user.id,
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-        fileUrl: url,
-        r2Key: r2Key,
-      });
-
-      return NextResponse.json(document);
-    } catch (r2Error: any) {
-      // Provide helpful error message for R2 access issues
-      if (r2Error.name === 'AccessDenied' || r2Error.Code === 'AccessDenied') {
-        throw new AppError(
-          'Access denied to file storage. Please check your R2 credentials and bucket permissions.',
-          403
-        );
-      }
-      throw r2Error;
-    }
-  } catch (error) {
     return handleError(error);
   }
 }

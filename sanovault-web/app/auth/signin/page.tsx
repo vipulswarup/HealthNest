@@ -1,6 +1,6 @@
 'use client';
 
-import { signIn, getSession } from 'next-auth/react';
+import { authClient } from '@/lib/auth/client';
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -25,8 +25,8 @@ function SignInContent() {
     }
 
     // Check if user is already signed in
-    getSession().then((session) => {
-      if (session) {
+    authClient.getSession().then(({ data }) => {
+      if (data?.user) {
         router.push(callbackUrl);
       } else {
         setIsCheckingSession(false);
@@ -40,10 +40,10 @@ function SignInContent() {
     setLoading(true);
 
     try {
-      const result = await signIn('credentials', {
+      const result = await authClient.signIn.email({
         email,
         password,
-        redirect: false,
+        callbackURL: callbackUrl,
       });
 
       if (result?.error) {
@@ -60,8 +60,7 @@ function SignInContent() {
   };
 
   const handleGoogleSignIn = async () => {
-    setLoading(true);
-    await signIn('google', { callbackUrl });
+    setError('Google sign-in has not yet been configured in Neon Auth.');
   };
 
   if (isCheckingSession) {
@@ -216,4 +215,3 @@ export default function SignInPage() {
     </Suspense>
   );
 }
-

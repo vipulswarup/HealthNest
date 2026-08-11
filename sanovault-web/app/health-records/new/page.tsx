@@ -1,6 +1,6 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/auth/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
@@ -31,7 +31,7 @@ function NewHealthRecordContent() {
   const [doctorsLoading, setDoctorsLoading] = useState(true);
   const [doctorInput, setDoctorInput] = useState('');
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
-  const [uploadedDocument, setUploadedDocument] = useState<{ id: string; fileUrl: string; fileName: string } | null>(null);
+  const [uploadedDocument, setUploadedDocument] = useState<{ id: string; fileName: string } | null>(null);
   
   // Processing states
   const [ocrStatus, setOcrStatus] = useState<'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'>('PENDING');
@@ -54,7 +54,6 @@ function NewHealthRecordContent() {
     documentDate: '',
     tags: [] as string[],
     data: {} as Record<string, any>,
-    documentPath: '',
   });
 
   // Sync sourceInput with formData.source when it changes externally
@@ -263,10 +262,6 @@ function NewHealthRecordContent() {
 
   const handleDocumentUploadSuccess = async (doc: any) => {
     setUploadedDocument(doc);
-    setFormData(prev => ({
-      ...prev,
-      documentPath: doc.fileUrl,
-    }));
 
     // Start processing pipeline
     await processDocument(doc.id);
@@ -491,7 +486,6 @@ function NewHealthRecordContent() {
               type="button"
               onClick={() => {
                 setUploadedDocument(null);
-                setFormData(prev => ({ ...prev, documentPath: '' }));
                 setOcrStatus('PENDING');
                 setAiStatus('PENDING');
                 setAiResults(null);

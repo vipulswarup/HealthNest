@@ -11,6 +11,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     const { id } = use(params);
 
     const [document, setDocument] = useState<DocumentMetadata | null>(null);
+    const [signedUrl, setSignedUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +27,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             if (!res.ok) throw new Error('Failed to load document');
             const data = await res.json();
             setDocument(data);
+            const view = await fetch('/api/documents/view', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ documentId: id }),
+            });
+            if (!view.ok) throw new Error('Failed to load document preview');
+            setSignedUrl((await view.json()).url);
             if (data.ocrStatus) setOcrStatus(data.ocrStatus);
             if (data.aiStatus) setAiStatus(data.aiStatus);
         } catch (err: any) {
@@ -132,10 +138,10 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                             <div className="bg-white rounded-lg shadow overflow-hidden border border-gray-200 aspect-[3/4] relative">
                                 {/* Use iframe for PDF, img for others. Simplifying to img for this demo if it's image */}
                                 {document.fileType === 'application/pdf' ? (
-                                    <iframe src={document.fileUrl} className="w-full h-full" />
+                                    <iframe src={signedUrl || undefined} className="w-full h-full" title={document.fileName} />
                                 ) : (
                                     <img
-                                        src={document.fileUrl}
+                                        src={signedUrl || undefined}
                                         alt="Document"
                                         className="w-full h-full object-contain bg-gray-900"
                                     />

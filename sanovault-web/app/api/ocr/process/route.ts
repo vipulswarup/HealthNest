@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/config';
+import { getCurrentUser } from '@/lib/auth/session';
 import { getDocumentById, updateDocumentStatus } from '@/lib/services/document.service';
 import { extractTextFromImage } from '@/lib/services/ocr.service';
 import { handleError, AppError } from '@/lib/middleware/error-handler';
 
 export async function POST(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
+        const user = await getCurrentUser();
+        if (!user) {
             throw new AppError('Unauthorized', 401);
         }
 
@@ -23,15 +22,15 @@ export async function POST(request: NextRequest) {
             throw new AppError('Document not found', 404);
         }
 
-        if (document.userId !== session.user.id) {
+        if (document.userId !== user.id) {
             throw new AppError('Forbidden', 403);
         }
 
         await updateDocumentStatus(documentId, { ocrStatus: 'PROCESSING' });
 
         try {
-            // Use r2Key if available for secure download, otherwise fallback to URL
-            const text = await extractTextFromImage(document.r2Key || document.fileUrl, !!document.r2Key);
+            if (!document.r2Key) throw new AppError('Document storage key is missing', 409);
+            const text = await extractTextFromImage(document.r2Key, true);
 
             await updateDocumentStatus(documentId, {
                 ocrStatus: 'COMPLETED',

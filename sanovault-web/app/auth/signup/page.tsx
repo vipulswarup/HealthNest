@@ -1,6 +1,6 @@
 'use client';
 
-import { signIn } from 'next-auth/react';
+import { authClient } from '@/lib/auth/client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -33,39 +33,16 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          firstName,
-          lastName,
-          email,
-          password,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'An error occurred. Please try again.');
-        setLoading(false);
-        return;
-      }
-
-      // Auto sign in after successful signup
-      const result = await signIn('credentials', {
+      const result = await authClient.signUp.email({
+        name: [firstName, lastName].filter(Boolean).join(' '),
         email,
         password,
-        redirect: false,
+        callbackURL: '/dashboard',
       });
 
       if (result?.error) {
-        // Account created but sign in failed - redirect to sign in
-        router.push('/auth/signin?message=Account created successfully. Please sign in.');
+        setError(result.error.message || 'An error occurred. Please try again.');
       } else {
-        // Successfully signed in - go to dashboard
         router.push('/dashboard');
         router.refresh();
       }
@@ -77,8 +54,7 @@ export default function SignUpPage() {
   };
 
   const handleGoogleSignUp = async () => {
-    setLoading(true);
-    await signIn('google', { callbackUrl: '/' });
+    setError('Google sign-in has not yet been configured in Neon Auth.');
   };
 
   return (
@@ -253,4 +229,3 @@ export default function SignUpPage() {
     </div>
   );
 }
-
