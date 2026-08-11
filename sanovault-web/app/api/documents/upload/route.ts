@@ -41,6 +41,9 @@ export async function POST(request: NextRequest) {
     if (error?.name === 'AccessDenied' || error?.Code === 'AccessDenied') {
       return handleError(new AppError('Access denied to file storage. Check the R2 credentials and bucket permissions.', 403));
     }
+    if (error?.name === 'NoSuchBucket' || error?.Code === 'NoSuchBucket') {
+      return handleError(new AppError('Document storage bucket is missing. Create the configured R2 bucket and retry.', 503));
+    }
     return handleError(error);
   }
 }

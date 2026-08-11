@@ -32,6 +32,17 @@ function NewHealthRecordContent() {
   const [doctorInput, setDoctorInput] = useState('');
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
   const [uploadedDocument, setUploadedDocument] = useState<{ id: string; fileName: string } | null>(null);
+  const [fileQueue, setFileQueue] = useState<Array<{
+    localId: string;
+    file: File;
+    fileName: string;
+    documentId?: string;
+    status: 'queued' | 'uploading' | 'processing' | 'review' | 'saved' | 'failed';
+    error?: string;
+  }>>([]);
+  const [currentQueueIndex, setCurrentQueueIndex] = useState(0);
+  const [documentPreviewUrl, setDocumentPreviewUrl] = useState<string | null>(null);
+  const [savedCount, setSavedCount] = useState(0);
   
   // Processing states
   const [ocrStatus, setOcrStatus] = useState<'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'>('PENDING');
@@ -260,11 +271,131 @@ function NewHealthRecordContent() {
     });
   };
 
-  const handleDocumentUploadSuccess = async (doc: any) => {
-    setUploadedDocument(doc);
+  const clearPreviewUrl = () => {
+    setDocumentPreviewUrl((prev) => {
+      if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+      return null;
+    });
+  };
 
-    // Start processing pipeline
-    await processDocument(doc.id);
+  const resetExtractionState = () => {
+    setUploadedDocument(null);
+    clearPreviewUrl();
+    setOcrStatus('PENDING');
+    setAiStatus('PENDING');
+    setAiResults(null);
+    setSourceInput('');
+    setDoctorInput('');
+    setFormData((prev) => ({
+      ...prev,
+      recordType: categories[0]?.code || prev.recordType,
+      source: '',
+      doctorName: '',
+      documentDate: '',
+      tags: [],
+      data: {},
+    }));
+  };
+
+  const loadDocumentPreview = async (documentId: string, localFile?: File) => {
+    if (localFile) {
+      const blobUrl = URL.createObjectURL(localFile);
+      setDocumentPreviewUrl((prev) => {
+        if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+        return blobUrl;
+      });
+    }
+    try {
+      const response = await fetch('/api/documents/view', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentId }),
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data.url) {
+        setDocumentPreviewUrl((prev) => {
+          if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+          return data.url;
+        });
+      }
+    } catch {
+      // Local blob preview is enough to continue review.
+    }
+  };
+
+  const updateQueueItem = (localId: string, patch: Partial<(typeof fileQueue)[number]>) => {
+    setFileQueue((prev) => prev.map((item) => (item.localId === localId ? { ...item, ...patch } : item)));
+  };
+
+  const processQueueItem = async (index: number, items = fileQueue) => {
+    const item = items[index];
+    if (!item) return;
+
+    setCurrentQueueIndex(index);
+    setCurrentStep(1);
+    resetExtractionState();
+    setError('');
+
+    try {
+      updateQueueItem(item.localId, { status: 'uploading', error: undefined });
+      const formPayload = new FormData();
+      formPayload.append('file', item.file);
+      const uploadRes = await fetch('/api/documents/upload', {
+        method: 'POST',
+        body: formPayload,
+      });
+      const uploadData = await uploadRes.json().catch(() => ({}));
+      if (!uploadRes.ok) {
+        throw new Error(uploadData.error || uploadData.message || 'Upload failed');
+      }
+
+      const documentId = uploadData.id as string;
+      const fileName = uploadData.fileName || item.fileName;
+      setUploadedDocument({ id: documentId, fileName });
+      updateQueueItem(item.localId, { status: 'processing', documentId, fileName });
+      await loadDocumentPreview(documentId, item.file);
+      await processDocument(documentId);
+      updateQueueItem(item.localId, { status: 'review' });
+      setCurrentStep(2);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to process document';
+      updateQueueItem(item.localId, { status: 'failed', error: message });
+      setError(message);
+    }
+  };
+
+  const handleFilesSelected = (files: File[]) => {
+    const items = files.map((file) => ({
+      localId: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
+      file,
+      fileName: file.name,
+      status: 'queued' as const,
+    }));
+    setFileQueue(items);
+    setSavedCount(0);
+    void processQueueItem(0, items);
+  };
+
+  const advanceQueueOrExit = async (fromIndex: number) => {
+    const nextIndex = fromIndex + 1;
+    if (fileQueue.length > 0 && nextIndex < fileQueue.length) {
+      await processQueueItem(nextIndex);
+      return;
+    }
+    if (formData.patientId) {
+      router.push(`/health-records?patientId=${formData.patientId}`);
+    } else {
+      router.push('/health-records');
+    }
+  };
+
+  const handleSkipCurrent = () => {
+    void advanceQueueOrExit(currentQueueIndex);
+  };
+
+  const handleRetryCurrent = () => {
+    void processQueueItem(currentQueueIndex);
   };
 
   const processDocument = async (documentId: string) => {
@@ -384,7 +515,7 @@ function NewHealthRecordContent() {
   };
 
   const handleNext = () => {
-    if (ocrStatus === 'COMPLETED' && aiStatus === 'COMPLETED') {
+    if (ocrStatus === 'COMPLETED' || aiStatus === 'COMPLETED' || ocrStatus === 'FAILED' || aiStatus === 'FAILED') {
       setCurrentStep(2);
     }
   };
@@ -441,7 +572,12 @@ function NewHealthRecordContent() {
         throw new Error(data.error || 'Failed to create health record');
       }
 
-      router.push(`/health-records?patientId=${formData.patientId}`);
+      const current = fileQueue[currentQueueIndex];
+      if (current) {
+        updateQueueItem(current.localId, { status: 'saved' });
+      }
+      setSavedCount((count) => count + 1);
+      await advanceQueueOrExit(currentQueueIndex);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -464,37 +600,102 @@ function NewHealthRecordContent() {
     return null;
   }
 
+  const currentQueueItem = fileQueue[currentQueueIndex];
+  const hasMoreInQueue = fileQueue.length > 0 && currentQueueIndex < fileQueue.length - 1;
+  const submitLabel = loading
+    ? 'Saving...'
+    : hasMoreInQueue
+      ? 'Confirm & review next'
+      : fileQueue.length > 1
+        ? 'Confirm & finish'
+        : 'Confirm & save';
+
+  const renderQueuePanel = () => {
+    if (fileQueue.length === 0) return null;
+    return (
+      <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-sm font-semibold text-gray-900">
+            Document queue ({savedCount}/{fileQueue.length} saved)
+          </h4>
+          <span className="text-xs text-gray-500">
+            Reviewing {Math.min(currentQueueIndex + 1, fileQueue.length)} of {fileQueue.length}
+          </span>
+        </div>
+        <ul className="space-y-2 max-h-48 overflow-auto">
+          {fileQueue.map((item, index) => (
+            <li
+              key={item.localId}
+              className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
+                index === currentQueueIndex ? 'bg-white border border-[#0175C2]' : 'bg-white/70 border border-transparent'
+              }`}
+            >
+              <span className="truncate mr-3 text-gray-800">{item.fileName}</span>
+              <span className="shrink-0 text-xs uppercase tracking-wide text-gray-500">{item.status}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
+
+  const renderDocumentPreview = () => {
+    if (!documentPreviewUrl) return null;
+    const previewName = uploadedDocument?.fileName || currentQueueItem?.fileName || '';
+    const isPdf = previewName.toLowerCase().endsWith('.pdf') || currentQueueItem?.file.type === 'application/pdf';
+    return (
+      <div className="mb-6 rounded-xl border border-gray-200 overflow-hidden bg-gray-100">
+        <div className="px-4 py-2 bg-white border-b border-gray-200 text-sm font-medium text-gray-700">
+          Preview{previewName ? `: ${previewName}` : ''}
+        </div>
+        {isPdf ? (
+          <iframe title="Document preview" src={documentPreviewUrl} className="w-full h-80 bg-white" />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={documentPreviewUrl} alt="Document preview" className="w-full max-h-80 object-contain bg-white" />
+        )}
+      </div>
+    );
+  };
+
   const renderStep1 = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Step 1: Upload and Process Document</h3>
-        <p className="text-sm text-gray-600 mb-6">Upload your document and we'll extract text and analyze it automatically.</p>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Step 1: Upload and scan documents</h3>
+        <p className="text-sm text-gray-600 mb-6">
+          Drop one or many files. Each document is scanned, auto-filled, then shown for your confirm/edit before the next one.
+        </p>
       </div>
 
-      {!uploadedDocument ? (
-        <DocumentUploader onUploadSuccess={handleDocumentUploadSuccess} />
+      {renderQueuePanel()}
+
+      {!uploadedDocument && fileQueue.length === 0 ? (
+        <DocumentUploader multiple onFilesSelected={handleFilesSelected} />
       ) : (
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex items-center">
-              <svg className="w-6 h-6 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              <span className="text-sm font-medium text-gray-700 truncate max-w-xs">{uploadedDocument.fileName}</span>
+          {uploadedDocument && (
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center min-w-0">
+                <svg className="w-6 h-6 text-green-500 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-sm font-medium text-gray-700 truncate">{uploadedDocument.fileName}</span>
+              </div>
+              {fileQueue.length === 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetExtractionState();
+                  }}
+                  className="text-red-500 hover:text-red-700 text-sm"
+                >
+                  Remove
+                </button>
+              )}
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setUploadedDocument(null);
-                setOcrStatus('PENDING');
-                setAiStatus('PENDING');
-                setAiResults(null);
-              }}
-              className="text-red-500 hover:text-red-700 text-sm"
-            >
-              Remove
-            </button>
-          </div>
+          )}
+
+          {renderDocumentPreview()}
 
           <div className="space-y-3">
             <OCRProgress label="Text Extraction (OCR)" status={ocrStatus} />
@@ -503,7 +704,7 @@ function NewHealthRecordContent() {
 
           {ocrStatus === 'COMPLETED' && aiStatus === 'COMPLETED' && (
             <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-800 font-medium mb-2">Processing Complete!</p>
+              <p className="text-sm text-green-800 font-medium mb-2">Scan complete. Review the extracted details next.</p>
               <p className="text-xs text-green-700">
                 {aiResults?.classification && `Detected: ${aiResults.classification}`}
                 {aiResults?.source && ` • Source: ${aiResults.source}`}
@@ -514,7 +715,28 @@ function NewHealthRecordContent() {
 
           {(ocrStatus === 'FAILED' || aiStatus === 'FAILED') && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-800">Processing encountered an error. You can still proceed to fill in the details manually.</p>
+              <p className="text-sm text-red-800">Automatic extraction had an issue. You can still continue and fill details manually.</p>
+            </div>
+          )}
+
+          {currentQueueItem?.status === 'failed' && (
+            <div className="flex flex-wrap gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleRetryCurrent}
+                className="px-4 py-2 rounded-lg font-medium bg-[#0175C2] text-white hover:bg-[#015a96]"
+              >
+                Retry this file
+              </button>
+              {hasMoreInQueue && (
+                <button
+                  type="button"
+                  onClick={handleSkipCurrent}
+                  className="px-4 py-2 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+                >
+                  Skip to next
+                </button>
+              )}
             </div>
           )}
 
@@ -522,14 +744,22 @@ function NewHealthRecordContent() {
             <button
               type="button"
               onClick={handleNext}
-              disabled={ocrStatus !== 'COMPLETED' || aiStatus !== 'COMPLETED'}
+              disabled={
+                currentQueueItem?.status === 'failed' ||
+                ocrStatus === 'PROCESSING' ||
+                aiStatus === 'PROCESSING' ||
+                ocrStatus === 'PENDING'
+              }
               className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                ocrStatus === 'COMPLETED' && aiStatus === 'COMPLETED'
+                currentQueueItem?.status !== 'failed' &&
+                ocrStatus !== 'PROCESSING' &&
+                aiStatus !== 'PROCESSING' &&
+                ocrStatus !== 'PENDING'
                   ? 'bg-[#0175C2] hover:bg-[#015a96] text-white'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
-              Next: Fill Details →
+              Next: Review details
             </button>
           </div>
         </div>
@@ -540,9 +770,14 @@ function NewHealthRecordContent() {
   const renderStep2 = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Step 2: Record Details</h3>
-        <p className="text-sm text-gray-600 mb-6">Review and complete the health record information.</p>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Step 2: Confirm or edit</h3>
+        <p className="text-sm text-gray-600 mb-6">
+          Check the auto-extracted fields against the document preview, edit anything that looks wrong, then confirm.
+        </p>
       </div>
+
+      {renderQueuePanel()}
+      {renderDocumentPreview()}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
@@ -761,23 +996,33 @@ function NewHealthRecordContent() {
           </div>
         </div>
 
-        <div className="flex space-x-4 pt-4">
+        <div className="flex flex-wrap gap-3 pt-4">
           <button
             type="button"
             onClick={() => setCurrentStep(1)}
             className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
           >
-            ← Back
+            Back
           </button>
+          {hasMoreInQueue && (
+            <button
+              type="button"
+              onClick={handleSkipCurrent}
+              disabled={loading}
+              className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors disabled:opacity-50"
+            >
+              Skip this file
+            </button>
+          )}
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 bg-[#0175C2] hover:bg-[#015a96] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 min-w-[12rem] bg-[#0175C2] hover:bg-[#015a96] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Creating...' : 'Create Health Record'}
+            {submitLabel}
           </button>
           <Link
-            href="/health-records"
+            href={formData.patientId ? `/health-records?patientId=${formData.patientId}` : '/health-records'}
             className="px-6 py-2 text-center bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
           >
             Cancel
