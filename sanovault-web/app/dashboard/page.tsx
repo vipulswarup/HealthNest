@@ -18,7 +18,7 @@ export default function Dashboard() {
     if (!session) {
       router.push('/auth/signin');
     }
-  }, [session, status, router]);
+  }, [session?.user?.id, status, router]);
 
   if (status === 'loading') {
     return (

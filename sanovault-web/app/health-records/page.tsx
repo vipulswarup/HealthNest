@@ -55,7 +55,7 @@ export default function HealthRecordsPage() {
   useEffect(() => {
     if (status === 'loading') return;
 
-    if (!session) {
+    if (!session?.user?.id) {
       router.push('/auth/signin');
       return;
     }
@@ -63,7 +63,7 @@ export default function HealthRecordsPage() {
     fetchPatients();
     fetchCategories();
     fetchSources();
-  }, [session, status, router]);
+  }, [session?.user?.id, status, router]);
 
   const fetchCategories = async () => {
     try {

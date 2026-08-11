@@ -26,13 +26,13 @@ export default function PatientsPage() {
   useEffect(() => {
     if (status === 'loading') return;
 
-    if (!session) {
+    if (!session?.user?.id) {
       router.push('/auth/signin');
       return;
     }
 
     fetchPatients();
-  }, [session, status, router]);
+  }, [session?.user?.id, status, router]);
 
   const fetchPatients = async () => {
     try {

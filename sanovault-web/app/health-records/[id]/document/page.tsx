@@ -57,7 +57,7 @@ export default function DocumentPreviewPage() {
 
     fetchRecord();
     fetchCategories();
-  }, [session, status, router, recordId]);
+  }, [session?.user?.id, status, router, recordId]);
 
   const fetchCategories = async () => {
     try {

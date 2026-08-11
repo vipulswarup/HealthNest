@@ -63,7 +63,7 @@ export default function PatientDetailPage() {
     fetchPatient();
     fetchHealthRecords();
     fetchCategories();
-  }, [session, status, router, patientId]);
+  }, [session?.user?.id, status, router, patientId]);
 
   const fetchCategories = async () => {
     try {

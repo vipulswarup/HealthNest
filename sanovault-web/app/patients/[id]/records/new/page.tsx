@@ -33,7 +33,7 @@ export default function NewHealthRecordPage() {
       router.push('/auth/signin');
     }
     fetchCategories();
-  }, [session, status, router]);
+  }, [session?.user?.id, status, router]);
 
   const fetchCategories = async () => {
     try {

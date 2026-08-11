@@ -24,7 +24,7 @@ export default function Home() {
       console.error('Navigation error:', err);
       setError('An error occurred. Please try again.');
     }
-  }, [session, status, router]);
+  }, [session?.user?.id, status, router]);
 
   if (error) {
     return (

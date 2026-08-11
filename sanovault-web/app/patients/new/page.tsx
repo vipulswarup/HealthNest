@@ -28,7 +28,7 @@ export default function NewPatientPage() {
     if (!session) {
       router.push('/auth/signin');
     }
-  }, [session, status, router]);
+  }, [session?.user?.id, status, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

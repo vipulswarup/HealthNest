@@ -82,7 +82,7 @@ function NewHealthRecordContent() {
     fetchCategories();
     fetchSources();
     fetchDoctors();
-  }, [session, status, router]);
+  }, [session?.user?.id, status, router]);
 
   const fetchPatients = async () => {
     try {

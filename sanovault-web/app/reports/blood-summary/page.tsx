@@ -29,7 +29,7 @@ function BloodSummaryContent() {
 
   useEffect(() => {
     if (status !== 'loading' && !session) router.replace('/auth/signin');
-  }, [session, status, router]);
+  }, [session?.user?.id, status, router]);
 
   useEffect(() => {
     if (!session) return;
