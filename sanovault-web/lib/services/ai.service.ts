@@ -69,35 +69,52 @@ async function callGroq(prompt: string, systemPrompt: string): Promise<string> {
 }
 
 import { getRecordTypeOptions } from '../constants/labels';
+import {
+    getAllCategories,
+    getValidCategoryDisplayNames,
+    resolveClassification,
+} from './category.service';
+
+async function getValidCategoryLabels(): Promise<string[]> {
+    try {
+        const categories = await getAllCategories();
+        const names = getValidCategoryDisplayNames(categories);
+        if (names.length > 0) return names;
+    } catch (error) {
+        console.warn('Failed to load categories from DB; using fallback labels', error);
+    }
+    return getRecordTypeOptions().map((opt) => opt.label);
+}
 
 export async function analyzeDocument(text: string): Promise<AnalysisResult> {
-    const recordTypes = getRecordTypeOptions().map(opt => `- "${opt.label}"`).join('\n');
-    const dynamicSystemPrompt = `${analysisPrompt}\n\nValid Categories:\n${recordTypes}`;
+    const validCategories = await getValidCategoryLabels();
+    const recordTypes = validCategories.map((label) => `- "${label}"`).join('\n');
+    const dynamicSystemPrompt =
+        `${analysisPrompt}\n\nValid Categories (classification MUST be exactly one of these strings):\n${recordTypes}`;
 
     const response = await callGroq(text, dynamicSystemPrompt);
     try {
         const result = JSON.parse(response);
-        
-        // DEBUG LOGGING - Parsed Result
+        const classification = resolveClassification(result.classification, validCategories);
+
         console.log('\n--- AI ANALYSIS RESULT ---');
-        console.log('Classification:', result.classification);
+        console.log('Classification (raw):', result.classification);
+        console.log('Classification (resolved):', classification);
         console.log('Confidence:', result.confidence);
         console.log('Source:', result.source);
         console.log('Doctor Name:', result.doctorName);
         console.log('Document Date (raw):', result.documentDate);
-        console.log('Document Date (type):', typeof result.documentDate);
         console.log('Tags:', result.tags);
-        console.log('Full Result:', JSON.stringify(result, null, 2));
         console.log('-----------------------\n');
-        
-        // Use all tags returned by AI, normalize them
+
         const aiTags: string[] = result.tags || [];
         const normalizedTags = aiTags
             .map(tag => normalizeTag(String(tag)))
-            .filter((tag, index, arr) => tag && arr.indexOf(tag) === index); // Remove empty and duplicates
-        
+            .filter((tag: string, index: number, arr: string[]) => tag && arr.indexOf(tag) === index);
+
         return {
             ...result,
+            classification,
             doctorName: result.doctorName || null,
             documentDate: result.documentDate || null,
             tags: normalizedTags
@@ -107,7 +124,7 @@ export async function analyzeDocument(text: string): Promise<AnalysisResult> {
         console.error("Raw response:", response);
         console.error("Parse error:", e);
         return {
-            classification: "Unknown",
+            classification: resolveClassification(null, validCategories),
             confidence: 0,
             source: null,
             doctorName: null,
@@ -118,20 +135,21 @@ export async function analyzeDocument(text: string): Promise<AnalysisResult> {
 }
 
 export async function classifyDocument(text: string): Promise<{ classification: string; confidence: number }> {
-    const recordTypes = getRecordTypeOptions().map(opt => `- "${opt.label}"`).join('\n');
-    // Replace the default static list in the prompt (or append to it) - simpler to just pass it in role
-    // But since the prompt file is static, let's prepend the dynamic list to the user prompt or system prompt
-
-    // Actually, prompt.ts has a static list. I should update prompt.ts to have a placeholder or just override it here.
-    // For now, let's append the valid categories to the system prompt to enforce strict adherence.
-    const dynamicSystemPrompt = `${classificationPrompt}\n\nValid Categories:\n${recordTypes}`;
+    const validCategories = await getValidCategoryLabels();
+    const recordTypes = validCategories.map((label) => `- "${label}"`).join('\n');
+    const dynamicSystemPrompt =
+        `${classificationPrompt}\n\nValid Categories (classification MUST be exactly one of these strings):\n${recordTypes}`;
 
     const response = await callGroq(text, dynamicSystemPrompt);
     try {
-        return JSON.parse(response);
+        const parsed = JSON.parse(response);
+        return {
+            classification: resolveClassification(parsed.classification, validCategories),
+            confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0,
+        };
     } catch (e) {
         console.error("Failed to parse AI classification response", response);
-        return { classification: "Unknown", confidence: 0 };
+        return { classification: resolveClassification(null, validCategories), confidence: 0 };
     }
 }
 

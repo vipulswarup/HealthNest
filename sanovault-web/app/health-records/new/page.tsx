@@ -429,11 +429,20 @@ function NewHealthRecordContent() {
         setAiStatus('COMPLETED');
         
         // Auto-populate form data
-        // Try to match AI classification to a category by displayName
-        // Only match if categories are loaded
-        const matchedCategory = (analyzeData.classification && categories.length > 0)
-          ? categories.find(cat => cat.displayName.toLowerCase() === analyzeData.classification.toLowerCase())
-          : null;
+        // Match AI classification to dropdown categories (exact displayName, then tag hints)
+        let matchedCategory = (analyzeData.classification && categories.length > 0)
+          ? categories.find(cat => cat.displayName.toLowerCase() === String(analyzeData.classification).toLowerCase())
+          : undefined;
+        if (!matchedCategory && categories.length > 0) {
+          const tagBlob = (analyzeData.tags || []).join(' ').toLowerCase();
+          if (/(lab|blood|cbc|haemat|hemat|diagnostic|patholog|urine)/.test(tagBlob)) {
+            matchedCategory = categories.find(cat => cat.code === 'LAB_REPORT');
+          } else if (/(imaging|radiolog|xray|mri|ct_scan|ultrasound)/.test(tagBlob)) {
+            matchedCategory = categories.find(cat => cat.code === 'IMAGING_REPORT');
+          } else if (/(prescription|medication)/.test(tagBlob)) {
+            matchedCategory = categories.find(cat => cat.code === 'PRESCRIPTION');
+          }
+        }
         
         // Use all tags returned by AI
         const allTags = analyzeData.tags && Array.isArray(analyzeData.tags) ? analyzeData.tags : [];
