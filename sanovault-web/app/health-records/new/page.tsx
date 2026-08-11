@@ -648,20 +648,38 @@ function NewHealthRecordContent() {
     );
   };
 
-  const renderDocumentPreview = () => {
+  const renderDocumentPreview = (variant: 'compact' | 'large' = 'compact') => {
     if (!documentPreviewUrl) return null;
     const previewName = uploadedDocument?.fileName || currentQueueItem?.fileName || '';
     const isPdf = previewName.toLowerCase().endsWith('.pdf') || currentQueueItem?.file.type === 'application/pdf';
+    const frameClass =
+      variant === 'large'
+        ? 'w-full h-[min(78vh,56rem)] min-h-[28rem] bg-white'
+        : 'w-full h-[28rem] bg-white';
+    const imageClass =
+      variant === 'large'
+        ? 'w-full max-h-[min(78vh,56rem)] min-h-[28rem] object-contain bg-white'
+        : 'w-full max-h-[28rem] object-contain bg-white';
     return (
-      <div className="mb-6 rounded-xl border border-gray-200 overflow-hidden bg-gray-100">
-        <div className="px-4 py-2 bg-white border-b border-gray-200 text-sm font-medium text-gray-700">
-          Preview{previewName ? `: ${previewName}` : ''}
+      <div className={`rounded-xl border border-gray-200 overflow-hidden bg-gray-100 ${variant === 'large' ? 'lg:sticky lg:top-6' : 'mb-6'}`}>
+        <div className="px-4 py-2 bg-white border-b border-gray-200 flex items-center justify-between gap-3">
+          <span className="text-sm font-medium text-gray-700 truncate">
+            Preview{previewName ? `: ${previewName}` : ''}
+          </span>
+          <a
+            href={documentPreviewUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 text-xs font-medium text-[#0175C2] hover:text-[#015a96]"
+          >
+            Open full size
+          </a>
         </div>
         {isPdf ? (
-          <iframe title="Document preview" src={documentPreviewUrl} className="w-full h-80 bg-white" />
+          <iframe title="Document preview" src={documentPreviewUrl} className={frameClass} />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={documentPreviewUrl} alt="Document preview" className="w-full max-h-80 object-contain bg-white" />
+          <img src={documentPreviewUrl} alt="Document preview" className={imageClass} />
         )}
       </div>
     );
@@ -786,7 +804,13 @@ function NewHealthRecordContent() {
       </div>
 
       {renderQueuePanel()}
-      {renderDocumentPreview()}
+
+      <div className={`gap-8 ${documentPreviewUrl ? 'lg:grid lg:grid-cols-2 lg:items-start' : ''}`}>
+        {documentPreviewUrl && (
+          <div className="mb-6 lg:mb-0">
+            {renderDocumentPreview('large')}
+          </div>
+        )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
@@ -1038,6 +1062,7 @@ function NewHealthRecordContent() {
           </Link>
         </div>
       </form>
+      </div>
     </div>
   );
 
@@ -1072,9 +1097,9 @@ function NewHealthRecordContent() {
         </div>
       </nav>
 
-      <main className="max-w-3xl mx-auto py-8 sm:px-6 lg:px-8">
+      <main className={`mx-auto py-8 sm:px-6 lg:px-8 ${currentStep === 2 && documentPreviewUrl ? 'max-w-7xl' : 'max-w-3xl'}`}>
         <div className="px-4 py-6 sm:px-0">
-          <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Add Health Record</h2>
               <div className="flex items-center space-x-2">
