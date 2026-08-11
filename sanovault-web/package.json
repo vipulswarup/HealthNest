@@ -20,14 +20,17 @@
     "mongodb": "^7.0.0",
     "next": "16.0.10",
     "next-auth": "^4.24.13",
+    "pngjs": "^7.0.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "unpdf": "^1.8.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
+    "@types/pngjs": "^6.0.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

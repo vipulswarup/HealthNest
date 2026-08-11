@@ -1,154 +1,248 @@
 import { AppError } from '@/lib/middleware/error-handler';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import fs from 'fs';
 import path from 'path';
-import { randomUUID } from 'crypto';
-import { pipeline } from 'stream/promises';
+import { PNG } from 'pngjs';
+import { extractImages, extractText, getDocumentProxy } from 'unpdf';
+import { getR2Object, getR2SignedUrl } from '../r2';
 
-import { getR2Object } from '../r2';
-import { Readable } from 'stream';
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
+const MIN_USEFUL_TEXT_CHARS = 80;
+const MAX_VISION_PAGES = 3;
 
-const execAsync = promisify(exec);
+type ImagePayload = { mime: string; dataUrl: string };
+
+function mimeFromExtension(ext: string): string {
+  switch (ext.toLowerCase()) {
+    case '.png':
+      return 'image/png';
+    case '.jpg':
+    case '.jpeg':
+      return 'image/jpeg';
+    case '.heic':
+      return 'image/heic';
+    case '.heif':
+      return 'image/heif';
+    case '.pdf':
+      return 'application/pdf';
+    default:
+      return 'application/octet-stream';
+  }
+}
+
+async function readInputBuffer(input: string, isR2Key: boolean): Promise<Buffer> {
+  if (isR2Key) {
+    const body = await getR2Object(input);
+    if (!body) throw new Error('Empty body from R2');
+    const bytes = await body.transformToByteArray();
+    return Buffer.from(bytes);
+  }
+
+  const response = await fetch(input);
+  if (!response.ok) throw new Error(`Failed to download file: ${response.statusText}`);
+  return Buffer.from(await response.arrayBuffer());
+}
+
+function encodeRawImageToPngDataUrl(image: {
+  data: Uint8ClampedArray;
+  width: number;
+  height: number;
+  channels: 1 | 3 | 4;
+}): string {
+  const png = new PNG({ width: image.width, height: image.height });
+  const src = image.data;
+  const dst = png.data;
+
+  if (image.channels === 4) {
+    dst.set(src);
+  } else if (image.channels === 3) {
+    for (let i = 0, j = 0; i < src.length; i += 3, j += 4) {
+      dst[j] = src[i];
+      dst[j + 1] = src[i + 1];
+      dst[j + 2] = src[i + 2];
+      dst[j + 3] = 255;
+    }
+  } else {
+    for (let i = 0, j = 0; i < src.length; i += 1, j += 4) {
+      dst[j] = src[i];
+      dst[j + 1] = src[i];
+      dst[j + 2] = src[i];
+      dst[j + 3] = 255;
+    }
+  }
+
+  const encoded = PNG.sync.write(png);
+  return `data:image/png;base64,${encoded.toString('base64')}`;
+}
+
+async function extractPdfText(buffer: Buffer): Promise<string> {
+  const pdf = await getDocumentProxy(new Uint8Array(buffer));
+  const { text } = await extractText(pdf, { mergePages: true });
+  return String(text ?? '').trim();
+}
+
+async function extractPdfImagesForVision(buffer: Buffer): Promise<ImagePayload[]> {
+  const pdf = await getDocumentProxy(new Uint8Array(buffer));
+  const pageCount = Math.min(pdf.numPages || 1, MAX_VISION_PAGES);
+  const images: ImagePayload[] = [];
+
+  for (let page = 1; page <= pageCount; page += 1) {
+    const pageImages = await extractImages(pdf, page);
+    for (const image of pageImages) {
+      images.push({
+        mime: 'image/png',
+        dataUrl: encodeRawImageToPngDataUrl(image),
+      });
+      if (images.length >= 5) return images;
+    }
+  }
+
+  return images;
+}
+
+async function extractViaExternalService(
+  buffer: Buffer,
+  fileName: string,
+  contentType: string,
+): Promise<string | null> {
+  const base = process.env.OCR_SERVICE_URL?.replace(/\/$/, '');
+  if (!base) return null;
+  if (process.env.VERCEL && /localhost|127\.0\.0\.1/.test(base)) {
+    console.warn('Skipping OCR_SERVICE_URL on Vercel because it points at localhost');
+    return null;
+  }
+
+  const form = new FormData();
+  form.append('file', new Blob([new Uint8Array(buffer)], { type: contentType }), fileName);
+
+  const endpoints = [`${base}/ocr`, base];
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, { method: 'POST', body: form });
+      if (!response.ok) continue;
+      const data = await response.json().catch(() => ({}));
+      const text = typeof data.text === 'string' ? data.text.trim() : '';
+      if (text) return text;
+    } catch (error) {
+      console.warn(`External OCR endpoint failed (${endpoint}):`, error);
+    }
+  }
+
+  return null;
+}
+
+async function extractViaGroqVision(images: ImagePayload[]): Promise<string> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error('GROQ_API_KEY is required for vision OCR on serverless');
+  }
+  if (images.length === 0) {
+    throw new Error('No images available for vision OCR');
+  }
+
+  const content: Array<Record<string, unknown>> = [
+    {
+      type: 'text',
+      text:
+        'Extract all readable text from these medical document page images. ' +
+        'Preserve labels, values, dates, doctor names, facility/hospital names, and table structure. ' +
+        'Return plain text only, with line breaks.',
+    },
+    ...images.slice(0, 5).map((image) => ({
+      type: 'image_url',
+      image_url: { url: image.dataUrl },
+    })),
+  ];
+
+  const response = await fetch(GROQ_API_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: GROQ_VISION_MODEL,
+      messages: [{ role: 'user', content }],
+      temperature: 0.1,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Groq vision OCR failed: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  const text = String(data.choices?.[0]?.message?.content || '').trim();
+  if (!text) throw new Error('Groq vision OCR returned empty text');
+  return text;
+}
+
+async function extractFromImageBuffer(buffer: Buffer, mime: string, r2Key?: string): Promise<string> {
+  if (mime === 'image/heic' || mime === 'image/heif') {
+    throw new Error('HEIC/HEIF OCR is not supported in production. Please upload PDF, JPG, or PNG.');
+  }
+
+  // Prefer a signed URL when available so request payloads stay smaller.
+  if (r2Key) {
+    try {
+      const url = await getR2SignedUrl(r2Key, 600);
+      return extractViaGroqVision([{ mime, dataUrl: url }]);
+    } catch (error) {
+      console.warn('Signed URL vision OCR failed, falling back to base64:', error);
+    }
+  }
+
+  return extractViaGroqVision([
+    { mime, dataUrl: `data:${mime};base64,${buffer.toString('base64')}` },
+  ]);
+}
 
 export async function extractTextFromImage(input: string, isR2Key: boolean = false): Promise<string> {
-    const tempDir = '/tmp';
-    const fileExtension = path.extname(input) || '.jpg';
-    const fileName = `${randomUUID()}${fileExtension}`;
-    const localFilePath = path.join(tempDir, fileName);
-    let processedFilePath = localFilePath; // File to be fed to OCR
+  const extension = path.extname(input) || '.jpg';
+  const mime = mimeFromExtension(extension);
+  const fileName = path.basename(input) || `document${extension}`;
 
-    try {
-        // DEBUG LOGGING
-        console.log('\n--- OCR REQUEST ---');
-        console.log('Input:', input);
-        console.log('Extension:', fileExtension);
-        console.log('-------------------\n');
+  try {
+    console.log('\n--- OCR REQUEST ---');
+    console.log('Input:', input);
+    console.log('Extension:', extension);
+    console.log('Runtime:', process.env.VERCEL ? 'vercel' : 'local');
+    console.log('-------------------\n');
 
-        // 1. Download file to local temp directory
-        console.log(`Downloading file to ${localFilePath}...`);
+    const buffer = await readInputBuffer(input, isR2Key);
 
-        if (isR2Key) {
-            const body = await getR2Object(input);
-            if (!body) throw new Error('Empty body from R2');
-            // body is likely a stream
-            await pipeline(body as any, fs.createWriteStream(localFilePath));
-        } else {
-            const response = await fetch(input);
-            if (!response.ok) {
-                throw new Error(`Failed to download file: ${response.statusText}`);
-            }
-
-            if (!response.body) {
-                throw new Error('Response body is empty');
-            }
-
-            await pipeline(response.body as any, fs.createWriteStream(localFilePath));
-        }
-
-        // 2. Convert PDF if necessary
-        if (fileExtension.toLowerCase() === '.pdf') {
-            const outputBaseName = randomUUID();
-            const outputBasePath = path.join(tempDir, outputBaseName);
-
-            console.log(`Converting PDF to TIFF: ${outputBasePath}...`);
-
-            // Use pdftocairo from poppler-utils to convert PDF to TIFF
-            // pdftocairo is more reliable than pdftoppm for single-page conversion
-            // -tiff: output format
-            // -r 300: resolution (300 DPI)
-            // -f 1 -l 1: first page only
-            // Output pattern: basename-1.tiff (page number appended)
-            const convertCommand = `docker run --rm -v "${tempDir}":"${tempDir}" minidocks/poppler pdftocairo -tiff -r 300 -f 1 -l 1 "${localFilePath}" "${outputBasePath}"`;
-
-            console.log(`Running Conversion: ${convertCommand}`);
-            try {
-                const { stdout, stderr } = await execAsync(convertCommand);
-                if (stdout) console.log('Conversion Stdout:', stdout);
-                if (stderr && !stderr.includes('Writing')) {
-                    console.warn('Conversion Stderr:', stderr);
-                }
-            } catch (error: any) {
-                console.error('Conversion command failed:', error);
-                throw new Error(`PDF conversion command failed: ${error.message}`);
-            }
-
-            // pdftocairo outputs files with pattern: basename-page.tif or basename-page.tiff
-            // With -f 1 -l 1, it may create: basename-1.tif, basename-01.tif, or basename-1.tiff
-            // Check for various page number formats (1, 01) and extensions (.tif, .tiff)
-            const possiblePaths = [
-                path.join(tempDir, `${outputBaseName}-1.tif`),
-                path.join(tempDir, `${outputBaseName}-01.tif`),
-                path.join(tempDir, `${outputBaseName}-1.tiff`),
-                path.join(tempDir, `${outputBaseName}-01.tiff`),
-            ];
-            
-            let foundPath: string | null = null;
-            for (const possiblePath of possiblePaths) {
-                if (fs.existsSync(possiblePath)) {
-                    foundPath = possiblePath;
-                    break;
-                }
-            }
-            
-            if (!foundPath) {
-                // If exact matches fail, search for any file matching the pattern
-                const files = await fs.promises.readdir(tempDir);
-                const matchingFiles = files.filter(f => 
-                    f.startsWith(outputBaseName) && 
-                    (f.endsWith('.tif') || f.endsWith('.tiff'))
-                );
-                
-                if (matchingFiles.length > 0) {
-                    // Use the first matching file
-                    foundPath = path.join(tempDir, matchingFiles[0]);
-                    console.log(`Found output file: ${foundPath}`);
-                } else {
-                    console.error(`Expected file not found. Files matching base name: ${files.filter(f => f.startsWith(outputBaseName)).join(', ')}`);
-                    throw new Error(`PDF conversion failed: output file not found. Checked: ${possiblePaths.join(', ')}`);
-                }
-            }
-            
-            processedFilePath = foundPath;
-        }
-
-        // 3. Run Tesseract via Docker
-        // Using processedFilePath (original image or converted TIFF)
-        // Map processedFilePath to /tmp/input.img inside container
-        // Note: If processedFilePath is /tmp/abc.tiff, we map "/tmp/abc.tiff":/tmp/input.img
-        // Tesseract handles TIFF
-
-        // Again, simplified mount mapping /tmp to /tmp
-        const dockerCommand = `docker run --rm -v "${tempDir}":"${tempDir}" jitesoft/tesseract-ocr "${processedFilePath}" stdout`;
-
-        console.log(`Running OCR on ${processedFilePath}: ${dockerCommand}`);
-        const { stdout, stderr } = await execAsync(dockerCommand);
-
-        if (stderr && !stderr.includes('tesseract')) {
-            console.warn('OCR Stderr:', stderr);
-        }
-
-        // 4. Cleanup
-        // Delete download
-        await fs.promises.unlink(localFilePath).catch(console.error);
-        // Delete converted file if it exists and is different
-        if (processedFilePath !== localFilePath) {
-            await fs.promises.unlink(processedFilePath).catch(console.error);
-        }
-
-        return stdout.trim();
-
-    } catch (error: any) {
-        console.error('OCR Processing Error:', error);
-
-        // Cleanup
-        if (fs.existsSync(localFilePath)) {
-            await fs.promises.unlink(localFilePath).catch(console.error);
-        }
-        if (processedFilePath !== localFilePath && fs.existsSync(processedFilePath)) {
-            await fs.promises.unlink(processedFilePath).catch(console.error);
-        }
-
-        throw new AppError(`Failed to process document with OCR: ${error.message}`, 502);
+    const externalText = await extractViaExternalService(buffer, fileName, mime);
+    if (externalText && externalText.length >= MIN_USEFUL_TEXT_CHARS) {
+      console.log('OCR source: external service');
+      return externalText;
     }
+
+    if (mime === 'application/pdf' || extension.toLowerCase() === '.pdf') {
+      const pdfText = await extractPdfText(buffer);
+      if (pdfText.length >= MIN_USEFUL_TEXT_CHARS) {
+        console.log('OCR source: PDF text layer', { chars: pdfText.length });
+        return pdfText;
+      }
+
+      console.log('PDF text layer insufficient; trying embedded images + Groq vision');
+      const images = await extractPdfImagesForVision(buffer);
+      if (images.length > 0) {
+        const visionText = await extractViaGroqVision(images);
+        console.log('OCR source: Groq vision from PDF images', { chars: visionText.length });
+        return visionText;
+      }
+
+      if (externalText) return externalText;
+      throw new Error(
+        'This PDF has no extractable text or embedded images. Export pages as JPG/PNG, or configure OCR_SERVICE_URL.',
+      );
+    }
+
+    const imageText = await extractFromImageBuffer(buffer, mime, isR2Key ? input : undefined);
+    console.log('OCR source: Groq vision image', { chars: imageText.length });
+    return imageText;
+  } catch (error: any) {
+    console.error('OCR Processing Error:', error);
+    throw new AppError(`Failed to process document with OCR: ${error.message}`, 502);
+  }
 }
