@@ -61,6 +61,12 @@ async function readInputBuffer(input: string, isR2Key: boolean): Promise<Buffer>
     return Buffer.from(bytes);
   }
 
+  const localPath = input.startsWith('file://') ? input.replace(/^file:\/\//, '') : input;
+  if (localPath.startsWith('/') || /^[A-Za-z]:[\\/]/.test(localPath)) {
+    const fs = await import('node:fs/promises');
+    return Buffer.from(await fs.readFile(localPath));
+  }
+
   const response = await fetch(input);
   if (!response.ok) throw new Error(`Failed to download file: ${response.statusText}`);
   return Buffer.from(await response.arrayBuffer());
