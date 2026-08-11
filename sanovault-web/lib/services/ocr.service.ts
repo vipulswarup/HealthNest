@@ -5,9 +5,11 @@ import { extractImages, extractText, getDocumentProxy } from 'unpdf';
 import { getR2Object, getR2SignedUrl } from '../r2';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
+/** Llama 4 Scout was shut down 2026-07-17; qwen3.6 still accepts image inputs on Groq. */
+const GROQ_VISION_MODEL = process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b';
 const MIN_USEFUL_TEXT_CHARS = 80;
 const MAX_VISION_PAGES = 3;
+const MAX_VISION_IMAGE_EDGE = 1600;
 
 type ImagePayload = { mime: string; dataUrl: string };
 
@@ -42,36 +44,80 @@ async function readInputBuffer(input: string, isR2Key: boolean): Promise<Buffer>
   return Buffer.from(await response.arrayBuffer());
 }
 
+function toRgba(
+  image: { data: Uint8ClampedArray; width: number; height: number; channels: 1 | 3 | 4 },
+): { data: Buffer; width: number; height: number } {
+  const { width, height, channels, data: src } = image;
+  const rgba = Buffer.alloc(width * height * 4);
+  if (channels === 4) {
+    rgba.set(src);
+  } else if (channels === 3) {
+    for (let i = 0, j = 0; i < src.length; i += 3, j += 4) {
+      rgba[j] = src[i];
+      rgba[j + 1] = src[i + 1];
+      rgba[j + 2] = src[i + 2];
+      rgba[j + 3] = 255;
+    }
+  } else {
+    for (let i = 0, j = 0; i < src.length; i += 1, j += 4) {
+      rgba[j] = src[i];
+      rgba[j + 1] = src[i];
+      rgba[j + 2] = src[i];
+      rgba[j + 3] = 255;
+    }
+  }
+  return { data: rgba, width, height };
+}
+
+function downscaleRgba(
+  rgba: Buffer,
+  width: number,
+  height: number,
+  maxEdge: number,
+): { data: Buffer; width: number; height: number } {
+  const edge = Math.max(width, height);
+  if (edge <= maxEdge) return { data: rgba, width, height };
+
+  const scale = maxEdge / edge;
+  const nextWidth = Math.max(2, Math.round(width * scale));
+  const nextHeight = Math.max(2, Math.round(height * scale));
+  const next = Buffer.alloc(nextWidth * nextHeight * 4);
+
+  for (let y = 0; y < nextHeight; y += 1) {
+    const srcY = Math.min(height - 1, Math.floor(y / scale));
+    for (let x = 0; x < nextWidth; x += 1) {
+      const srcX = Math.min(width - 1, Math.floor(x / scale));
+      const srcIdx = (srcY * width + srcX) * 4;
+      const dstIdx = (y * nextWidth + x) * 4;
+      next[dstIdx] = rgba[srcIdx];
+      next[dstIdx + 1] = rgba[srcIdx + 1];
+      next[dstIdx + 2] = rgba[srcIdx + 2];
+      next[dstIdx + 3] = rgba[srcIdx + 3];
+    }
+  }
+
+  return { data: next, width: nextWidth, height: nextHeight };
+}
+
 function encodeRawImageToPngDataUrl(image: {
   data: Uint8ClampedArray;
   width: number;
   height: number;
   channels: 1 | 3 | 4;
 }): string {
-  const png = new PNG({ width: image.width, height: image.height });
-  const src = image.data;
-  const dst = png.data;
-
-  if (image.channels === 4) {
-    dst.set(src);
-  } else if (image.channels === 3) {
-    for (let i = 0, j = 0; i < src.length; i += 3, j += 4) {
-      dst[j] = src[i];
-      dst[j + 1] = src[i + 1];
-      dst[j + 2] = src[i + 2];
-      dst[j + 3] = 255;
-    }
-  } else {
-    for (let i = 0, j = 0; i < src.length; i += 1, j += 4) {
-      dst[j] = src[i];
-      dst[j + 1] = src[i];
-      dst[j + 2] = src[i];
-      dst[j + 3] = 255;
-    }
-  }
-
+  const rgba = toRgba(image);
+  const scaled = downscaleRgba(rgba.data, rgba.width, rgba.height, MAX_VISION_IMAGE_EDGE);
+  const png = new PNG({ width: scaled.width, height: scaled.height });
+  png.data = Buffer.from(scaled.data);
   const encoded = PNG.sync.write(png);
   return `data:image/png;base64,${encoded.toString('base64')}`;
+}
+
+function stripModelThinking(text: string): string {
+  return text
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/^\s*thinking[\s\S]*?(?=\n[A-Z0-9])/i, '')
+    .trim();
 }
 
 async function extractPdfText(buffer: Buffer): Promise<string> {
@@ -153,6 +199,7 @@ async function extractViaGroqVision(images: ImagePayload[]): Promise<string> {
     })),
   ];
 
+  console.log('Groq vision model:', GROQ_VISION_MODEL, 'images:', images.length);
   const response = await fetch(GROQ_API_URL, {
     method: 'POST',
     headers: {
@@ -163,6 +210,7 @@ async function extractViaGroqVision(images: ImagePayload[]): Promise<string> {
       model: GROQ_VISION_MODEL,
       messages: [{ role: 'user', content }],
       temperature: 0.1,
+      max_completion_tokens: 4096,
     }),
   });
 
@@ -172,7 +220,7 @@ async function extractViaGroqVision(images: ImagePayload[]): Promise<string> {
   }
 
   const data = await response.json();
-  const text = String(data.choices?.[0]?.message?.content || '').trim();
+  const text = stripModelThinking(String(data.choices?.[0]?.message?.content || ''));
   if (!text) throw new Error('Groq vision OCR returned empty text');
   return text;
 }
