@@ -8,13 +8,32 @@ const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 /** Llama 4 Scout was shut down 2026-07-17; qwen3.6 still accepts image inputs on Groq. */
 const GROQ_VISION_MODEL = process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b';
 const MIN_USEFUL_TEXT_CHARS = 80;
-const MAX_VISION_PAGES = 3;
 /** qwen/qwen3.6-27b rejects more than 3 images per request. */
-const MAX_VISION_IMAGES = 3;
+const MAX_VISION_IMAGES_PER_REQUEST = 3;
 const MAX_VISION_IMAGE_EDGE = 1600;
 const MIN_USEFUL_IMAGE_PIXELS = 80_000;
+/** Soft cap for full-document scanned OCR jobs. */
+const MAX_FULL_OCR_PAGES = 40;
+
+export type OcrMode = 'intake' | 'full';
+
+export interface OcrOptions {
+  /**
+   * intake: first-page metadata for upload/categorization (default).
+   * full: whole document text for later lab-value extraction.
+   */
+  mode?: OcrMode;
+}
 
 type ImagePayload = { mime: string; dataUrl: string };
+type RawPdfImage = {
+  data: Uint8ClampedArray;
+  width: number;
+  height: number;
+  channels: 1 | 3 | 4;
+  page: number;
+  pixels: number;
+};
 
 function mimeFromExtension(ext: string): string {
   switch (ext.toLowerCase()) {
@@ -123,38 +142,47 @@ function stripModelThinking(text: string): string {
     .trim();
 }
 
-async function extractPdfText(buffer: Buffer): Promise<string> {
+async function extractPdfText(buffer: Buffer, options?: { firstPageOnly?: boolean }): Promise<string> {
   const pdf = await getDocumentProxy(new Uint8Array(buffer));
+  if (options?.firstPageOnly) {
+    const { text } = await extractText(pdf, { mergePages: false });
+    const pages = Array.isArray(text) ? text : [String(text ?? '')];
+    return String(pages[0] ?? '').trim();
+  }
   const { text } = await extractText(pdf, { mergePages: true });
   return String(text ?? '').trim();
 }
 
-async function extractPdfImagesForVision(buffer: Buffer): Promise<ImagePayload[]> {
+async function collectPdfImages(
+  buffer: Buffer,
+  options: { maxPages: number; pageStart?: number },
+): Promise<RawPdfImage[]> {
   const pdf = await getDocumentProxy(new Uint8Array(buffer));
-  const pageCount = Math.min(pdf.numPages || 1, MAX_VISION_PAGES);
-  const all: Array<{
-    pixels: number;
-    image: { data: Uint8ClampedArray; width: number; height: number; channels: 1 | 3 | 4 };
-  }> = [];
+  const start = options.pageStart ?? 1;
+  const end = Math.min(pdf.numPages || 1, start + options.maxPages - 1);
+  const all: RawPdfImage[] = [];
 
-  for (let page = 1; page <= pageCount; page += 1) {
+  for (let page = start; page <= end; page += 1) {
     for (const image of await extractImages(pdf, page)) {
-      all.push({ pixels: image.width * image.height, image });
+      all.push({
+        ...image,
+        page,
+        pixels: image.width * image.height,
+      });
     }
   }
 
-  all.sort((a, b) => b.pixels - a.pixels);
-  const largeEnough = all.filter((item) => item.pixels >= MIN_USEFUL_IMAGE_PIXELS);
-  const selected = (largeEnough.length > 0 ? largeEnough : all).slice(0, MAX_VISION_IMAGES);
+  return all;
+}
 
-  console.log('Vision image candidates:', {
-    pages: pageCount,
-    found: all.length,
-    kept: selected.length,
-    sizes: selected.map((c) => `${c.image.width}x${c.image.height}`),
-  });
+function pickLargestImages(images: RawPdfImage[], limit: number): RawPdfImage[] {
+  const largeEnough = images.filter((item) => item.pixels >= MIN_USEFUL_IMAGE_PIXELS);
+  const pool = largeEnough.length > 0 ? largeEnough : images;
+  return [...pool].sort((a, b) => b.pixels - a.pixels).slice(0, limit);
+}
 
-  return selected.map(({ image }) => ({
+function toVisionPayloads(images: RawPdfImage[]): ImagePayload[] {
+  return images.map((image) => ({
     mime: 'image/png',
     dataUrl: encodeRawImageToPngDataUrl(image),
   }));
@@ -208,13 +236,13 @@ async function extractViaGroqVision(images: ImagePayload[]): Promise<string> {
         'Preserve labels, values, dates, doctor names, facility/hospital names, and table structure. ' +
         'Return plain text only, with line breaks.',
     },
-    ...images.slice(0, MAX_VISION_IMAGES).map((image) => ({
+    ...images.slice(0, MAX_VISION_IMAGES_PER_REQUEST).map((image) => ({
       type: 'image_url',
       image_url: { url: image.dataUrl },
     })),
   ];
 
-  console.log('Groq vision model:', GROQ_VISION_MODEL, 'images:', images.length);
+  console.log('Groq vision model:', GROQ_VISION_MODEL, 'images:', Math.min(images.length, MAX_VISION_IMAGES_PER_REQUEST));
   const response = await fetch(GROQ_API_URL, {
     method: 'POST',
     headers: {
@@ -245,7 +273,6 @@ async function extractFromImageBuffer(buffer: Buffer, mime: string, r2Key?: stri
     throw new Error('HEIC/HEIF OCR is not supported in production. Please upload PDF, JPG, or PNG.');
   }
 
-  // Prefer a signed URL when available so request payloads stay smaller.
   if (r2Key) {
     try {
       const url = await getR2SignedUrl(r2Key, 600);
@@ -260,7 +287,62 @@ async function extractFromImageBuffer(buffer: Buffer, mime: string, r2Key?: stri
   ]);
 }
 
-export async function extractTextFromImage(input: string, isR2Key: boolean = false): Promise<string> {
+/** Intake: one largest image from page 1 (metadata lives in the header). */
+async function extractIntakeVisionText(buffer: Buffer): Promise<string> {
+  const pageOneImages = await collectPdfImages(buffer, { maxPages: 1, pageStart: 1 });
+  const selected = pickLargestImages(pageOneImages, 1);
+  console.log('Intake vision images:', {
+    foundOnPage1: pageOneImages.length,
+    kept: selected.length,
+    sizes: selected.map((c) => `${c.width}x${c.height}`),
+  });
+  if (selected.length === 0) {
+    throw new Error('No embedded images found on the first PDF page for vision OCR');
+  }
+  return extractViaGroqVision(toVisionPayloads(selected));
+}
+
+/**
+ * Full document: OCR page images in batches of 3 for later lab-value extraction.
+ * Prefer calling this from a dedicated job; intake should use mode "intake".
+ */
+async function extractFullVisionText(buffer: Buffer): Promise<string> {
+  const pdf = await getDocumentProxy(new Uint8Array(buffer));
+  const totalPages = Math.min(pdf.numPages || 1, MAX_FULL_OCR_PAGES);
+  const pageImages: RawPdfImage[] = [];
+
+  for (let page = 1; page <= totalPages; page += 1) {
+    const images = await collectPdfImages(buffer, { maxPages: 1, pageStart: page });
+    const best = pickLargestImages(images, 1)[0];
+    if (best) pageImages.push(best);
+  }
+
+  if (pageImages.length === 0) {
+    throw new Error('No embedded images found for full-document vision OCR');
+  }
+
+  const chunks: string[] = [];
+  for (let i = 0; i < pageImages.length; i += MAX_VISION_IMAGES_PER_REQUEST) {
+    const batch = pageImages.slice(i, i + MAX_VISION_IMAGES_PER_REQUEST);
+    const pageLabel = batch.map((img) => img.page).join('-');
+    const batchText = await extractViaGroqVision(toVisionPayloads(batch));
+    chunks.push(`--- Pages ${pageLabel} ---\n${batchText}`);
+  }
+
+  console.log('Full vision OCR complete:', {
+    pagesProcessed: pageImages.length,
+    totalPages,
+    batches: chunks.length,
+  });
+  return chunks.join('\n\n');
+}
+
+export async function extractTextFromImage(
+  input: string,
+  isR2Key: boolean = false,
+  options: OcrOptions = {},
+): Promise<string> {
+  const mode: OcrMode = options.mode || 'intake';
   const extension = path.extname(input) || '.jpg';
   const mime = mimeFromExtension(extension);
   const fileName = path.basename(input) || `document${extension}`;
@@ -269,6 +351,7 @@ export async function extractTextFromImage(input: string, isR2Key: boolean = fal
     console.log('\n--- OCR REQUEST ---');
     console.log('Input:', input);
     console.log('Extension:', extension);
+    console.log('Mode:', mode);
     console.log('Runtime:', process.env.VERCEL ? 'vercel' : 'local');
     console.log('-------------------\n');
 
@@ -281,24 +364,26 @@ export async function extractTextFromImage(input: string, isR2Key: boolean = fal
     }
 
     if (mime === 'application/pdf' || extension.toLowerCase() === '.pdf') {
-      const pdfText = await extractPdfText(buffer);
+      // Digital PDFs: full text layer is cheap and useful later for lab-value parsing.
+      // Intake AI still only consumes the first ~1000 words.
+      const pdfText = await extractPdfText(buffer, {
+        firstPageOnly: false,
+      });
       if (pdfText.length >= MIN_USEFUL_TEXT_CHARS) {
-        console.log('OCR source: PDF text layer', { chars: pdfText.length });
+        console.log('OCR source: PDF text layer', { chars: pdfText.length, mode });
         return pdfText;
       }
 
-      console.log('PDF text layer insufficient; trying embedded images + Groq vision');
-      const images = await extractPdfImagesForVision(buffer);
-      if (images.length > 0) {
-        const visionText = await extractViaGroqVision(images);
-        console.log('OCR source: Groq vision from PDF images', { chars: visionText.length });
+      console.log('PDF text layer insufficient; using Groq vision', { mode });
+      if (mode === 'full') {
+        const visionText = await extractFullVisionText(buffer);
+        console.log('OCR source: Groq vision full document', { chars: visionText.length });
         return visionText;
       }
 
-      if (externalText) return externalText;
-      throw new Error(
-        'This PDF has no extractable text or embedded images. Export pages as JPG/PNG, or configure OCR_SERVICE_URL.',
-      );
+      const visionText = await extractIntakeVisionText(buffer);
+      console.log('OCR source: Groq vision first page (intake)', { chars: visionText.length });
+      return visionText;
     }
 
     const imageText = await extractFromImageBuffer(buffer, mime, isR2Key ? input : undefined);

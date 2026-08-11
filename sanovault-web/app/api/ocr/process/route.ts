@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getDocumentById, updateDocumentStatus } from '@/lib/services/document.service';
-import { extractTextFromImage } from '@/lib/services/ocr.service';
+import { extractTextFromImage, OcrMode } from '@/lib/services/ocr.service';
 import { handleError, AppError } from '@/lib/middleware/error-handler';
 
 export const runtime = 'nodejs';
+/** Intake OCR is first-page / text-layer only. Full multi-page OCR should use a dedicated job later. */
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
@@ -14,7 +15,9 @@ export async function POST(request: NextRequest) {
             throw new AppError('Unauthorized', 401);
         }
 
-        const { documentId } = await request.json();
+        const body = await request.json();
+        const { documentId } = body;
+        const mode: OcrMode = body.mode === 'full' ? 'full' : 'intake';
 
         if (!documentId) {
             throw new AppError('Document ID is required', 400);
@@ -33,14 +36,18 @@ export async function POST(request: NextRequest) {
 
         try {
             if (!document.r2Key) throw new AppError('Document storage key is missing', 409);
-            const text = await extractTextFromImage(document.r2Key, true);
+            const text = await extractTextFromImage(document.r2Key, true, { mode });
 
             await updateDocumentStatus(documentId, {
                 ocrStatus: 'COMPLETED',
-                ocrText: text
+                ocrText: text,
+                extractedData: {
+                    ...(document.extractedData || {}),
+                    ocrMode: mode,
+                },
             });
 
-            return NextResponse.json({ text });
+            return NextResponse.json({ text, mode });
         } catch (error) {
             await updateDocumentStatus(documentId, { ocrStatus: 'FAILED' });
             throw error;

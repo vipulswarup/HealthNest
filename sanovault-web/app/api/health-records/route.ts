@@ -51,13 +51,15 @@ export async function POST(request: NextRequest) {
     const data = parsed.data;
     const [patient] = await sql`SELECT id FROM patients WHERE id = ${data.patientId}::uuid AND owner_id = ${user.id}`;
     if (!patient) throw new AppError('Patient not found', 404);
+    let ocrText = data.ocrText || null;
     if (data.documentId) {
-      const [document] = await sql`SELECT id FROM documents WHERE id = ${data.documentId}::uuid AND owner_id = ${user.id}`;
+      const [document] = await sql`SELECT id, ocr_text FROM documents WHERE id = ${data.documentId}::uuid AND owner_id = ${user.id}`;
       if (!document) throw new AppError('Document not found', 404);
+      if (!ocrText && document.ocr_text) ocrText = document.ocr_text;
     }
     const [record] = await sql`
       INSERT INTO health_records (patient_id, record_type, data, tags, source, doctor_name, document_date, document_id, ocr_text, hospital_system_name, hospital_identifier_type, hospital_identifier_value)
-      VALUES (${data.patientId}::uuid, ${data.recordType}, ${JSON.stringify(data.data)}::jsonb, ${data.tags || []}, ${data.source}, ${data.doctorName || null}, ${data.documentDate || null}::date, ${data.documentId || null}::uuid, ${data.ocrText || null}, ${data.hospitalSystemName || null}, ${data.hospitalIdentifierType || null}, ${data.hospitalIdentifierValue || null})
+      VALUES (${data.patientId}::uuid, ${data.recordType}, ${JSON.stringify(data.data)}::jsonb, ${data.tags || []}, ${data.source}, ${data.doctorName || null}, ${data.documentDate || null}::date, ${data.documentId || null}::uuid, ${ocrText}, ${data.hospitalSystemName || null}, ${data.hospitalIdentifierType || null}, ${data.hospitalIdentifierValue || null})
       RETURNING *
     `;
     return NextResponse.json(toHealthRecord(record), { status: 201 });
