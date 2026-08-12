@@ -123,3 +123,7 @@ app.*.symbols
 /test-data/
 grok-image-*.jpg
 /package-lock.json
+.env*
+
+.DS_Store
+**/.DS_Store
