@@ -193,6 +193,7 @@ export async function canAccessDocument(userId: string, documentId: string): Pro
     SELECT 1
     FROM documents d
     LEFT JOIN patients p ON p.id = d.patient_id
+    LEFT JOIN health_records hr ON hr.document_id = d.id
     WHERE d.id = ${documentId}::uuid
       AND (
         d.owner_id = ${userId}
@@ -204,6 +205,16 @@ export async function canAccessDocument(userId: string, documentId: string): Pro
             INNER JOIN household_members hm
               ON hm.household_id = hp.household_id AND hm.user_id = ${userId}
             WHERE hp.patient_id = p.id
+          )
+        )
+        OR (
+          hr.patient_id IS NOT NULL
+          AND EXISTS (
+            SELECT 1
+            FROM household_patients hp
+            INNER JOIN household_members hm
+              ON hm.household_id = hp.household_id AND hm.user_id = ${userId}
+            WHERE hp.patient_id = hr.patient_id
           )
         )
       )
@@ -220,6 +231,7 @@ export async function getAccessibleDocument(
     SELECT d.*
     FROM documents d
     LEFT JOIN patients p ON p.id = d.patient_id
+    LEFT JOIN health_records hr ON hr.document_id = d.id
     WHERE d.id = ${documentId}::uuid
       AND (
         d.owner_id = ${userId}
@@ -231,6 +243,16 @@ export async function getAccessibleDocument(
             INNER JOIN household_members hm
               ON hm.household_id = hp.household_id AND hm.user_id = ${userId}
             WHERE hp.patient_id = p.id
+          )
+        )
+        OR (
+          hr.patient_id IS NOT NULL
+          AND EXISTS (
+            SELECT 1
+            FROM household_patients hp
+            INNER JOIN household_members hm
+              ON hm.household_id = hp.household_id AND hm.user_id = ${userId}
+            WHERE hp.patient_id = hr.patient_id
           )
         )
       )
