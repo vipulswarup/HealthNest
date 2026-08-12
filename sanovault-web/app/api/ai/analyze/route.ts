@@ -4,6 +4,7 @@ import { getDocumentById, updateDocumentStatus } from '@/lib/services/document.s
 import { analyzeDocument } from '@/lib/services/ai.service';
 import { handleError, AppError } from '@/lib/middleware/error-handler';
 import { sql } from '@/lib/db/neon';
+import { enforceHourlyRateLimit } from '@/lib/security/rate-limit';
 
 function limitToFirstNWords(text: string, maxWords: number): string {
     if (!text || text.trim().length === 0) {
@@ -24,6 +25,7 @@ export async function POST(request: NextRequest) {
         if (!user) {
             throw new AppError('Unauthorized', 401);
         }
+        await enforceHourlyRateLimit(user.id, 'ai');
 
         const { documentId } = await request.json();
 
@@ -50,22 +52,7 @@ export async function POST(request: NextRequest) {
             // Limit to first 1000 words to save AI costs
             const limitedText = limitToFirstNWords(document.ocrText, 1000);
             
-            // DEBUG LOGGING - Input to AI
-            console.log('\n--- AI ANALYSIS INPUT ---');
-            console.log('Document ID:', documentId);
-            console.log('OCR Text Length:', document.ocrText.length);
-            console.log('Limited Text Length:', limitedText.length);
-            console.log('First 200 chars of OCR:', document.ocrText.substring(0, 200));
-            console.log('-----------------------\n');
-            
             const result = await analyzeDocument(limitedText);
-
-            // DEBUG LOGGING - After AI Analysis
-            console.log('\n--- AI ANALYSIS OUTPUT ---');
-            console.log('Result:', JSON.stringify(result, null, 2));
-            console.log('Document Date from AI:', result.documentDate);
-            console.log('Document Date type:', typeof result.documentDate);
-            console.log('-----------------------\n');
 
             // Normalize doctor name if provided
             let normalizedDoctorName = result.doctorName || null;
@@ -75,8 +62,8 @@ export async function POST(request: NextRequest) {
                     if (matchedDoctor) {
                         normalizedDoctorName = matchedDoctor.preferred_name;
                     }
-                } catch (err) {
-                    console.warn('Failed to normalize doctor name:', err);
+                } catch {
+                    // A failed normalization must not expose document-derived data in logs.
                 }
             }
 

@@ -5,7 +5,8 @@ export class AppError extends Error {
     message: string,
     public statusCode: number = 500,
     public code?: string,
-    public details?: unknown
+    public details?: unknown,
+    public headers?: Record<string, string>
   ) {
     super(message);
     this.name = 'AppError';
@@ -20,7 +21,7 @@ export function handleError(error: unknown): NextResponse {
         code: error.code,
         ...(error.details !== undefined ? { details: error.details } : {}),
       },
-      { status: error.statusCode }
+      { status: error.statusCode, headers: error.headers }
     );
   }
 
@@ -40,4 +41,3 @@ export function handleError(error: unknown): NextResponse {
     { status: 500 }
   );
 }
-

@@ -4,10 +4,9 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { deleteFromR2, uploadToR2 } from '@/lib/r2';
 import { createDocument } from '@/lib/services/document.service';
 import { handleError, AppError } from '@/lib/middleware/error-handler';
+import { verifyUploadSignature } from '@/lib/security/file-signature';
+import { enforceHourlyRateLimit } from '@/lib/security/rate-limit';
 
-const ALLOWED_TYPES = new Set([
-  'application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/heic', 'image/heif',
-]);
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
 export async function POST(request: NextRequest) {
@@ -15,24 +14,27 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) throw new AppError('Unauthorized', 401);
+    await enforceHourlyRateLimit(user.id, 'document-upload');
 
     const formData = await request.formData();
     const file = formData.get('file');
     if (!(file instanceof File)) throw new AppError('No file provided', 400);
-    if (!ALLOWED_TYPES.has(file.type)) {
-      throw new AppError('Invalid file type. Allowed: PDF, JPEG, PNG, HEIC, HEIF', 400);
-    }
     if (file.size > MAX_FILE_SIZE) throw new AppError('File size exceeds 50MB limit', 400);
 
-    const extension = file.name.split('.').pop()?.toLowerCase() || 'bin';
-    r2Key = `${user.id}/${randomUUID()}.${extension}`;
-    await uploadToR2(r2Key, Buffer.from(await file.arrayBuffer()), file.type);
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const verifiedFile = verifyUploadSignature(bytes, file.type);
+    if (!verifiedFile) {
+      throw new AppError('File content does not match an allowed PDF, JPEG, PNG, HEIC, or HEIF type', 400);
+    }
+
+    r2Key = `${user.id}/${randomUUID()}.${verifiedFile.extension}`;
+    await uploadToR2(r2Key, bytes, verifiedFile.mimeType);
 
     const document = await createDocument({
       userId: user.id,
       fileName: file.name,
       fileSize: file.size,
-      fileType: file.type,
+      fileType: verifiedFile.mimeType,
       r2Key,
     });
     return NextResponse.json(document, { status: 201 });

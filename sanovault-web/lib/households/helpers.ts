@@ -37,6 +37,16 @@ export function toHouseholdInvite(row: Record<string, any>) {
   };
 }
 
+/** Safe to expose to anyone holding an invite URL. */
+export function toPublicHouseholdInvite(row: Record<string, any>) {
+  return {
+    householdName: row.household_name || undefined,
+    invitedByName: row.invited_by_name || undefined,
+    status: row.status,
+    expiresAt: row.expires_at,
+  };
+}
+
 export function generateInviteToken(): string {
   return randomBytes(32).toString('hex');
 }

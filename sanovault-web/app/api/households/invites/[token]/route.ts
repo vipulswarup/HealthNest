@@ -9,7 +9,7 @@ import {
   listAccessiblePatients,
   setActiveHouseholdId,
 } from '@/lib/households/access';
-import { toHouseholdInvite } from '@/lib/households/helpers';
+import { toPublicHouseholdInvite } from '@/lib/households/helpers';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
 
 const acceptSchema = z.object({
@@ -51,7 +51,7 @@ export async function GET(
       invite.status = 'expired';
     }
 
-    const invitePayload = toHouseholdInvite(invite);
+    const invitePayload = toPublicHouseholdInvite(invite);
 
     // Public preview for logged-out invitees (no patient list).
     if (!user) {

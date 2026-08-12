@@ -192,28 +192,10 @@ function NewHealthRecordContent() {
     setFormData(prev => ({ ...prev, source: source.preferredName }));
   };
 
-  const handleSourceBlur = async () => {
+  const handleSourceBlur = () => {
     // Small delay to allow click events to fire first
     setTimeout(() => {
       setShowSourceDropdown(false);
-      
-      // If source doesn't match any existing source, save it
-      if (sourceInput.trim() && !sources.some(s => s.preferredName.toLowerCase() === sourceInput.toLowerCase())) {
-        fetch('/api/healthcare-sources', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: sourceInput.trim() }),
-        })
-          .then(res => res.json())
-          .then(newSource => {
-            if (newSource.preferredName) {
-              setSources(prev => [...prev, newSource].sort((a, b) => 
-                a.preferredName.localeCompare(b.preferredName)
-              ));
-            }
-          })
-          .catch(err => console.error('Failed to save new source:', err));
-      }
     }, 200);
   };
 
@@ -238,26 +220,9 @@ function NewHealthRecordContent() {
     setFormData(prev => ({ ...prev, doctorName: doctor.preferredName }));
   };
 
-  const handleDoctorBlur = async () => {
+  const handleDoctorBlur = () => {
     setTimeout(() => {
       setShowDoctorDropdown(false);
-      
-      if (doctorInput.trim() && !doctors.some(d => d.preferredName.toLowerCase() === doctorInput.toLowerCase())) {
-        fetch('/api/doctors', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: doctorInput.trim() }),
-        })
-          .then(res => res.json())
-          .then(newDoctor => {
-            if (newDoctor.preferredName) {
-              setDoctors(prev => [...prev, newDoctor].sort((a, b) => 
-                a.preferredName.localeCompare(b.preferredName)
-              ));
-            }
-          })
-          .catch(err => console.error('Failed to save new doctor:', err));
-      }
     }, 200);
   };
 
@@ -557,27 +522,6 @@ function NewHealthRecordContent() {
       return;
     }
 
-    // Ensure source is saved if it's new
-    let finalSource = formData.source;
-    if (formData.source && !sources.some(s => s.preferredName.toLowerCase() === formData.source.toLowerCase())) {
-      try {
-        const sourceRes = await fetch('/api/healthcare-sources', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: formData.source.trim() }),
-        });
-        if (sourceRes.ok) {
-          const newSource = await sourceRes.json();
-          finalSource = newSource.preferredName;
-          setSources(prev => [...prev, newSource].sort((a, b) => 
-            a.preferredName.localeCompare(b.preferredName)
-          ));
-        }
-      } catch (err) {
-        console.error('Failed to save source:', err);
-      }
-    }
-
     try {
       const recordData = { ...(formData.data || {}) };
       if (labResultsTouched) {
@@ -593,7 +537,7 @@ function NewHealthRecordContent() {
         },
         body: JSON.stringify({
           ...formData,
-          source: finalSource,
+          source: formData.source,
           data: recordData,
           documentId: uploadedDocument?.id,
           ocrText: ocrText || undefined,

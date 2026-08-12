@@ -216,8 +216,8 @@ async function extractViaExternalService(
       const data = await response.json().catch(() => ({}));
       const text = typeof data.text === 'string' ? data.text.trim() : '';
       if (text) return text;
-    } catch (error) {
-      console.warn(`External OCR endpoint failed (${endpoint}):`, error);
+    } catch {
+      // Try the next configured endpoint without logging document or provider details.
     }
   }
 
@@ -247,7 +247,6 @@ async function extractViaGroqVision(images: ImagePayload[]): Promise<string> {
     })),
   ];
 
-  console.log('Groq vision model:', GROQ_VISION_MODEL, 'images:', Math.min(images.length, MAX_VISION_IMAGES_PER_REQUEST));
   const response = await fetch(GROQ_API_URL, {
     method: 'POST',
     headers: {
@@ -263,8 +262,7 @@ async function extractViaGroqVision(images: ImagePayload[]): Promise<string> {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Groq vision OCR failed: ${response.status} - ${errorText}`);
+    throw new Error(`Groq vision OCR failed: ${response.status}`);
   }
 
   const data = await response.json();
@@ -282,8 +280,8 @@ async function extractFromImageBuffer(buffer: Buffer, mime: string, r2Key?: stri
     try {
       const url = await getR2SignedUrl(r2Key, 600);
       return extractViaGroqVision([{ mime, dataUrl: url }]);
-    } catch (error) {
-      console.warn('Signed URL vision OCR failed, falling back to base64:', error);
+    } catch {
+      // Fall back to an in-memory data URL without logging the signed URL or provider error.
     }
   }
 
@@ -296,11 +294,6 @@ async function extractFromImageBuffer(buffer: Buffer, mime: string, r2Key?: stri
 async function extractIntakeVisionText(buffer: Buffer): Promise<string> {
   const pageOneImages = await collectPdfImages(buffer, { maxPages: 1, pageStart: 1 });
   const selected = pickLargestImages(pageOneImages, 1);
-  console.log('Intake vision images:', {
-    foundOnPage1: pageOneImages.length,
-    kept: selected.length,
-    sizes: selected.map((c) => `${c.width}x${c.height}`),
-  });
   if (selected.length === 0) {
     throw new Error('No embedded images found on the first PDF page for vision OCR');
   }
@@ -334,11 +327,6 @@ async function extractFullVisionText(buffer: Buffer): Promise<string> {
     chunks.push(`--- Pages ${pageLabel} ---\n${batchText}`);
   }
 
-  console.log('Full vision OCR complete:', {
-    pagesProcessed: pageImages.length,
-    totalPages,
-    batches: chunks.length,
-  });
   return chunks.join('\n\n');
 }
 
@@ -353,18 +341,10 @@ export async function extractTextFromImage(
   const fileName = path.basename(input) || `document${extension}`;
 
   try {
-    console.log('\n--- OCR REQUEST ---');
-    console.log('Input:', input);
-    console.log('Extension:', extension);
-    console.log('Mode:', mode);
-    console.log('Runtime:', process.env.VERCEL ? 'vercel' : 'local');
-    console.log('-------------------\n');
-
     const buffer = await readInputBuffer(input, isR2Key);
 
     const externalText = await extractViaExternalService(buffer, fileName, mime);
     if (externalText && externalText.length >= MIN_USEFUL_TEXT_CHARS) {
-      console.log('OCR source: external service');
       return externalText;
     }
 
@@ -375,27 +355,21 @@ export async function extractTextFromImage(
         firstPageOnly: false,
       });
       if (pdfText.length >= MIN_USEFUL_TEXT_CHARS) {
-        console.log('OCR source: PDF text layer', { chars: pdfText.length, mode });
         return pdfText;
       }
 
-      console.log('PDF text layer insufficient; using Groq vision', { mode });
       if (mode === 'full') {
         const visionText = await extractFullVisionText(buffer);
-        console.log('OCR source: Groq vision full document', { chars: visionText.length });
         return visionText;
       }
 
       const visionText = await extractIntakeVisionText(buffer);
-      console.log('OCR source: Groq vision first page (intake)', { chars: visionText.length });
       return visionText;
     }
 
     const imageText = await extractFromImageBuffer(buffer, mime, isR2Key ? input : undefined);
-    console.log('OCR source: Groq vision image', { chars: imageText.length });
     return imageText;
-  } catch (error: any) {
-    console.error('OCR Processing Error:', error);
-    throw new AppError(`Failed to process document with OCR: ${error.message}`, 502);
+  } catch {
+    throw new AppError('Failed to process document with OCR', 502);
   }
 }

@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { getDocumentById, updateDocumentStatus } from '@/lib/services/document.service';
 import { suggestTags } from '@/lib/services/ai.service';
 import { handleError, AppError } from '@/lib/middleware/error-handler';
+import { enforceHourlyRateLimit } from '@/lib/security/rate-limit';
 
 function limitToFirstNWords(text: string, maxWords: number): string {
     if (!text || text.trim().length === 0) {
@@ -23,6 +24,7 @@ export async function POST(request: NextRequest) {
         if (!user) {
             throw new AppError('Unauthorized', 401);
         }
+        await enforceHourlyRateLimit(user.id, 'ai');
 
         const { documentId, text } = await request.json();
 

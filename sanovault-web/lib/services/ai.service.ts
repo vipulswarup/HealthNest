@@ -20,7 +20,6 @@ export interface AnalysisResult {
 async function callGroq(prompt: string, systemPrompt: string): Promise<string> {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-        console.warn('GROQ_API_KEY is missing. Returning mock AI response.');
         return JSON.stringify({ mock: true, message: "AI Service Unavailable" });
     }
 
@@ -42,28 +41,15 @@ async function callGroq(prompt: string, systemPrompt: string): Promise<string> {
             }),
         });
 
-        // DEBUG LOGGING
-        console.log('\n--- GROQ AI REQUEST ---');
-        console.log('System Prompt:', systemPrompt);
-        console.log('User Prompt:', prompt);
-        console.log('-----------------------\n');
-
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Groq API error: ${response.status} - ${errorText}`);
+            throw new Error(`Groq API error: ${response.status}`);
         }
 
         const data = await response.json();
         const aiResponse = data.choices[0]?.message?.content || '{}';
         
-        // DEBUG LOGGING - Raw AI Response
-        console.log('\n--- GROQ AI RESPONSE ---');
-        console.log('Raw Response:', aiResponse);
-        console.log('-----------------------\n');
-        
         return aiResponse;
-    } catch (error) {
-        console.error('AI Service Error:', error);
+    } catch {
         throw new AppError('Failed to process request with AI service', 502);
     }
 }
@@ -80,8 +66,8 @@ async function getValidCategoryLabels(): Promise<string[]> {
         const categories = await getAllCategories();
         const names = getValidCategoryDisplayNames(categories);
         if (names.length > 0) return names;
-    } catch (error) {
-        console.warn('Failed to load categories from DB; using fallback labels', error);
+    } catch {
+        // The static label set is intentionally retained as a resilient fallback.
     }
     return getRecordTypeOptions().map((opt) => opt.label);
 }
@@ -97,16 +83,6 @@ export async function analyzeDocument(text: string): Promise<AnalysisResult> {
         const result = JSON.parse(response);
         const classification = resolveClassification(result.classification, validCategories);
 
-        console.log('\n--- AI ANALYSIS RESULT ---');
-        console.log('Classification (raw):', result.classification);
-        console.log('Classification (resolved):', classification);
-        console.log('Confidence:', result.confidence);
-        console.log('Source:', result.source);
-        console.log('Doctor Name:', result.doctorName);
-        console.log('Document Date (raw):', result.documentDate);
-        console.log('Tags:', result.tags);
-        console.log('-----------------------\n');
-
         const aiTags: string[] = result.tags || [];
         const normalizedTags = aiTags
             .map(tag => normalizeTag(String(tag)))
@@ -119,10 +95,7 @@ export async function analyzeDocument(text: string): Promise<AnalysisResult> {
             documentDate: result.documentDate || null,
             tags: normalizedTags
         };
-    } catch (e) {
-        console.error("Failed to parse AI analysis response");
-        console.error("Raw response:", response);
-        console.error("Parse error:", e);
+    } catch {
         return {
             classification: resolveClassification(null, validCategories),
             confidence: 0,
@@ -147,8 +120,7 @@ export async function classifyDocument(text: string): Promise<{ classification: 
             classification: resolveClassification(parsed.classification, validCategories),
             confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0,
         };
-    } catch (e) {
-        console.error("Failed to parse AI classification response", response);
+    } catch {
         return { classification: resolveClassification(null, validCategories), confidence: 0 };
     }
 }
@@ -158,8 +130,7 @@ export async function extractData(text: string, documentType: string): Promise<R
     const response = await callGroq(text, systemPrompt);
     try {
         return JSON.parse(response);
-    } catch (e) {
-        console.error("Failed to parse AI extraction response", response);
+    } catch {
         return {};
     }
 }
@@ -251,8 +222,7 @@ export async function suggestTags(text: string): Promise<TagSuggestionResult> {
             newTags,
             allTags: normalizedTags
         };
-    } catch (e) {
-        console.error("Failed to parse AI tagging response", response);
+    } catch {
         return {
             matchedTags: [],
             newTags: [],

@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { getDocumentById, updateDocumentStatus } from '@/lib/services/document.service';
 import { extractTextFromImage, OcrMode } from '@/lib/services/ocr.service';
 import { handleError, AppError } from '@/lib/middleware/error-handler';
+import { enforceHourlyRateLimit } from '@/lib/security/rate-limit';
 
 export const runtime = 'nodejs';
 /** Intake OCR is first-page / text-layer only. Full multi-page OCR should use a dedicated job later. */
@@ -22,6 +23,7 @@ export async function POST(request: NextRequest) {
         if (!documentId) {
             throw new AppError('Document ID is required', 400);
         }
+        await enforceHourlyRateLimit(user.id, mode === 'full' ? 'ocr-full' : 'ocr-intake');
 
         const document = await getDocumentById(documentId);
         if (!document) {

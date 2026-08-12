@@ -10,10 +10,7 @@ import AppNav from '@/components/layout/AppNav';
 type Patient = { id: string; firstName: string; lastName?: string };
 type InvitePreview = {
   invite: {
-    id: string;
-    householdId: string;
     householdName?: string;
-    email: string;
     status: string;
     invitedByName?: string;
     expiresAt: string;
@@ -36,12 +33,10 @@ export default function AcceptInvitePage() {
   const [busy, setBusy] = useState(false);
 
   const invitePath = `/households/invites/${token}`;
-  const authQuery = useMemo(() => {
-    const inviteEmail = preview?.invite.email?.trim().toLowerCase() || '';
-    const qs = new URLSearchParams({ callbackUrl: invitePath });
-    if (inviteEmail) qs.set('email', inviteEmail);
-    return qs.toString();
-  }, [invitePath, preview?.invite.email]);
+  const authQuery = useMemo(
+    () => new URLSearchParams({ callbackUrl: invitePath }).toString(),
+    [invitePath]
+  );
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -150,8 +145,7 @@ export default function AcceptInvitePage() {
             </h1>
             {invite && (
               <p className="mt-2 text-sm text-gray-600">
-                <strong>{inviterName}</strong> invited{' '}
-                <strong>{invite.email}</strong> to share health records on SanoVault.
+                <strong>{inviterName}</strong> invited you to share health records on SanoVault.
               </p>
             )}
           </div>
@@ -187,7 +181,7 @@ export default function AcceptInvitePage() {
                 Already have an account? Sign in
               </Link>
               <p className="text-xs text-center text-gray-500">
-                Use <strong>{invite.email}</strong> so we can match this invite to your account.
+                Sign in with the email address that received this invitation.
               </p>
             </div>
           )}
@@ -213,13 +207,12 @@ export default function AcceptInvitePage() {
                 <strong>{inviterName}</strong> invited you to join <strong>{householdName}</strong>.
               </p>
               <p className="text-sm text-gray-600">
-                Invited email: {invite?.email} · Status: {invite?.status}
+                Status: {invite?.status}
               </p>
 
               {!preview.emailMatches && (
                 <div className="rounded-md bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 text-sm">
-                  You are signed in as a different email than this invite. Sign in with{' '}
-                  <strong>{invite?.email}</strong> to accept.
+                  You are signed in with a different account than this invite. Sign in with the invited account to accept.
                 </div>
               )}
 

@@ -33,13 +33,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ matched: existing.preferredName, doctor: existing });
     }
 
-    const [doctor] = await sql`
-      INSERT INTO doctors (preferred_name) VALUES (${trimmed})
-      ON CONFLICT (preferred_name) DO UPDATE SET updated_at = NOW()
-      RETURNING id, preferred_name AS "preferredName", aliases, is_active AS "isActive"
-    `;
-
-    return NextResponse.json({ matched: doctor.preferredName, doctor });
+    // The catalog is shared across every account. An unmatched value remains
+    // private to the health record being created; only curated data is global.
+    return NextResponse.json({ matched: trimmed, doctor: null });
   } catch (error) {
     return handleError(error);
   }
