@@ -15,6 +15,7 @@ export const config = {
     '/reports',
     '/reports/:path*',
     '/households',
-    '/households/:path*',
+    // Allow /households/invites/:token without auth so invitees see a pending-invite gate.
+    '/households/((?!invites(?:/|$)).*)',
   ],
 };

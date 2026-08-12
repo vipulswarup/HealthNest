@@ -40,8 +40,9 @@ function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const emailFromInvite = searchParams.get('email')?.trim().toLowerCase() || '';
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(emailFromInvite);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -49,6 +50,8 @@ function SignInContent() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
+    if (emailFromInvite) setEmail(emailFromInvite);
+
     const msg = searchParams.get('message');
     if (msg) setMessage(msg);
 
@@ -64,7 +67,7 @@ function SignInContent() {
         setIsCheckingSession(false);
       }
     });
-  }, [router, callbackUrl, searchParams]);
+  }, [router, callbackUrl, searchParams, emailFromInvite]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,7 +222,11 @@ function SignInContent() {
             <p className="text-center text-sm text-gray-600">
               Don&apos;t have an account?{' '}
               <a
-                href="/auth/signup"
+                href={(() => {
+                  const qs = new URLSearchParams({ callbackUrl });
+                  if (email.trim()) qs.set('email', email.trim().toLowerCase());
+                  return `/auth/signup?${qs.toString()}`;
+                })()}
                 className="font-medium text-[#0175C2] hover:text-[#015a96] transition-colors"
               >
                 Sign up

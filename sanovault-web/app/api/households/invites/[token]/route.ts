@@ -36,7 +36,6 @@ export async function GET(
 ) {
   try {
     const user = await getCurrentUser();
-    if (!user) throw new AppError('Unauthorized', 401);
 
     const { token } = await params;
     if (!token) throw new AppError('Invalid invite token', 400);
@@ -52,6 +51,18 @@ export async function GET(
       invite.status = 'expired';
     }
 
+    const invitePayload = toHouseholdInvite(invite);
+
+    // Public preview for logged-out invitees (no patient list).
+    if (!user) {
+      return NextResponse.json({
+        invite: invitePayload,
+        shareablePatients: [],
+        emailMatches: false,
+        authenticated: false,
+      });
+    }
+
     const accessible = await listAccessiblePatients(user.id);
     const alreadyLinked = await sql`
       SELECT patient_id FROM household_patients WHERE household_id = ${invite.household_id}::uuid
@@ -60,9 +71,10 @@ export async function GET(
     const shareablePatients = accessible.filter((p) => !linkedSet.has(String(p.id)));
 
     return NextResponse.json({
-      invite: toHouseholdInvite(invite),
+      invite: invitePayload,
       shareablePatients: shareablePatients.map(toPatient),
       emailMatches: user.email?.toLowerCase() === String(invite.email).toLowerCase(),
+      authenticated: true,
     });
   } catch (error) {
     return handleError(error);

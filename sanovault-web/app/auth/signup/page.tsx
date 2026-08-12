@@ -2,20 +2,27 @@
 
 import { authClient } from '@/lib/auth/client';
 import SocialAuthButtons from '@/components/auth/SocialAuthButtons';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
-export default function SignUpPage() {
+function SignUpContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const emailFromInvite = searchParams.get('email')?.trim().toLowerCase() || '';
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(emailFromInvite);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (emailFromInvite) setEmail(emailFromInvite);
+  }, [emailFromInvite]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +45,7 @@ export default function SignUpPage() {
         name: [firstName, lastName].filter(Boolean).join(' '),
         email: email.trim().toLowerCase(),
         password,
-        callbackURL: '/dashboard',
+        callbackURL: callbackUrl,
       });
 
       if (result?.error) {
@@ -46,7 +53,7 @@ export default function SignUpPage() {
         return;
       }
 
-      router.push('/dashboard');
+      router.push(callbackUrl);
       router.refresh();
     } catch {
       setError('Unable to create account. Please try again.');
@@ -54,6 +61,12 @@ export default function SignUpPage() {
       setLoading(false);
     }
   };
+
+  const signInHref = (() => {
+    const qs = new URLSearchParams({ callbackUrl });
+    if (email.trim()) qs.set('email', email.trim().toLowerCase());
+    return `/auth/signin?${qs.toString()}`;
+  })();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
@@ -73,7 +86,9 @@ export default function SignUpPage() {
             Create your account
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Start managing your health records with SanoVault
+            {emailFromInvite
+              ? 'Finish signing up to accept your household invite'
+              : 'Start managing your health records with SanoVault'}
           </p>
         </div>
 
@@ -177,14 +192,14 @@ export default function SignUpPage() {
 
           <SocialAuthButtons
             mode="signup"
-            callbackURL="/dashboard"
+            callbackURL={callbackUrl}
             disabled={loading}
             onError={setError}
           />
 
           <div className="text-center">
             <a
-              href="/auth/signin"
+              href={signInHref}
               className="font-medium text-[#0175C2] hover:text-[#015a96] transition-colors"
             >
               Already have an account? Sign in
@@ -193,5 +208,19 @@ export default function SignUpPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-white">
+          <div className="text-center text-gray-600">Loading...</div>
+        </div>
+      }
+    >
+      <SignUpContent />
+    </Suspense>
   );
 }
