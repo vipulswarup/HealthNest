@@ -9,6 +9,7 @@ import {
   requireActiveHouseholdId,
 } from '@/lib/households/access';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
+import { recordAuditEvent } from '@/lib/services/audit.service';
 
 const recordSchema = z.object({
   patientId: z.string().uuid(), recordType: z.string().min(1), data: z.record(z.string(), z.any()), tags: z.array(z.string()).optional(),
@@ -80,6 +81,13 @@ export async function POST(request: NextRequest) {
       VALUES (${data.patientId}::uuid, ${data.recordType}, ${JSON.stringify(data.data)}::jsonb, ${data.tags || []}, ${data.source}, ${data.doctorName || null}, ${data.documentDate || null}::date, ${data.documentId || null}::uuid, ${ocrText}, ${data.hospitalSystemName || null}, ${data.hospitalIdentifierType || null}, ${data.hospitalIdentifierValue || null})
       RETURNING *
     `;
+    await recordAuditEvent({
+      actorId: user.id,
+      patientId: data.patientId,
+      eventType: 'created',
+      entityType: 'health_record',
+      entityId: record.id,
+    });
     return NextResponse.json(toHealthRecord(record), { status: 201 });
   } catch (error) { return handleError(error); }
 }

@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { sql } from '@/lib/db/neon';
 import { toHealthRecord } from '@/lib/db/records';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
+import { recordAuditEvent } from '@/lib/services/audit.service';
 
 const updateSchema = z.object({
   recordType: z.string().min(1).optional(), data: z.record(z.string(), z.any()).optional(), tags: z.array(z.string()).optional(), source: z.string().min(1).optional(),
@@ -64,6 +65,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       RETURNING hr.*
     `;
     if (!record) throw new AppError('Health record not found', 404);
+    await recordAuditEvent({
+      actorId: user.id,
+      patientId: record.patient_id,
+      eventType: 'updated',
+      entityType: 'health_record',
+      entityId: id,
+      metadata: { changedFields: Object.keys(data) },
+    });
     return NextResponse.json(toHealthRecord(record));
   } catch (error) { return handleError(error); }
 }
@@ -82,9 +91,16 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
             ON hm.household_id = hp.household_id AND hm.user_id = ${user.id}
           WHERE hp.patient_id = p.id
         )
-      RETURNING hr.id
+      RETURNING hr.id, hr.patient_id
     `;
     if (!record) throw new AppError('Health record not found', 404);
+    await recordAuditEvent({
+      actorId: user.id,
+      patientId: record.patient_id,
+      eventType: 'deleted',
+      entityType: 'health_record',
+      entityId: id,
+    });
     return NextResponse.json({ message: 'Health record deleted successfully' });
   } catch (error) { return handleError(error); }
 }

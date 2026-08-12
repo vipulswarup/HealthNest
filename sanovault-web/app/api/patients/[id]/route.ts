@@ -5,6 +5,7 @@ import { toPatient } from '@/lib/db/mappers';
 import { getCurrentUser } from '@/lib/auth/session';
 import { canAccessPatient, getAccessiblePatient } from '@/lib/households/access';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
+import { recordAuditEvent } from '@/lib/services/audit.service';
 
 const idSchema = z.string().uuid();
 const updateSchema = z.object({
@@ -56,6 +57,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       WHERE id = ${id}::uuid RETURNING *
     `;
     if (!patient) throw new AppError('Patient not found', 404);
+    await recordAuditEvent({
+      actorId: user.id,
+      patientId: id,
+      eventType: 'updated',
+      entityType: 'patient',
+      entityId: id,
+      metadata: { changedFields: Object.keys(data) },
+    });
     return NextResponse.json(toPatient(patient));
   } catch (error) { return handleError(error); }
 }
@@ -66,6 +75,12 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
     if (!(await canAccessPatient(user.id, id))) throw new AppError('Patient not found', 404);
     const [patient] = await sql`DELETE FROM patients WHERE id = ${id}::uuid RETURNING id`;
     if (!patient) throw new AppError('Patient not found', 404);
+    await recordAuditEvent({
+      actorId: user.id,
+      eventType: 'deleted',
+      entityType: 'patient',
+      entityId: id,
+    });
     return NextResponse.json({ message: 'Patient deleted successfully' });
   } catch (error) { return handleError(error); }
 }

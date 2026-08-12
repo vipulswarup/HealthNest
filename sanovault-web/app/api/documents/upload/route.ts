@@ -6,6 +6,7 @@ import { createDocument } from '@/lib/services/document.service';
 import { handleError, AppError } from '@/lib/middleware/error-handler';
 import { verifyUploadSignature } from '@/lib/security/file-signature';
 import { enforceHourlyRateLimit } from '@/lib/security/rate-limit';
+import { recordAuditEvent } from '@/lib/services/audit.service';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
@@ -27,15 +28,25 @@ export async function POST(request: NextRequest) {
       throw new AppError('File content does not match an allowed PDF, JPEG, PNG, HEIC, or HEIF type', 400);
     }
 
-    r2Key = `${user.id}/${randomUUID()}.${verifiedFile.extension}`;
-    await uploadToR2(r2Key, bytes, verifiedFile.mimeType);
+    const storageKey = `${user.id}/${randomUUID()}.${verifiedFile.extension}`;
+    r2Key = storageKey;
+    await uploadToR2(storageKey, bytes, verifiedFile.mimeType);
 
     const document = await createDocument({
       userId: user.id,
       fileName: file.name,
       fileSize: file.size,
       fileType: verifiedFile.mimeType,
-      r2Key,
+      r2Key: storageKey,
+    });
+    const documentId = document.id || document._id;
+    if (!documentId) throw new AppError('Document storage did not return an ID', 500);
+    await recordAuditEvent({
+      actorId: user.id,
+      eventType: 'created',
+      entityType: 'document',
+      entityId: documentId,
+      metadata: { fileSize: file.size, fileType: verifiedFile.mimeType },
     });
     return NextResponse.json(document, { status: 201 });
   } catch (error: any) {

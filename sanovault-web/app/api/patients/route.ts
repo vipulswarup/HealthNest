@@ -10,6 +10,7 @@ import {
   requireActiveHouseholdId,
 } from '@/lib/households/access';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
+import { recordAuditEvent } from '@/lib/services/audit.service';
 
 const patientSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -67,6 +68,14 @@ export async function POST(request: NextRequest) {
       ) RETURNING *
     `;
     await linkPatientToHousehold(data.householdId, patient.id);
+    await recordAuditEvent({
+      actorId: user.id,
+      patientId: patient.id,
+      eventType: 'created',
+      entityType: 'patient',
+      entityId: patient.id,
+      metadata: { householdLinked: true },
+    });
     return NextResponse.json(toPatient({ ...patient, household_id: data.householdId }), { status: 201 });
   } catch (error) { return handleError(error); }
 }
