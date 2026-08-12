@@ -14,6 +14,7 @@ const defaultLinks = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/patients', label: 'Patients' },
   { href: '/health-records', label: 'Health Records' },
+  { href: '/medications', label: 'Medications' },
   { href: '/households', label: 'Households' },
 ];
 

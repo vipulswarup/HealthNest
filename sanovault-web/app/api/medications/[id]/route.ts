@@ -17,6 +17,8 @@ const updateMedicationSchema = z.object({
   instructions: z.string().optional(),
   prescribedBy: z.string().optional(),
   source: z.string().optional(),
+  indication: z.string().max(500).optional(),
+  stoppedReason: z.string().max(500).optional(),
   isActive: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
 });
@@ -58,6 +60,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         instructions = COALESCE(${data.instructions ?? null}, m.instructions),
         prescribed_by = COALESCE(${data.prescribedBy ?? null}, m.prescribed_by),
         source = COALESCE(${data.source ?? null}, m.source),
+        indication = COALESCE(${data.indication ?? null}, m.indication),
+        stopped_reason = COALESCE(${data.stoppedReason ?? null}, m.stopped_reason),
         is_active = COALESCE(${data.isActive ?? null}, m.is_active),
         tags = COALESCE(${data.tags ?? null}, m.tags),
         updated_at = NOW()
@@ -81,7 +85,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       entityId: id,
       metadata: { changedFields: Object.keys(data) },
     });
-    return NextResponse.json(toMedication(medication));
+    const current = await getAccessibleMedication(user.id, id);
+    return NextResponse.json(current ? toMedication(current) : toMedication(medication));
   } catch (error) {
     return handleError(error);
   }

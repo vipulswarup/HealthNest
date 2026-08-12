@@ -38,6 +38,8 @@ export const config = {
     '/patients/:path*',
     '/health-records',
     '/health-records/:path*',
+    '/medications',
+    '/medications/:path*',
     '/documents',
     '/documents/:path*',
     '/reports',
