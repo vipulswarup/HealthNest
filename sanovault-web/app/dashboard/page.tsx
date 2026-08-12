@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AppNav from '@/components/layout/AppNav';
+import { useHouseholdContext } from '@/components/households/useHouseholdContext';
 
 type PendingInvite = {
   id: string;
@@ -17,6 +18,7 @@ export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [pending, setPending] = useState<PendingInvite[]>([]);
+  const { households, loading: householdsLoading } = useHouseholdContext();
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -51,6 +53,21 @@ export default function Dashboard() {
 
       <main className="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
+          {!householdsLoading && households.length === 0 && (
+            <div className="bg-white border border-blue-100 rounded-xl p-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Create your first household</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Patients and records live in households. Create one to get started, then invite family members.
+              </p>
+              <Link
+                href="/households"
+                className="inline-block bg-[#0175C2] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#015a96]"
+              >
+                Go to Households
+              </Link>
+            </div>
+          )}
+
           {pending.length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
               <p className="font-medium text-amber-900 mb-2">Pending household invitations</p>

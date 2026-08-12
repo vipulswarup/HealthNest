@@ -1,23 +1,26 @@
 import { sql } from '@/lib/db/neon';
 
-export type ActiveHouseholdId = string | null;
+export type ActiveHouseholdId = string;
 
-/** Personal: owner + no household. Household: member of patient's household. */
+async function firstMembership(userId: string): Promise<string | null> {
+  const [row] = await sql`
+    SELECT household_id
+    FROM household_members
+    WHERE user_id = ${userId}
+    ORDER BY joined_at ASC
+    LIMIT 1
+  `;
+  return row ? String(row.household_id) : null;
+}
+
+/** Accessible if user is a member of any household linked to the patient. */
 export async function canAccessPatient(userId: string, patientId: string): Promise<boolean> {
   const [row] = await sql`
     SELECT 1
-    FROM patients p
-    WHERE p.id = ${patientId}::uuid
-      AND (
-        (p.household_id IS NULL AND p.owner_id = ${userId})
-        OR (
-          p.household_id IS NOT NULL
-          AND EXISTS (
-            SELECT 1 FROM household_members hm
-            WHERE hm.household_id = p.household_id AND hm.user_id = ${userId}
-          )
-        )
-      )
+    FROM household_patients hp
+    INNER JOIN household_members hm
+      ON hm.household_id = hp.household_id AND hm.user_id = ${userId}
+    WHERE hp.patient_id = ${patientId}::uuid
     LIMIT 1
   `;
   return Boolean(row);
@@ -31,15 +34,12 @@ export async function getAccessiblePatient(
     SELECT p.*
     FROM patients p
     WHERE p.id = ${patientId}::uuid
-      AND (
-        (p.household_id IS NULL AND p.owner_id = ${userId})
-        OR (
-          p.household_id IS NOT NULL
-          AND EXISTS (
-            SELECT 1 FROM household_members hm
-            WHERE hm.household_id = p.household_id AND hm.user_id = ${userId}
-          )
-        )
+      AND EXISTS (
+        SELECT 1
+        FROM household_patients hp
+        INNER JOIN household_members hm
+          ON hm.household_id = hp.household_id AND hm.user_id = ${userId}
+        WHERE hp.patient_id = p.id
       )
     LIMIT 1
   `;
@@ -55,31 +55,41 @@ export async function isHouseholdMember(userId: string, householdId: string): Pr
   return Boolean(row);
 }
 
-export async function getActiveHouseholdId(userId: string): Promise<ActiveHouseholdId> {
+/** Resolve active household: stored preference if valid, else first membership. */
+export async function getActiveHouseholdId(userId: string): Promise<ActiveHouseholdId | null> {
   const [row] = await sql`
     SELECT preferences->>'activeHouseholdId' AS active_household_id
     FROM profiles WHERE user_id = ${userId}
   `;
   const raw = row?.active_household_id;
-  if (!raw || raw === 'null' || raw === '') return null;
-  return String(raw);
+  if (raw && raw !== 'null' && raw !== '') {
+    const id = String(raw);
+    if (await isHouseholdMember(userId, id)) return id;
+  }
+  const fallback = await firstMembership(userId);
+  if (fallback) {
+    await setActiveHouseholdId(userId, fallback);
+    return fallback;
+  }
+  return null;
 }
 
-export async function setActiveHouseholdId(
-  userId: string,
-  householdId: ActiveHouseholdId
-): Promise<void> {
-  if (householdId) {
-    const member = await isHouseholdMember(userId, householdId);
-    if (!member) throw new Error('NOT_HOUSEHOLD_MEMBER');
-  }
+export async function requireActiveHouseholdId(userId: string): Promise<ActiveHouseholdId> {
+  const id = await getActiveHouseholdId(userId);
+  if (!id) throw new Error('NO_HOUSEHOLD');
+  return id;
+}
+
+export async function setActiveHouseholdId(userId: string, householdId: string): Promise<void> {
+  const member = await isHouseholdMember(userId, householdId);
+  if (!member) throw new Error('NOT_HOUSEHOLD_MEMBER');
   await sql`
     UPDATE profiles
     SET
       preferences = jsonb_set(
         COALESCE(preferences, '{}'::jsonb),
         '{activeHouseholdId}',
-        ${householdId === null ? 'null' : JSON.stringify(householdId)}::jsonb,
+        ${JSON.stringify(householdId)}::jsonb,
         true
       ),
       updated_at = NOW()
@@ -87,36 +97,97 @@ export async function setActiveHouseholdId(
   `;
 }
 
-/** List patients scoped to Personal (null) or a specific household. */
 export async function listPatientsForContext(
   userId: string,
   activeHouseholdId: ActiveHouseholdId
 ): Promise<Record<string, any>[]> {
-  if (activeHouseholdId) {
-    const member = await isHouseholdMember(userId, activeHouseholdId);
-    if (!member) return [];
-    return sql`
-      SELECT * FROM patients
-      WHERE household_id = ${activeHouseholdId}::uuid
-      ORDER BY created_at DESC
-    `;
-  }
+  const member = await isHouseholdMember(userId, activeHouseholdId);
+  if (!member) return [];
   return sql`
-    SELECT * FROM patients
-    WHERE owner_id = ${userId} AND household_id IS NULL
-    ORDER BY created_at DESC
+    SELECT p.*
+    FROM patients p
+    INNER JOIN household_patients hp ON hp.patient_id = p.id
+    WHERE hp.household_id = ${activeHouseholdId}::uuid
+    ORDER BY p.created_at DESC
   `;
 }
 
-export async function listPersonalPatients(userId: string): Promise<Record<string, any>[]> {
+/** Patients the user can access via any household membership. */
+export async function listAccessiblePatients(userId: string): Promise<Record<string, any>[]> {
   return sql`
-    SELECT * FROM patients
-    WHERE owner_id = ${userId} AND household_id IS NULL
-    ORDER BY created_at DESC
+    SELECT DISTINCT ON (p.id) p.*
+    FROM patients p
+    INNER JOIN household_patients hp ON hp.patient_id = p.id
+    INNER JOIN household_members hm ON hm.household_id = hp.household_id AND hm.user_id = ${userId}
+    ORDER BY p.id, p.created_at DESC
   `;
 }
 
-/** SQL fragment helper: patient accessible to user (for JOINs). Use with neon tagged templates carefully. */
+export async function listHouseholdPatients(
+  userId: string,
+  householdId: string
+): Promise<Record<string, any>[]> {
+  if (!(await isHouseholdMember(userId, householdId))) return [];
+  return sql`
+    SELECT p.*
+    FROM patients p
+    INNER JOIN household_patients hp ON hp.patient_id = p.id
+    WHERE hp.household_id = ${householdId}::uuid
+    ORDER BY p.created_at DESC
+  `;
+}
+
+export async function linkPatientToHousehold(
+  householdId: string,
+  patientId: string
+): Promise<void> {
+  await sql`
+    INSERT INTO household_patients (household_id, patient_id)
+    VALUES (${householdId}::uuid, ${patientId}::uuid)
+    ON CONFLICT DO NOTHING
+  `;
+}
+
+export async function unlinkPatientFromHousehold(
+  householdId: string,
+  patientId: string
+): Promise<{ ok: true } | { ok: false; reason: 'ORPHAN' | 'NOT_LINKED' }> {
+  const [link] = await sql`
+    SELECT 1 FROM household_patients
+    WHERE household_id = ${householdId}::uuid AND patient_id = ${patientId}::uuid
+    LIMIT 1
+  `;
+  if (!link) return { ok: false, reason: 'NOT_LINKED' };
+
+  const others = await sql`
+    SELECT household_id FROM household_patients
+    WHERE patient_id = ${patientId}::uuid AND household_id <> ${householdId}::uuid
+    LIMIT 1
+  `;
+  if (others.length === 0) return { ok: false, reason: 'ORPHAN' };
+
+  await sql`
+    DELETE FROM household_patients
+    WHERE household_id = ${householdId}::uuid AND patient_id = ${patientId}::uuid
+  `;
+  return { ok: true };
+}
+
+/** Patients that would have zero households if this household were removed. */
+export async function listOrphanRiskPatients(householdId: string): Promise<Record<string, any>[]> {
+  return sql`
+    SELECT p.id, p.first_name, p.last_name
+    FROM patients p
+    INNER JOIN household_patients hp ON hp.patient_id = p.id
+    WHERE hp.household_id = ${householdId}::uuid
+      AND NOT EXISTS (
+        SELECT 1 FROM household_patients hp2
+        WHERE hp2.patient_id = p.id AND hp2.household_id <> ${householdId}::uuid
+      )
+    ORDER BY p.first_name ASC
+  `;
+}
+
 export async function canAccessDocument(userId: string, documentId: string): Promise<boolean> {
   const [row] = await sql`
     SELECT 1
@@ -126,15 +197,13 @@ export async function canAccessDocument(userId: string, documentId: string): Pro
       AND (
         d.owner_id = ${userId}
         OR (
-          p.id IS NOT NULL AND (
-            (p.household_id IS NULL AND p.owner_id = ${userId})
-            OR (
-              p.household_id IS NOT NULL
-              AND EXISTS (
-                SELECT 1 FROM household_members hm
-                WHERE hm.household_id = p.household_id AND hm.user_id = ${userId}
-              )
-            )
+          p.id IS NOT NULL
+          AND EXISTS (
+            SELECT 1
+            FROM household_patients hp
+            INNER JOIN household_members hm
+              ON hm.household_id = hp.household_id AND hm.user_id = ${userId}
+            WHERE hp.patient_id = p.id
           )
         )
       )
@@ -155,15 +224,13 @@ export async function getAccessibleDocument(
       AND (
         d.owner_id = ${userId}
         OR (
-          p.id IS NOT NULL AND (
-            (p.household_id IS NULL AND p.owner_id = ${userId})
-            OR (
-              p.household_id IS NOT NULL
-              AND EXISTS (
-                SELECT 1 FROM household_members hm
-                WHERE hm.household_id = p.household_id AND hm.user_id = ${userId}
-              )
-            )
+          p.id IS NOT NULL
+          AND EXISTS (
+            SELECT 1
+            FROM household_patients hp
+            INNER JOIN household_members hm
+              ON hm.household_id = hp.household_id AND hm.user_id = ${userId}
+            WHERE hp.patient_id = p.id
           )
         )
       )
@@ -176,42 +243,43 @@ export async function listAccessibleDocuments(
   userId: string,
   activeHouseholdId: ActiveHouseholdId
 ): Promise<Record<string, any>[]> {
-  if (activeHouseholdId) {
-    const member = await isHouseholdMember(userId, activeHouseholdId);
-    if (!member) return [];
-    return sql`
-      SELECT d.*
-      FROM documents d
-      INNER JOIN patients p ON p.id = d.patient_id
-      WHERE p.household_id = ${activeHouseholdId}::uuid
-      ORDER BY d.uploaded_at DESC
-    `;
-  }
+  if (!(await isHouseholdMember(userId, activeHouseholdId))) return [];
   return sql`
     SELECT d.*
     FROM documents d
-    LEFT JOIN patients p ON p.id = d.patient_id
-    WHERE d.owner_id = ${userId}
-      AND (d.patient_id IS NULL OR (p.household_id IS NULL AND p.owner_id = ${userId}))
+    INNER JOIN patients p ON p.id = d.patient_id
+    INNER JOIN household_patients hp ON hp.patient_id = p.id
+    WHERE hp.household_id = ${activeHouseholdId}::uuid
     ORDER BY d.uploaded_at DESC
   `;
 }
 
-export async function dissolveHouseholdIfEmpty(
-  householdId: string,
-  reclaimUserId: string
-): Promise<boolean> {
+/**
+ * Dissolve household when empty of members.
+ * Caller must already have checked orphan risk and removed members.
+ */
+export async function dissolveHouseholdIfEmpty(householdId: string): Promise<boolean> {
   const members = await sql`
     SELECT user_id FROM household_members WHERE household_id = ${householdId}::uuid
   `;
   if (members.length > 0) return false;
 
-  await sql`
-    UPDATE patients
-    SET household_id = NULL, owner_id = ${reclaimUserId}, updated_at = NOW()
-    WHERE household_id = ${householdId}::uuid
-  `;
+  const orphans = await listOrphanRiskPatients(householdId);
+  if (orphans.length > 0) {
+    throw new Error('ORPHAN_PATIENTS');
+  }
+
+  await sql`DELETE FROM household_patients WHERE household_id = ${householdId}::uuid`;
   await sql`DELETE FROM household_invites WHERE household_id = ${householdId}::uuid`;
   await sql`DELETE FROM households WHERE id = ${householdId}::uuid`;
   return true;
+}
+
+export async function assertCanDissolveOrLeave(householdId: string): Promise<void> {
+  const orphans = await listOrphanRiskPatients(householdId);
+  if (orphans.length > 0) {
+    const err = new Error('ORPHAN_PATIENTS') as Error & { patients: Record<string, any>[] };
+    err.patients = orphans;
+    throw err;
+  }
 }

@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth/session';
-import { getActiveHouseholdId, setActiveHouseholdId } from '@/lib/households/access';
+import {
+  getActiveHouseholdId,
+  setActiveHouseholdId,
+} from '@/lib/households/access';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
 
 const schema = z.object({
-  householdId: z.string().uuid().nullable(),
+  householdId: z.string().uuid(),
 });
 
 export async function GET() {

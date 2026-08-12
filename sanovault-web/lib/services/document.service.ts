@@ -45,6 +45,7 @@ export async function getDocumentById(id: string): Promise<DocumentMetadata | nu
 
 export async function listUserDocuments(userId: string): Promise<DocumentMetadata[]> {
   const activeHouseholdId = await getActiveHouseholdId(userId);
+  if (!activeHouseholdId) return [];
   const rows = await listAccessibleDocuments(userId, activeHouseholdId);
   return rows.map(toDocument);
 }

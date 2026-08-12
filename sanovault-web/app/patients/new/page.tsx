@@ -3,6 +3,7 @@
 import { useSession } from '@/lib/auth/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import AppNav from '@/components/layout/AppNav';
 import { useHouseholdContext } from '@/components/households/useHouseholdContext';
 
@@ -32,14 +33,21 @@ export default function NewPatientPage() {
   }, [session?.user?.id, status, router]);
 
   useEffect(() => {
-    if (!householdsLoading) {
-      setScopeHouseholdId(activeHouseholdId || '');
+    if (householdsLoading) return;
+    if (households.length === 0) {
+      router.push('/households');
+      return;
     }
-  }, [activeHouseholdId, householdsLoading]);
+    setScopeHouseholdId(activeHouseholdId || households[0].id);
+  }, [activeHouseholdId, households, householdsLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (!scopeHouseholdId) {
+      setError('Select a household');
+      return;
+    }
     setLoading(true);
 
     try {
@@ -53,9 +61,7 @@ export default function NewPatientPage() {
 
       const response = await fetch('/api/patients', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           firstName: formData.firstName,
           lastName: formData.lastName || undefined,
@@ -64,16 +70,12 @@ export default function NewPatientPage() {
           abhaNumber: formData.abhaNumber || undefined,
           bloodGroup: formData.bloodGroup || undefined,
           emergencyContacts: emergencyContactsArray.length > 0 ? emergencyContactsArray : undefined,
-          householdId: scopeHouseholdId || null,
+          householdId: scopeHouseholdId,
         }),
       });
 
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create patient');
-      }
-
+      if (!response.ok) throw new Error(data.error || 'Failed to create patient');
       router.push(`/patients/${data.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -82,7 +84,7 @@ export default function NewPatientPage() {
     }
   };
 
-  if (status === 'loading') {
+  if (status === 'loading' || householdsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -93,14 +95,11 @@ export default function NewPatientPage() {
     );
   }
 
-  if (!session) {
-    return null;
-  }
+  if (!session) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <AppNav />
-
       <main className="max-w-3xl mx-auto py-8 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="bg-white rounded-2xl shadow-xl p-8">
@@ -115,79 +114,67 @@ export default function NewPatientPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label htmlFor="householdScope" className="block text-sm font-medium text-gray-700 mb-2">
-                  Vault *
+                  Household *
                 </label>
                 <select
                   id="householdScope"
+                  required
                   value={scopeHouseholdId}
                   onChange={(e) => setScopeHouseholdId(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
-                  disabled={householdsLoading}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
                 >
-                  <option value="">Personal</option>
                   {households.map((h) => (
                     <option key={h.id} value={h.id}>
                       {h.name}
                     </option>
                   ))}
                 </select>
-                <p className="mt-1 text-xs text-gray-500">
-                  Personal patients are only visible to you. Household patients are shared with all members.
+                <p className="mt-1 text-xs text-gray-600">
+                  Patients always belong to a household and can be shared with multiple households later.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
-                    First Name *
-                  </label>
+                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
                   <input
                     type="text"
                     id="firstName"
                     required
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
                   />
                 </div>
-
                 <div>
-                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
-                    Last Name
-                  </label>
+                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
                   <input
                     type="text"
                     id="lastName"
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
                   />
                 </div>
-
                 <div>
-                  <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 mb-2">
-                    Date of Birth *
-                  </label>
+                  <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 mb-2">Date of Birth *</label>
                   <input
                     type="date"
                     id="dateOfBirth"
                     required
                     value={formData.dateOfBirth}
                     onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
                   />
                 </div>
-
                 <div>
-                  <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-2">
-                    Gender *
-                  </label>
+                  <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-2">Gender *</label>
                   <select
                     id="gender"
                     required
                     value={formData.gender}
                     onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
                   >
                     <option value="">Select gender</option>
                     <option value="Male">Male</option>
@@ -196,30 +183,23 @@ export default function NewPatientPage() {
                     <option value="Prefer not to say">Prefer not to say</option>
                   </select>
                 </div>
-
                 <div>
-                  <label htmlFor="abhaNumber" className="block text-sm font-medium text-gray-700 mb-2">
-                    ABHA Number
-                  </label>
+                  <label htmlFor="abhaNumber" className="block text-sm font-medium text-gray-700 mb-2">ABHA Number</label>
                   <input
                     type="text"
                     id="abhaNumber"
                     value={formData.abhaNumber}
                     onChange={(e) => setFormData({ ...formData, abhaNumber: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
-                    placeholder="Ayushman Bharat Health Account"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
                   />
                 </div>
-
                 <div>
-                  <label htmlFor="bloodGroup" className="block text-sm font-medium text-gray-700 mb-2">
-                    Blood Group
-                  </label>
+                  <label htmlFor="bloodGroup" className="block text-sm font-medium text-gray-700 mb-2">Blood Group</label>
                   <select
                     id="bloodGroup"
                     value={formData.bloodGroup}
                     onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
                   >
                     <option value="">Select blood group</option>
                     {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((g) => (
@@ -230,13 +210,9 @@ export default function NewPatientPage() {
               </div>
 
               <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => router.push('/patients')}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
-                >
+                <Link href="/patients" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">
                   Cancel
-                </button>
+                </Link>
                 <button
                   type="submit"
                   disabled={loading}

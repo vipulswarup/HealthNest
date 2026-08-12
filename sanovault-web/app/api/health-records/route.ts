@@ -6,7 +6,7 @@ import { toHealthRecord } from '@/lib/db/records';
 import {
   canAccessPatient,
   getAccessibleDocument,
-  getActiveHouseholdId,
+  requireActiveHouseholdId,
 } from '@/lib/households/access';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
 
@@ -22,7 +22,13 @@ async function currentUser() { const user = await getCurrentUser(); if (!user) t
 export async function GET(request: NextRequest) {
   try {
     const user = await currentUser();
-    const activeHouseholdId = await getActiveHouseholdId(user.id);
+    let activeHouseholdId: string;
+    try {
+      activeHouseholdId = await requireActiveHouseholdId(user.id);
+    } catch {
+      throw new AppError('Create or join a household before viewing records', 400, 'NO_HOUSEHOLD');
+    }
+
     const params = request.nextUrl.searchParams;
     const patientId = params.get('patientId') || null;
     if (patientId && !z.string().uuid().safeParse(patientId).success) throw new AppError('Invalid patient ID', 400);
@@ -33,37 +39,24 @@ export async function GET(request: NextRequest) {
     const startDate = params.get('startDate') || null;
     const endDate = params.get('endDate') || null;
 
-    const records = activeHouseholdId
-      ? await sql`
-          SELECT hr.* FROM health_records hr
-          JOIN patients p ON p.id = hr.patient_id
-          WHERE p.household_id = ${activeHouseholdId}::uuid
-            AND EXISTS (
-              SELECT 1 FROM household_members hm
-              WHERE hm.household_id = p.household_id AND hm.user_id = ${user.id}
-            )
-            AND (${patientId}::uuid IS NULL OR hr.patient_id = ${patientId}::uuid)
-            AND (${source}::text IS NULL OR hr.source ILIKE '%' || ${source} || '%')
-            AND (${recordType}::text IS NULL OR hr.record_type = ${recordType})
-            AND (${tag}::text IS NULL OR ${tag} = ANY(hr.tags))
-            AND (${startDate}::date IS NULL OR hr.created_at >= ${startDate}::date)
-            AND (${endDate}::date IS NULL OR hr.created_at < (${endDate}::date + INTERVAL '1 day'))
-            AND (${keyword}::text IS NULL OR CONCAT_WS(' ', hr.source, hr.doctor_name, hr.record_type, hr.ocr_text, hr.data::text) ILIKE '%' || ${keyword} || '%' OR EXISTS (SELECT 1 FROM unnest(hr.tags) AS record_tag WHERE record_tag ILIKE '%' || ${keyword} || '%'))
-          ORDER BY hr.created_at DESC
-        `
-      : await sql`
-          SELECT hr.* FROM health_records hr
-          JOIN patients p ON p.id = hr.patient_id
-          WHERE p.owner_id = ${user.id} AND p.household_id IS NULL
-            AND (${patientId}::uuid IS NULL OR hr.patient_id = ${patientId}::uuid)
-            AND (${source}::text IS NULL OR hr.source ILIKE '%' || ${source} || '%')
-            AND (${recordType}::text IS NULL OR hr.record_type = ${recordType})
-            AND (${tag}::text IS NULL OR ${tag} = ANY(hr.tags))
-            AND (${startDate}::date IS NULL OR hr.created_at >= ${startDate}::date)
-            AND (${endDate}::date IS NULL OR hr.created_at < (${endDate}::date + INTERVAL '1 day'))
-            AND (${keyword}::text IS NULL OR CONCAT_WS(' ', hr.source, hr.doctor_name, hr.record_type, hr.ocr_text, hr.data::text) ILIKE '%' || ${keyword} || '%' OR EXISTS (SELECT 1 FROM unnest(hr.tags) AS record_tag WHERE record_tag ILIKE '%' || ${keyword} || '%'))
-          ORDER BY hr.created_at DESC
-        `;
+    const records = await sql`
+      SELECT hr.* FROM health_records hr
+      JOIN patients p ON p.id = hr.patient_id
+      INNER JOIN household_patients hp ON hp.patient_id = p.id
+      WHERE hp.household_id = ${activeHouseholdId}::uuid
+        AND EXISTS (
+          SELECT 1 FROM household_members hm
+          WHERE hm.household_id = hp.household_id AND hm.user_id = ${user.id}
+        )
+        AND (${patientId}::uuid IS NULL OR hr.patient_id = ${patientId}::uuid)
+        AND (${source}::text IS NULL OR hr.source ILIKE '%' || ${source} || '%')
+        AND (${recordType}::text IS NULL OR hr.record_type = ${recordType})
+        AND (${tag}::text IS NULL OR ${tag} = ANY(hr.tags))
+        AND (${startDate}::date IS NULL OR hr.created_at >= ${startDate}::date)
+        AND (${endDate}::date IS NULL OR hr.created_at < (${endDate}::date + INTERVAL '1 day'))
+        AND (${keyword}::text IS NULL OR CONCAT_WS(' ', hr.source, hr.doctor_name, hr.record_type, hr.ocr_text, hr.data::text) ILIKE '%' || ${keyword} || '%' OR EXISTS (SELECT 1 FROM unnest(hr.tags) AS record_tag WHERE record_tag ILIKE '%' || ${keyword} || '%'))
+      ORDER BY hr.created_at DESC
+    `;
 
     return NextResponse.json(records.map(toHealthRecord));
   } catch (error) { return handleError(error); }

@@ -2,11 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth/session';
 import { sql } from '@/lib/db/neon';
-import { dissolveHouseholdIfEmpty } from '@/lib/households/access';
+import {
+  assertCanDissolveOrLeave,
+  dissolveHouseholdIfEmpty,
+} from '@/lib/households/access';
 import { getHouseholdForMember } from '@/lib/households/helpers';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
 
 const idSchema = z.string().uuid();
+
+function orphanError(err: unknown): never {
+  if (err instanceof Error && err.message === 'ORPHAN_PATIENTS') {
+    const patients = (err as Error & { patients?: Record<string, any>[] }).patients || [];
+    throw new AppError(
+      'Cannot remove the last member: some patients belong only to this household. Link them elsewhere or delete them first.',
+      400,
+      'ORPHAN_PATIENTS',
+      { patients: patients.map((p) => ({ id: p.id, firstName: p.first_name, lastName: p.last_name })) }
+    );
+  }
+  throw err;
+}
 
 export async function DELETE(
   _: NextRequest,
@@ -28,6 +44,18 @@ export async function DELETE(
     const household = await getHouseholdForMember(parsedId.data, user.id);
     if (!household) throw new AppError('Household not found', 404);
 
+    const members = await sql`
+      SELECT user_id FROM household_members WHERE household_id = ${parsedId.data}::uuid
+    `;
+    const remainingAfter = members.filter((m) => m.user_id !== targetUserId).length;
+    if (remainingAfter === 0) {
+      try {
+        await assertCanDissolveOrLeave(parsedId.data);
+      } catch (err) {
+        orphanError(err);
+      }
+    }
+
     const [removed] = await sql`
       DELETE FROM household_members
       WHERE household_id = ${parsedId.data}::uuid AND user_id = ${targetUserId}
@@ -35,7 +63,14 @@ export async function DELETE(
     `;
     if (!removed) throw new AppError('Member not found', 404);
 
-    await dissolveHouseholdIfEmpty(parsedId.data, user.id);
+    if (remainingAfter === 0) {
+      try {
+        await dissolveHouseholdIfEmpty(parsedId.data);
+      } catch (err) {
+        orphanError(err);
+      }
+    }
+
     return NextResponse.json({ message: 'Member removed' });
   } catch (error) {
     return handleError(error);

@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth/session';
 import { sql } from '@/lib/db/neon';
-import { toHouseholdInvite } from '@/lib/households/helpers';
 import { toPatient } from '@/lib/db/mappers';
+import {
+  canAccessPatient,
+  linkPatientToHousehold,
+  listAccessiblePatients,
+  setActiveHouseholdId,
+} from '@/lib/households/access';
+import { toHouseholdInvite } from '@/lib/households/helpers';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
 
 const acceptSchema = z.object({
@@ -46,15 +52,16 @@ export async function GET(
       invite.status = 'expired';
     }
 
-    const personalPatients = await sql`
-      SELECT * FROM patients
-      WHERE owner_id = ${user.id} AND household_id IS NULL
-      ORDER BY created_at DESC
+    const accessible = await listAccessiblePatients(user.id);
+    const alreadyLinked = await sql`
+      SELECT patient_id FROM household_patients WHERE household_id = ${invite.household_id}::uuid
     `;
+    const linkedSet = new Set(alreadyLinked.map((r) => String(r.patient_id)));
+    const shareablePatients = accessible.filter((p) => !linkedSet.has(String(p.id)));
 
     return NextResponse.json({
       invite: toHouseholdInvite(invite),
-      personalPatients: personalPatients.map(toPatient),
+      shareablePatients: shareablePatients.map(toPatient),
       emailMatches: user.email?.toLowerCase() === String(invite.email).toLowerCase(),
     });
   } catch (error) {
@@ -109,43 +116,19 @@ export async function POST(
       WHERE household_id = ${invite.household_id}::uuid AND user_id = ${user.id}
       LIMIT 1
     `;
-    if (existing) {
+    if (!existing) {
       await sql`
-        UPDATE household_invites SET status = 'accepted', updated_at = NOW()
-        WHERE id = ${invite.id}::uuid
+        INSERT INTO household_members (household_id, user_id)
+        VALUES (${invite.household_id}::uuid, ${user.id})
       `;
-      return NextResponse.json({ message: 'Already a member', householdId: invite.household_id });
     }
 
     const patientIds = parsed.data.patientIds;
-    if (patientIds.length > 0) {
-      for (const patientId of patientIds) {
-        const [owned] = await sql`
-          SELECT id FROM patients
-          WHERE owner_id = ${user.id}
-            AND household_id IS NULL
-            AND id = ${patientId}::uuid
-          LIMIT 1
-        `;
-        if (!owned) {
-          throw new AppError('One or more selected patients are not personal patients you own', 400);
-        }
-      }
-    }
-
-    await sql`
-      INSERT INTO household_members (household_id, user_id)
-      VALUES (${invite.household_id}::uuid, ${user.id})
-    `;
-
     for (const patientId of patientIds) {
-      await sql`
-        UPDATE patients
-        SET household_id = ${invite.household_id}::uuid, updated_at = NOW()
-        WHERE owner_id = ${user.id}
-          AND household_id IS NULL
-          AND id = ${patientId}::uuid
-      `;
+      if (!(await canAccessPatient(user.id, patientId))) {
+        throw new AppError('One or more selected patients are not accessible', 400);
+      }
+      await linkPatientToHousehold(invite.household_id, patientId);
     }
 
     await sql`
@@ -153,10 +136,12 @@ export async function POST(
       WHERE id = ${invite.id}::uuid
     `;
 
+    await setActiveHouseholdId(user.id, invite.household_id);
+
     return NextResponse.json({
       message: 'Joined household',
       householdId: invite.household_id,
-      patientsMoved: patientIds.length,
+      patientsLinked: patientIds.length,
     });
   } catch (error) {
     return handleError(error);

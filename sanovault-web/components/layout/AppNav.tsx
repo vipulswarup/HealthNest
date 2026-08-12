@@ -24,9 +24,12 @@ export default function AppNav({ links = defaultLinks }: AppNavProps) {
   const { householdId, households, loading, setActive } = useHouseholdContext();
 
   const onSwitch = async (value: string) => {
-    const next = value === '' ? null : value;
+    if (!value) {
+      router.push('/households');
+      return;
+    }
     try {
-      await setActive(next);
+      await setActive(value);
       router.refresh();
       if (pathname.startsWith('/patients') || pathname.startsWith('/health-records') || pathname.startsWith('/reports')) {
         window.location.reload();
@@ -68,17 +71,20 @@ export default function AppNav({ links = defaultLinks }: AppNavProps) {
             </label>
             <select
               id="household-switcher"
-              className="text-sm border border-gray-300 rounded-md px-2 py-1.5 max-w-[10rem] sm:max-w-[14rem] bg-white text-gray-800"
+              className="text-sm border border-gray-300 rounded-md px-2 py-1.5 max-w-[10rem] sm:max-w-[14rem] bg-white text-gray-900"
               disabled={loading}
               value={householdId || ''}
               onChange={(e) => void onSwitch(e.target.value)}
             >
-              <option value="">Personal</option>
-              {households.map((h) => (
-                <option key={h.id} value={h.id}>
-                  {h.name}
-                </option>
-              ))}
+              {households.length === 0 ? (
+                <option value="">Create a household…</option>
+              ) : (
+                households.map((h) => (
+                  <option key={h.id} value={h.id}>
+                    {h.name}
+                  </option>
+                ))
+              )}
             </select>
             <span className="text-sm text-gray-700 truncate hidden sm:inline max-w-[10rem]">
               {session?.user?.email || session?.user?.name}

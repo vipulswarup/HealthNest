@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth/session';
 import { sql } from '@/lib/db/neon';
+import { setActiveHouseholdId } from '@/lib/households/access';
 import { toHousehold } from '@/lib/households/helpers';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
 
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
       INSERT INTO household_members (household_id, user_id)
       VALUES (${household.id}::uuid, ${user.id})
     `;
+    await setActiveHouseholdId(user.id, household.id);
 
     return NextResponse.json(toHousehold(household), { status: 201 });
   } catch (error) {

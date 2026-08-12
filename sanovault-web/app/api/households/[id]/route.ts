@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth/session';
 import { sql } from '@/lib/db/neon';
-import { dissolveHouseholdIfEmpty } from '@/lib/households/access';
+import { assertCanDissolveOrLeave, dissolveHouseholdIfEmpty } from '@/lib/households/access';
 import { getHouseholdForMember, toHousehold } from '@/lib/households/helpers';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
 
@@ -17,6 +17,19 @@ async function memberHousehold(params: Promise<{ id: string }>, userId: string) 
   const household = await getHouseholdForMember(parsedId.data, userId);
   if (!household) throw new AppError('Household not found', 404);
   return { id: parsedId.data, household };
+}
+
+function orphanError(err: unknown): never {
+  if (err instanceof Error && err.message === 'ORPHAN_PATIENTS') {
+    const patients = (err as Error & { patients?: Record<string, any>[] }).patients || [];
+    throw new AppError(
+      'Cannot dissolve: some patients belong only to this household. Link them to another household or delete them first.',
+      400,
+      'ORPHAN_PATIENTS',
+      { patients: patients.map((p) => ({ id: p.id, firstName: p.first_name, lastName: p.last_name })) }
+    );
+  }
+  throw err;
 }
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -57,8 +70,18 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
     if (!user) throw new AppError('Unauthorized', 401);
     const { id } = await memberHousehold(params, user.id);
 
+    try {
+      await assertCanDissolveOrLeave(id);
+    } catch (err) {
+      orphanError(err);
+    }
+
     await sql`DELETE FROM household_members WHERE household_id = ${id}::uuid`;
-    await dissolveHouseholdIfEmpty(id, user.id);
+    try {
+      await dissolveHouseholdIfEmpty(id);
+    } catch (err) {
+      orphanError(err);
+    }
 
     return NextResponse.json({ message: 'Household dissolved' });
   } catch (error) {

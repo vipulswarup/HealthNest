@@ -17,7 +17,7 @@ type InvitePreview = {
     invitedByName?: string;
     expiresAt: string;
   };
-  personalPatients: Patient[];
+  shareablePatients: Patient[];
   emailMatches: boolean;
 };
 
@@ -79,11 +79,6 @@ export default function AcceptInvitePage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to accept');
-      await fetch('/api/me/active-household', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ householdId: data.householdId }),
-      });
       router.push(`/households/${data.householdId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to accept');
@@ -127,42 +122,41 @@ export default function AcceptInvitePage() {
         <div className="bg-white rounded-2xl shadow-xl p-6 space-y-5">
           <h1 className="text-2xl font-bold text-gray-900">Household invitation</h1>
 
-          {loading && <p className="text-gray-500 text-sm">Loading invite...</p>}
+          {loading && <p className="text-gray-600 text-sm">Loading invite...</p>}
           {error && (
             <div className="rounded-md bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">{error}</div>
           )}
 
           {preview && (
             <>
-              <p className="text-gray-700">
+              <p className="text-gray-800">
                 <strong>{preview.invite.invitedByName || 'Someone'}</strong> invited you to join{' '}
                 <strong>{preview.invite.householdName || 'a household'}</strong>.
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-600">
                 Invited email: {preview.invite.email} · Status: {preview.invite.status}
               </p>
 
               {!preview.emailMatches && (
                 <div className="rounded-md bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 text-sm">
-                  You are signed in as a different email than this invite. Sign in with{' '}
-                  <strong>{preview.invite.email}</strong> to accept.
+                  Sign in with <strong>{preview.invite.email}</strong> to accept this invite.
                 </div>
               )}
 
               {preview.invite.status === 'pending' && preview.emailMatches && (
                 <>
                   <div>
-                    <h2 className="font-semibold text-gray-900 mb-2">Bring personal patients into this household?</h2>
+                    <h2 className="font-semibold text-gray-900 mb-2">Also share patients into this household?</h2>
                     <p className="text-sm text-gray-600 mb-3">
-                      Selected patients move into the shared vault. Leave unchecked to keep them personal.
+                      Optional. Selected patients will also appear in this household (they keep any other household links).
                     </p>
-                    {preview.personalPatients.length === 0 ? (
-                      <p className="text-sm text-gray-500">You have no personal patients to move.</p>
+                    {preview.shareablePatients.length === 0 ? (
+                      <p className="text-sm text-gray-600">No other patients available to share yet.</p>
                     ) : (
                       <ul className="space-y-2">
-                        {preview.personalPatients.map((p) => (
+                        {preview.shareablePatients.map((p) => (
                           <li key={p.id}>
-                            <label className="flex items-center gap-2 text-sm text-gray-800">
+                            <label className="flex items-center gap-2 text-sm text-gray-900">
                               <input
                                 type="checkbox"
                                 checked={selected.has(p.id)}
@@ -189,7 +183,7 @@ export default function AcceptInvitePage() {
                       type="button"
                       disabled={busy}
                       onClick={() => void decline()}
-                      className="text-sm font-medium text-gray-600 hover:underline disabled:opacity-50"
+                      className="text-sm font-medium text-gray-700 hover:underline disabled:opacity-50"
                     >
                       Decline
                     </button>

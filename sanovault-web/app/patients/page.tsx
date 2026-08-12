@@ -37,11 +37,17 @@ export default function PatientsPage() {
   const fetchPatients = async () => {
     try {
       setLoading(true);
+      setError('');
       const response = await fetch('/api/patients');
-      if (!response.ok) {
-        throw new Error('Failed to fetch patients');
-      }
       const data = await response.json();
+      if (!response.ok) {
+        if (data.code === 'NO_HOUSEHOLD') {
+          setError('Create a household first, then add patients.');
+          setPatients([]);
+          return;
+        }
+        throw new Error(data.error || 'Failed to fetch patients');
+      }
       setPatients(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -85,6 +91,11 @@ export default function PatientsPage() {
             {error && (
               <div className="mb-4 rounded-md bg-red-50 p-4">
                 <div className="text-sm text-red-800">{error}</div>
+                {error.includes('household') && (
+                  <Link href="/households" className="mt-2 inline-block text-sm font-medium text-[#0175C2] hover:underline">
+                    Go to Households
+                  </Link>
+                )}
               </div>
             )}
 

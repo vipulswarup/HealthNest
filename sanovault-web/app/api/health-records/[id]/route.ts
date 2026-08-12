@@ -26,15 +26,12 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
       SELECT hr.* FROM health_records hr
       JOIN patients p ON p.id = hr.patient_id
       WHERE hr.id = ${id}::uuid
-        AND (
-          (p.household_id IS NULL AND p.owner_id = ${user.id})
-          OR (
-            p.household_id IS NOT NULL
-            AND EXISTS (
-              SELECT 1 FROM household_members hm
-              WHERE hm.household_id = p.household_id AND hm.user_id = ${user.id}
-            )
-          )
+        AND EXISTS (
+          SELECT 1
+          FROM household_patients hp
+          INNER JOIN household_members hm
+            ON hm.household_id = hp.household_id AND hm.user_id = ${user.id}
+          WHERE hp.patient_id = p.id
         )
     `;
     if (!record) throw new AppError('Health record not found', 404);
@@ -57,15 +54,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         hospital_identifier_value = COALESCE(${data.hospitalIdentifierValue ?? null}, hr.hospital_identifier_value), updated_at = NOW()
       FROM patients p
       WHERE hr.patient_id = p.id AND hr.id = ${id}::uuid
-        AND (
-          (p.household_id IS NULL AND p.owner_id = ${user.id})
-          OR (
-            p.household_id IS NOT NULL
-            AND EXISTS (
-              SELECT 1 FROM household_members hm
-              WHERE hm.household_id = p.household_id AND hm.user_id = ${user.id}
-            )
-          )
+        AND EXISTS (
+          SELECT 1
+          FROM household_patients hp
+          INNER JOIN household_members hm
+            ON hm.household_id = hp.household_id AND hm.user_id = ${user.id}
+          WHERE hp.patient_id = p.id
         )
       RETURNING hr.*
     `;
@@ -81,15 +75,12 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
       DELETE FROM health_records hr
       USING patients p
       WHERE hr.patient_id = p.id AND hr.id = ${id}::uuid
-        AND (
-          (p.household_id IS NULL AND p.owner_id = ${user.id})
-          OR (
-            p.household_id IS NOT NULL
-            AND EXISTS (
-              SELECT 1 FROM household_members hm
-              WHERE hm.household_id = p.household_id AND hm.user_id = ${user.id}
-            )
-          )
+        AND EXISTS (
+          SELECT 1
+          FROM household_patients hp
+          INNER JOIN household_members hm
+            ON hm.household_id = hp.household_id AND hm.user_id = ${user.id}
+          WHERE hp.patient_id = p.id
         )
       RETURNING hr.id
     `;

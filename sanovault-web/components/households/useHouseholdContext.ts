@@ -15,7 +15,7 @@ export type ActiveHouseholdState = {
   households: HouseholdSummary[];
   loading: boolean;
   refresh: () => Promise<void>;
-  setActive: (householdId: string | null) => Promise<void>;
+  setActive: (householdId: string) => Promise<void>;
 };
 
 export function useHouseholdContext(): ActiveHouseholdState {
@@ -30,12 +30,13 @@ export function useHouseholdContext(): ActiveHouseholdState {
         fetch('/api/me/active-household'),
         fetch('/api/households'),
       ]);
+      if (listRes.ok) {
+        const list = await listRes.json();
+        setHouseholds(list);
+      }
       if (activeRes.ok) {
         const active = await activeRes.json();
         setHouseholdId(active.householdId ?? null);
-      }
-      if (listRes.ok) {
-        setHouseholds(await listRes.json());
       }
     } finally {
       setLoading(false);
@@ -46,7 +47,7 @@ export function useHouseholdContext(): ActiveHouseholdState {
     void refresh();
   }, [refresh]);
 
-  const setActive = useCallback(async (next: string | null) => {
+  const setActive = useCallback(async (next: string) => {
     const res = await fetch('/api/me/active-household', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },

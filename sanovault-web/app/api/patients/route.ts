@@ -4,9 +4,10 @@ import { sql } from '@/lib/db/neon';
 import { toPatient } from '@/lib/db/mappers';
 import { getCurrentUser } from '@/lib/auth/session';
 import {
-  getActiveHouseholdId,
   isHouseholdMember,
+  linkPatientToHousehold,
   listPatientsForContext,
+  requireActiveHouseholdId,
 } from '@/lib/households/access';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
 
@@ -20,7 +21,7 @@ const patientSchema = z.object({
   preferences: z.record(z.string(), z.any()).optional(),
   hospitalIdentifiers: z.array(z.object({ systemName: z.string(), identifierType: z.string(), value: z.string() })).optional(),
   mobileNumbers: z.array(z.object({ countryCode: z.string(), number: z.string() })).optional(),
-  householdId: z.string().uuid().nullable().optional(),
+  householdId: z.string().uuid('A household is required'),
 });
 
 async function currentUser() {
@@ -32,8 +33,13 @@ async function currentUser() {
 export async function GET() {
   try {
     const user = await currentUser();
-    const activeHouseholdId = await getActiveHouseholdId(user.id);
-    const patients = await listPatientsForContext(user.id, activeHouseholdId);
+    let householdId: string;
+    try {
+      householdId = await requireActiveHouseholdId(user.id);
+    } catch {
+      throw new AppError('Create or join a household before managing patients', 400, 'NO_HOUSEHOLD');
+    }
+    const patients = await listPatientsForContext(user.id, householdId);
     return NextResponse.json(patients.map(toPatient));
   } catch (error) { return handleError(error); }
 }
@@ -45,23 +51,22 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) throw new AppError(parsed.error.issues[0].message, 400, 'VALIDATION_ERROR');
     const data = parsed.data;
 
-    let householdId: string | null = data.householdId === undefined ? null : data.householdId;
-    if (householdId) {
-      const member = await isHouseholdMember(user.id, householdId);
-      if (!member) throw new AppError('Not a member of that household', 403);
+    if (!(await isHouseholdMember(user.id, data.householdId))) {
+      throw new AppError('Not a member of that household', 403);
     }
 
     const [patient] = await sql`
       INSERT INTO patients (
-        owner_id, household_id, first_name, middle_name, last_name, title, suffix, emails, mobile_numbers, date_of_birth, gender,
+        owner_id, first_name, middle_name, last_name, title, suffix, emails, mobile_numbers, date_of_birth, gender,
         abha_number, blood_group, emergency_contacts, preferences, hospital_identifiers
       ) VALUES (
-        ${user.id}, ${householdId}::uuid, ${data.firstName}, ${data.middleName || null}, ${data.lastName || null}, ${data.title || null}, ${data.suffix || null},
+        ${user.id}, ${data.firstName}, ${data.middleName || null}, ${data.lastName || null}, ${data.title || null}, ${data.suffix || null},
         ${JSON.stringify(data.emails || [])}::jsonb, ${JSON.stringify(data.mobileNumbers || [])}::jsonb, ${data.dateOfBirth}::date, ${data.gender},
         ${data.abhaNumber || null}, ${data.bloodGroup || null}, ${JSON.stringify(data.emergencyContacts || [])}::jsonb,
         ${JSON.stringify(data.preferences || {})}::jsonb, ${JSON.stringify(data.hospitalIdentifiers || [])}::jsonb
       ) RETURNING *
     `;
-    return NextResponse.json(toPatient(patient), { status: 201 });
+    await linkPatientToHousehold(data.householdId, patient.id);
+    return NextResponse.json(toPatient({ ...patient, household_id: data.householdId }), { status: 201 });
   } catch (error) { return handleError(error); }
 }
