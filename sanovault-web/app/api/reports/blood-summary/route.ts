@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth/session';
 import { sql } from '@/lib/db/neon';
+import { getAccessiblePatient } from '@/lib/households/access';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
 import {
   buildBloodReportSummary,
@@ -21,12 +22,7 @@ export async function GET(request: NextRequest) {
       throw new AppError('A valid patient ID is required', 400);
     }
 
-    const [patient] = await sql`
-      SELECT id, first_name, last_name
-      FROM patients
-      WHERE id = ${patientId}::uuid AND owner_id = ${user.id}
-      LIMIT 1
-    `;
+    const patient = await getAccessiblePatient(user.id, patientId);
     if (!patient) throw new AppError('Patient not found', 404);
 
     const periodEnd = new Date();

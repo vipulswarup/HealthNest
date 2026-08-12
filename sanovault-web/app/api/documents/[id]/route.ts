@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth/session';
 import { deleteFromR2 } from '@/lib/r2';
+import { canAccessDocument } from '@/lib/households/access';
 import { deleteDocument, getDocumentById } from '@/lib/services/document.service';
 import { handleError, AppError } from '@/lib/middleware/error-handler';
 
@@ -12,7 +13,7 @@ async function documentForCurrentUser(params: Promise<{ id: string }>) {
   if (!z.string().uuid().safeParse(id).success) throw new AppError('Invalid document ID', 400);
   const document = await getDocumentById(id);
   if (!document) throw new AppError('Document not found', 404);
-  if (document.userId !== user.id) throw new AppError('Forbidden', 403);
+  if (!(await canAccessDocument(user.id, id))) throw new AppError('Forbidden', 403);
   return { id, document };
 }
 

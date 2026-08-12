@@ -1,23 +1,33 @@
 'use client';
 
-import { signOut, useSession } from '@/lib/auth/client';
+import { useSession } from '@/lib/auth/client';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import Image from 'next/image';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import AppNav from '@/components/layout/AppNav';
+
+type PendingInvite = {
+  id: string;
+  householdName?: string;
+  token: string;
+  invitedByName?: string;
+};
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [pending, setPending] = useState<PendingInvite[]>([]);
 
   useEffect(() => {
-    if (status === 'loading') {
-      return;
-    }
-
+    if (status === 'loading') return;
     if (!session) {
       router.push('/auth/signin');
+      return;
     }
+    void fetch('/api/households/invites/pending')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setPending(Array.isArray(data) ? data : []))
+      .catch(() => setPending([]));
   }, [session?.user?.id, status, router]);
 
   if (status === 'loading') {
@@ -37,36 +47,32 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <nav className="bg-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center space-x-3">
-              <Image
-                src="/logo.png"
-                alt="SanoVault Logo"
-                width={40}
-                height={40}
-                className="rounded-full"
-              />
-              <h1 className="text-xl font-bold text-gray-900">SanoVault</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-700">
-                {session.user?.email || session.user?.name}
-              </span>
-              <button
-                onClick={() => signOut({ callbackUrl: '/auth/signin' })}
-                className="text-sm text-[#0175C2] hover:text-[#015a96] font-medium transition-colors"
-              >
-                Sign out
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <AppNav />
 
       <main className="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
+          {pending.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+              <p className="font-medium text-amber-900 mb-2">Pending household invitations</p>
+              <ul className="space-y-2">
+                {pending.map((invite) => (
+                  <li key={invite.id} className="flex items-center justify-between gap-3 text-sm">
+                    <span>
+                      {invite.invitedByName || 'Someone'} invited you to{' '}
+                      <strong>{invite.householdName || 'a household'}</strong>
+                    </span>
+                    <Link
+                      href={`/households/invites/${invite.token}`}
+                      className="text-[#0175C2] font-medium hover:underline shrink-0"
+                    >
+                      Review
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-gray-900 mb-2">
@@ -78,20 +84,17 @@ export default function Dashboard() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Link href="/health-records" className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-blue-100">
-                <div className="text-4xl mb-3">📋</div>
                 <h3 className="font-semibold text-gray-900 text-lg mb-2">Health Records</h3>
                 <p className="text-sm text-gray-600">Manage your health records and documents</p>
               </Link>
               <Link href="/patients" className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-green-100">
-                <div className="text-4xl mb-3">👥</div>
                 <h3 className="font-semibold text-gray-900 text-lg mb-2">Patients</h3>
-                <p className="text-sm text-gray-600">Manage family members' health profiles</p>
+                <p className="text-sm text-gray-600">Manage family members&apos; health profiles</p>
               </Link>
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-purple-100">
-                <div className="text-4xl mb-3">💊</div>
-                <h3 className="font-semibold text-gray-900 text-lg mb-2">Medications</h3>
-                <p className="text-sm text-gray-600">Track medications and reminders</p>
-              </div>
+              <Link href="/households" className="bg-gradient-to-br from-slate-50 to-slate-100 p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-slate-200">
+                <h3 className="font-semibold text-gray-900 text-lg mb-2">Households</h3>
+                <p className="text-sm text-gray-600">Invite family and share a vault</p>
+              </Link>
             </div>
           </div>
         </div>

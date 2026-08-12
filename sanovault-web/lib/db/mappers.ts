@@ -2,6 +2,7 @@ export function toPatient(row: Record<string, any>) {
   return {
     id: row.id,
     userId: row.owner_id,
+    householdId: row.household_id || null,
     firstName: row.first_name,
     middleName: row.middle_name || undefined,
     lastName: row.last_name || undefined,

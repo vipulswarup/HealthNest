@@ -3,8 +3,8 @@
 import { useSession } from '@/lib/auth/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
+import AppNav from '@/components/layout/AppNav';
 import { HealthRecordCategory } from '@/lib/types/health-record-category.types';
 import { HealthcareSource } from '@/lib/types/healthcare-source.types';
 
@@ -228,57 +228,18 @@ export default function HealthRecordsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <nav className="bg-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center space-x-3">
-              <Link href="/dashboard">
-                <Image
-                  src="/logo.png"
-                  alt="SanoVault Logo"
-                  width={40}
-                  height={40}
-                  className="rounded-full cursor-pointer"
-                />
-              </Link>
-              <Link href="/dashboard">
-                <h1 className="text-xl font-bold text-gray-900 cursor-pointer">SanoVault</h1>
-              </Link>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/dashboard"
-                className="text-sm text-gray-700 hover:text-[#0175C2] transition-colors"
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/patients"
-                className="text-sm text-gray-700 hover:text-[#0175C2] transition-colors"
-              >
-                Patients
-              </Link>
-              <Link
-                href="/health-records"
-                className="text-sm font-medium text-[#0175C2]"
-              >
-                Health Records
-              </Link>
-              <Link
-                href={selectedPatientId ? `/reports/blood-summary?patientId=${selectedPatientId}` : '/reports/blood-summary'}
-                className="text-sm text-gray-700 hover:text-[#0175C2] transition-colors"
-              >
-                Blood Summary
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <AppNav />
 
       <main className="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex justify-between items-center mb-6 gap-3 flex-wrap">
             <h2 className="text-3xl font-bold text-gray-900">Health Records</h2>
+            <Link
+              href={selectedPatientId ? `/reports/blood-summary?patientId=${selectedPatientId}` : '/reports/blood-summary'}
+              className="text-sm text-[#0175C2] hover:underline"
+            >
+              Blood Summary
+            </Link>
             {selectedPatientId && (
               <Link
                 href={`/health-records/new?patientId=${selectedPatientId}`}

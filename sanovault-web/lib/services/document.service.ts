@@ -1,5 +1,6 @@
 import { sql } from '@/lib/db/neon';
 import { CreateDocumentInput, DocumentMetadata } from '@/lib/types/document.types';
+import { getActiveHouseholdId, listAccessibleDocuments } from '@/lib/households/access';
 
 type DocumentRow = Record<string, any>;
 
@@ -43,7 +44,8 @@ export async function getDocumentById(id: string): Promise<DocumentMetadata | nu
 }
 
 export async function listUserDocuments(userId: string): Promise<DocumentMetadata[]> {
-  const rows = await sql`SELECT * FROM documents WHERE owner_id = ${userId} ORDER BY uploaded_at DESC`;
+  const activeHouseholdId = await getActiveHouseholdId(userId);
+  const rows = await listAccessibleDocuments(userId, activeHouseholdId);
   return rows.map(toDocument);
 }
 

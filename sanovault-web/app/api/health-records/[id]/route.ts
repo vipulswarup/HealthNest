@@ -22,7 +22,21 @@ async function context(params: Promise<{ id: string }>) {
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { user, id } = await context(params);
-    const [record] = await sql`SELECT hr.* FROM health_records hr JOIN patients p ON p.id = hr.patient_id WHERE hr.id = ${id}::uuid AND p.owner_id = ${user.id}`;
+    const [record] = await sql`
+      SELECT hr.* FROM health_records hr
+      JOIN patients p ON p.id = hr.patient_id
+      WHERE hr.id = ${id}::uuid
+        AND (
+          (p.household_id IS NULL AND p.owner_id = ${user.id})
+          OR (
+            p.household_id IS NOT NULL
+            AND EXISTS (
+              SELECT 1 FROM household_members hm
+              WHERE hm.household_id = p.household_id AND hm.user_id = ${user.id}
+            )
+          )
+        )
+    `;
     if (!record) throw new AppError('Health record not found', 404);
     return NextResponse.json(toHealthRecord(record));
   } catch (error) { return handleError(error); }
@@ -41,7 +55,19 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         document_date = COALESCE(${data.documentDate ?? null}::date, hr.document_date), ocr_text = COALESCE(${data.ocrText ?? null}, hr.ocr_text),
         hospital_system_name = COALESCE(${data.hospitalSystemName ?? null}, hr.hospital_system_name), hospital_identifier_type = COALESCE(${data.hospitalIdentifierType ?? null}, hr.hospital_identifier_type),
         hospital_identifier_value = COALESCE(${data.hospitalIdentifierValue ?? null}, hr.hospital_identifier_value), updated_at = NOW()
-      FROM patients p WHERE hr.patient_id = p.id AND hr.id = ${id}::uuid AND p.owner_id = ${user.id} RETURNING hr.*
+      FROM patients p
+      WHERE hr.patient_id = p.id AND hr.id = ${id}::uuid
+        AND (
+          (p.household_id IS NULL AND p.owner_id = ${user.id})
+          OR (
+            p.household_id IS NOT NULL
+            AND EXISTS (
+              SELECT 1 FROM household_members hm
+              WHERE hm.household_id = p.household_id AND hm.user_id = ${user.id}
+            )
+          )
+        )
+      RETURNING hr.*
     `;
     if (!record) throw new AppError('Health record not found', 404);
     return NextResponse.json(toHealthRecord(record));
@@ -51,7 +77,22 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { user, id } = await context(params);
-    const [record] = await sql`DELETE FROM health_records hr USING patients p WHERE hr.patient_id = p.id AND hr.id = ${id}::uuid AND p.owner_id = ${user.id} RETURNING hr.id`;
+    const [record] = await sql`
+      DELETE FROM health_records hr
+      USING patients p
+      WHERE hr.patient_id = p.id AND hr.id = ${id}::uuid
+        AND (
+          (p.household_id IS NULL AND p.owner_id = ${user.id})
+          OR (
+            p.household_id IS NOT NULL
+            AND EXISTS (
+              SELECT 1 FROM household_members hm
+              WHERE hm.household_id = p.household_id AND hm.user_id = ${user.id}
+            )
+          )
+        )
+      RETURNING hr.id
+    `;
     if (!record) throw new AppError('Health record not found', 404);
     return NextResponse.json({ message: 'Health record deleted successfully' });
   } catch (error) { return handleError(error); }

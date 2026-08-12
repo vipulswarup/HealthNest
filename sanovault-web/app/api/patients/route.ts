@@ -3,6 +3,11 @@ import { z } from 'zod';
 import { sql } from '@/lib/db/neon';
 import { toPatient } from '@/lib/db/mappers';
 import { getCurrentUser } from '@/lib/auth/session';
+import {
+  getActiveHouseholdId,
+  isHouseholdMember,
+  listPatientsForContext,
+} from '@/lib/households/access';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
 
 const patientSchema = z.object({
@@ -15,6 +20,7 @@ const patientSchema = z.object({
   preferences: z.record(z.string(), z.any()).optional(),
   hospitalIdentifiers: z.array(z.object({ systemName: z.string(), identifierType: z.string(), value: z.string() })).optional(),
   mobileNumbers: z.array(z.object({ countryCode: z.string(), number: z.string() })).optional(),
+  householdId: z.string().uuid().nullable().optional(),
 });
 
 async function currentUser() {
@@ -26,7 +32,8 @@ async function currentUser() {
 export async function GET() {
   try {
     const user = await currentUser();
-    const patients = await sql`SELECT * FROM patients WHERE owner_id = ${user.id} ORDER BY created_at DESC`;
+    const activeHouseholdId = await getActiveHouseholdId(user.id);
+    const patients = await listPatientsForContext(user.id, activeHouseholdId);
     return NextResponse.json(patients.map(toPatient));
   } catch (error) { return handleError(error); }
 }
@@ -37,12 +44,19 @@ export async function POST(request: NextRequest) {
     const parsed = patientSchema.safeParse(await request.json());
     if (!parsed.success) throw new AppError(parsed.error.issues[0].message, 400, 'VALIDATION_ERROR');
     const data = parsed.data;
+
+    let householdId: string | null = data.householdId === undefined ? null : data.householdId;
+    if (householdId) {
+      const member = await isHouseholdMember(user.id, householdId);
+      if (!member) throw new AppError('Not a member of that household', 403);
+    }
+
     const [patient] = await sql`
       INSERT INTO patients (
-        owner_id, first_name, middle_name, last_name, title, suffix, emails, mobile_numbers, date_of_birth, gender,
+        owner_id, household_id, first_name, middle_name, last_name, title, suffix, emails, mobile_numbers, date_of_birth, gender,
         abha_number, blood_group, emergency_contacts, preferences, hospital_identifiers
       ) VALUES (
-        ${user.id}, ${data.firstName}, ${data.middleName || null}, ${data.lastName || null}, ${data.title || null}, ${data.suffix || null},
+        ${user.id}, ${householdId}::uuid, ${data.firstName}, ${data.middleName || null}, ${data.lastName || null}, ${data.title || null}, ${data.suffix || null},
         ${JSON.stringify(data.emails || [])}::jsonb, ${JSON.stringify(data.mobileNumbers || [])}::jsonb, ${data.dateOfBirth}::date, ${data.gender},
         ${data.abhaNumber || null}, ${data.bloodGroup || null}, ${JSON.stringify(data.emergencyContacts || [])}::jsonb,
         ${JSON.stringify(data.preferences || {})}::jsonb, ${JSON.stringify(data.hospitalIdentifiers || [])}::jsonb

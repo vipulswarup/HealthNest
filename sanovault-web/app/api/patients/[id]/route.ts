@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { sql } from '@/lib/db/neon';
 import { toPatient } from '@/lib/db/mappers';
 import { getCurrentUser } from '@/lib/auth/session';
+import { canAccessPatient, getAccessiblePatient } from '@/lib/households/access';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
 
 const idSchema = z.string().uuid();
@@ -26,7 +27,7 @@ async function userAndId(params: Promise<{ id: string }>) {
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { user, id } = await userAndId(params);
-    const [patient] = await sql`SELECT * FROM patients WHERE id = ${id}::uuid AND owner_id = ${user.id}`;
+    const patient = await getAccessiblePatient(user.id, id);
     if (!patient) throw new AppError('Patient not found', 404);
     return NextResponse.json(toPatient(patient));
   } catch (error) { return handleError(error); }
@@ -35,6 +36,8 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { user, id } = await userAndId(params);
+    if (!(await canAccessPatient(user.id, id))) throw new AppError('Patient not found', 404);
+
     const parsed = updateSchema.safeParse(await request.json());
     if (!parsed.success) throw new AppError(parsed.error.issues[0].message, 400, 'VALIDATION_ERROR');
     const data = parsed.data;
@@ -50,7 +53,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         preferences = COALESCE(${data.preferences === undefined ? null : JSON.stringify(data.preferences)}::jsonb, preferences),
         hospital_identifiers = COALESCE(${data.hospitalIdentifiers === undefined ? null : JSON.stringify(data.hospitalIdentifiers)}::jsonb, hospital_identifiers),
         updated_at = NOW()
-      WHERE id = ${id}::uuid AND owner_id = ${user.id} RETURNING *
+      WHERE id = ${id}::uuid RETURNING *
     `;
     if (!patient) throw new AppError('Patient not found', 404);
     return NextResponse.json(toPatient(patient));
@@ -60,7 +63,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { user, id } = await userAndId(params);
-    const [patient] = await sql`DELETE FROM patients WHERE id = ${id}::uuid AND owner_id = ${user.id} RETURNING id`;
+    if (!(await canAccessPatient(user.id, id))) throw new AppError('Patient not found', 404);
+    const [patient] = await sql`DELETE FROM patients WHERE id = ${id}::uuid RETURNING id`;
     if (!patient) throw new AppError('Patient not found', 404);
     return NextResponse.json({ message: 'Patient deleted successfully' });
   } catch (error) { return handleError(error); }
