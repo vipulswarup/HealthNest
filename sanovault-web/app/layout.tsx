@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Providers from "./providers";
+import BetaAcknowledgementGate from '@/components/auth/BetaAcknowledgementGate';
 
 export const metadata: Metadata = {
   title: "SanoVault - Your Health Record Management",
@@ -24,7 +25,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <Providers>{children}</Providers>
+        <Providers>
+          <BetaAcknowledgementGate />
+          {children}
+        </Providers>
       </body>
     </html>
   );

@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth/server';
 import { sql } from '@/lib/db/neon';
+import { BETA_ACKNOWLEDGEMENT_VERSION } from '@/lib/legal/beta-acknowledgement';
 
 export type CurrentUser = { id: string; email: string; name: string };
 
@@ -8,7 +9,12 @@ function splitName(name: string) {
   return { firstName: firstName || 'User', lastName: rest.length ? rest.join(' ') : null };
 }
 
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+/**
+ * Returns an authenticated user and ensures there is a local profile. This is
+ * intentionally not the default for health-data routes: use getCurrentUser()
+ * there so beta acknowledgement remains mandatory before data access.
+ */
+export async function getAuthenticatedUser(): Promise<CurrentUser | null> {
   const { data: session } = await auth.getSession();
   const user = session?.user;
   if (!user) return null;
@@ -24,6 +30,26 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       updated_at = NOW()
   `;
   return { id: user.id, email: user.email, name };
+}
+
+/**
+ * Returns a user only after the current beta acknowledgement has been stored.
+ * Keeping this enforcement alongside the shared session helper means every
+ * API route that uses it fails closed if an account bypasses the sign-up UI.
+ */
+export async function getCurrentUser(): Promise<CurrentUser | null> {
+  const user = await getAuthenticatedUser();
+  if (!user) return null;
+
+  const [acknowledgement] = await sql`
+    SELECT 1
+    FROM beta_acknowledgements
+    WHERE user_id = ${user.id}
+      AND acknowledgement_version = ${BETA_ACKNOWLEDGEMENT_VERSION}
+    LIMIT 1
+  `;
+
+  return acknowledgement ? user : null;
 }
 
 export async function requireCurrentUser(): Promise<CurrentUser> {

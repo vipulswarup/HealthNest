@@ -5,18 +5,21 @@ import SocialAuthButtons from '@/components/auth/SocialAuthButtons';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import { BETA_ACKNOWLEDGEMENT_VERSION } from '@/lib/legal/beta-acknowledgement';
 
 function SignUpContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
   const emailFromInvite = searchParams.get('email')?.trim().toLowerCase() || '';
+  const betaAcknowledgementUrl = `/beta-acknowledgement?${new URLSearchParams({ callbackUrl })}`;
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState(emailFromInvite);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [agreedToBetaAcknowledgement, setAgreedToBetaAcknowledgement] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -38,6 +41,11 @@ function SignUpContent() {
       return;
     }
 
+    if (!agreedToBetaAcknowledgement) {
+      setError('You must agree to the beta acknowledgement to create an account.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -50,6 +58,16 @@ function SignUpContent() {
 
       if (result?.error) {
         setError(result.error.message || 'Unable to create account. Please try again.');
+        return;
+      }
+
+      const acknowledgement = await fetch('/api/users/beta-acknowledgement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version: BETA_ACKNOWLEDGEMENT_VERSION }),
+      });
+      if (!acknowledgement.ok) {
+        router.push(`/beta-acknowledgement?${new URLSearchParams({ callbackUrl })}`);
         return;
       }
 
@@ -178,6 +196,17 @@ function SignUpContent() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
             </div>
+            <label className="flex cursor-pointer gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-gray-800">
+              <input
+                type="checkbox"
+                checked={agreedToBetaAcknowledgement}
+                onChange={(e) => setAgreedToBetaAcknowledgement(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#0175C2] focus:ring-[#0175C2]"
+              />
+              <span>
+                I understand SanoVault is a beta, experimental service and is not currently represented as HIPAA, GDPR, or DPDP compliant. I agree to the beta acknowledgement before creating my account.
+              </span>
+            </label>
           </div>
 
           <div>
@@ -192,8 +221,8 @@ function SignUpContent() {
 
           <SocialAuthButtons
             mode="signup"
-            callbackURL={callbackUrl}
-            disabled={loading}
+            callbackURL={betaAcknowledgementUrl}
+            disabled={loading || !agreedToBetaAcknowledgement}
             onError={setError}
           />
 

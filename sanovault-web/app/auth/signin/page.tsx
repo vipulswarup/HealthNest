@@ -41,6 +41,7 @@ function SignInContent() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
   const emailFromInvite = searchParams.get('email')?.trim().toLowerCase() || '';
+  const betaAcknowledgementUrl = `/beta-acknowledgement?${new URLSearchParams({ callbackUrl })}`;
 
   const [email, setEmail] = useState(emailFromInvite);
   const [password, setPassword] = useState('');
@@ -62,12 +63,12 @@ function SignInContent() {
 
     authClient.getSession().then(({ data }) => {
       if (data?.user) {
-        router.push(callbackUrl);
+        router.push(betaAcknowledgementUrl);
       } else {
         setIsCheckingSession(false);
       }
     });
-  }, [router, callbackUrl, searchParams, emailFromInvite]);
+  }, [router, betaAcknowledgementUrl, searchParams, emailFromInvite]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +79,7 @@ function SignInContent() {
       const result = await authClient.signIn.email({
         email: email.trim().toLowerCase(),
         password,
-        callbackURL: callbackUrl,
+        callbackURL: betaAcknowledgementUrl,
       });
 
       if (result?.error) {
@@ -86,7 +87,7 @@ function SignInContent() {
         return;
       }
 
-      router.push(callbackUrl);
+      router.push(betaAcknowledgementUrl);
       router.refresh();
     } catch {
       setError('Unable to sign in. Please try again.');
@@ -214,7 +215,7 @@ function SignInContent() {
 
             <SocialAuthButtons
               mode="signin"
-              callbackURL={callbackUrl}
+              callbackURL={betaAcknowledgementUrl}
               disabled={loading}
               onError={setError}
             />
