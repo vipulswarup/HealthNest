@@ -6,6 +6,36 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
+const FEATURES = [
+  {
+    title: 'Privacy & security',
+    description: 'Your records stay in an encrypted vault you control.',
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+      </svg>
+    ),
+  },
+  {
+    title: 'AI insights',
+    description: 'Get clear summaries and trends from your lab results and records.',
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+      </svg>
+    ),
+  },
+  {
+    title: 'Family profiles',
+    description: 'Manage health records for everyone in your family, in one place.',
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+      </svg>
+    ),
+  },
+] as const;
+
 function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -64,48 +94,81 @@ function SignInContent() {
 
   if (isCheckingSession) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center text-gray-600">Loading...</div>
       </div>
     );
   }
 
+  const inputClassName =
+    'mt-1.5 block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-gray-900 placeholder-gray-400 shadow-none focus:border-[#0175C2] focus:outline-none focus:ring-2 focus:ring-[#0175C2]/30 sm:text-sm';
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white rounded-2xl shadow-xl p-8">
-        <div className="text-center">
-          <div className="flex justify-center mb-4">
+    <div className="min-h-screen lg:grid lg:grid-cols-2">
+      <section className="relative flex flex-col justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-100 px-6 py-12 sm:px-10 lg:px-14 lg:py-16">
+        <div className="mx-auto w-full max-w-md lg:mx-0 lg:max-w-lg">
+          <div className="flex items-center gap-3">
             <Image
               src="/logo.png"
               alt="SanoVault Logo"
-              width={80}
-              height={80}
+              width={56}
+              height={56}
               className="rounded-full"
               priority
             />
+            <span className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+              SanoVault
+            </span>
           </div>
-          <h2 className="text-3xl font-extrabold text-gray-900">
-            Welcome back
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Sign in to your SanoVault account
-          </p>
-        </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {message && (
-            <div className="rounded-md bg-green-50 p-4">
-              <div className="text-sm text-green-800">{message}</div>
-            </div>
-          )}
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-800">{error}</div>
-            </div>
-          )}
-          <div className="rounded-md shadow-sm -space-y-px">
+          <h1 className="mt-8 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+            One vault for your family&apos;s health
+          </h1>
+          <p className="mt-3 text-base text-gray-600 sm:text-lg">
+            Store records securely, understand what they mean, and keep everyone&apos;s care in sync.
+          </p>
+
+          <ul className="mt-10 space-y-5">
+            {FEATURES.map((feature) => (
+              <li key={feature.title} className="flex gap-3.5">
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0175C2]/10 text-[#0175C2]">
+                  {feature.icon}
+                </span>
+                <div>
+                  <p className="font-semibold text-gray-900">{feature.title}</p>
+                  <p className="mt-0.5 text-sm text-gray-600">{feature.description}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="flex flex-col justify-center bg-white px-6 py-12 sm:px-10 lg:px-14 lg:py-16">
+        <div className="mx-auto w-full max-w-md">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900">
+              Welcome back
+            </h2>
+            <p className="mt-1.5 text-sm text-gray-600">
+              Sign in to your SanoVault account
+            </p>
+          </div>
+
+          <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+            {message && (
+              <div className="rounded-lg bg-green-50 px-4 py-3">
+                <div className="text-sm text-green-800">{message}</div>
+              </div>
+            )}
+            {error && (
+              <div className="rounded-lg bg-red-50 px-4 py-3">
+                <div className="text-sm text-red-800">{error}</div>
+              </div>
+            )}
+
             <div>
-              <label htmlFor="email" className="sr-only">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email address
               </label>
               <input
@@ -114,14 +177,15 @@ function SignInContent() {
                 type="email"
                 autoComplete="email"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-[#0175C2] focus:border-[#0175C2] sm:text-sm"
-                placeholder="Email address"
+                className={inputClassName}
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
+
             <div>
-              <label htmlFor="password" className="sr-only">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Password
               </label>
               <input
@@ -130,41 +194,40 @@ function SignInContent() {
                 type="password"
                 autoComplete="current-password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-[#0175C2] focus:border-[#0175C2] sm:text-sm"
+                className={inputClassName}
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-          </div>
 
-          <div>
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-[#0175C2] hover:bg-[#015a96] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0175C2] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              className="w-full rounded-lg bg-[#0175C2] px-4 py-3 text-sm font-medium text-white transition-colors duration-200 hover:bg-[#015a96] focus:outline-none focus:ring-2 focus:ring-[#0175C2] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
-          </div>
 
-          <SocialAuthButtons
-            mode="signin"
-            callbackURL={callbackUrl}
-            disabled={loading}
-            onError={setError}
-          />
+            <SocialAuthButtons
+              mode="signin"
+              callbackURL={callbackUrl}
+              disabled={loading}
+              onError={setError}
+            />
 
-          <div className="text-center">
-            <a
-              href="/auth/signup"
-              className="font-medium text-[#0175C2] hover:text-[#015a96] transition-colors"
-            >
-              Don&apos;t have an account? Sign up
-            </a>
-          </div>
-        </form>
-      </div>
+            <p className="text-center text-sm text-gray-600">
+              Don&apos;t have an account?{' '}
+              <a
+                href="/auth/signup"
+                className="font-medium text-[#0175C2] hover:text-[#015a96] transition-colors"
+              >
+                Sign up
+              </a>
+            </p>
+          </form>
+        </div>
+      </section>
     </div>
   );
 }
@@ -172,8 +235,8 @@ function SignInContent() {
 export default function SignInPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center text-gray-600">Loading...</div>
       </div>
     }>
       <SignInContent />

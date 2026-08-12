@@ -18,12 +18,20 @@ function parseFromAddress(from: string): { email: string; name?: string } {
 export async function sendBrevoEmail(
   input: SendEmailInput
 ): Promise<{ sent: boolean; error?: string; messageId?: string }> {
-  const apiKey = process.env.BREVO_API_KEY;
+  const apiKey = process.env.BREVO_API_KEY?.trim();
   const fromRaw = process.env.EMAIL_FROM;
 
   if (!apiKey) {
     console.warn('BREVO_API_KEY not set; skipping email');
     return { sent: false, error: 'Email not configured' };
+  }
+  // Brevo SMTP keys (xsmtpsib-…) authenticate SMTP only; REST needs an API key (xkeysib-…).
+  if (apiKey.startsWith('xsmtpsib')) {
+    console.warn('BREVO_API_KEY is an SMTP key; use an API key from SMTP & API → API keys');
+    return {
+      sent: false,
+      error: 'BREVO_API_KEY is an SMTP key; use a Brevo API key (starts with xkeysib-)',
+    };
   }
   if (!fromRaw) {
     console.warn('EMAIL_FROM not set; skipping email');
