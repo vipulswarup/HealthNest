@@ -12,6 +12,18 @@ test('accepts the configured production origin', () => {
   assert.equal(hasTrustedMutationOrigin({ ...production, origin: 'https://www.sanovault.com' }), true);
 });
 
+test('accepts only the canonical www/apex alias in production', () => {
+  assert.equal(hasTrustedMutationOrigin({
+    ...production,
+    configuredAppUrl: 'https://sanovault.com',
+    origin: 'https://www.sanovault.com',
+  }), true);
+  assert.equal(hasTrustedMutationOrigin({
+    ...production,
+    origin: 'https://attacker.sanovault.com',
+  }), false);
+});
+
 test('rejects missing and cross-site production origins', () => {
   assert.equal(hasTrustedMutationOrigin({ ...production, origin: null }), false);
   assert.equal(hasTrustedMutationOrigin({ ...production, origin: 'https://attacker.example' }), false);
