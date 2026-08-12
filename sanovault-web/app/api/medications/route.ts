@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/config';
-import { getDatabase } from '@/lib/mongodb';
 import { z } from 'zod';
-import { handleError, AppError } from '@/lib/middleware/error-handler';
-import { ObjectId } from 'mongodb';
+import { getCurrentUser } from '@/lib/auth/session';
+import { sql } from '@/lib/db/neon';
+import { canAccessPatient } from '@/lib/households/access';
+import { AppError, handleError } from '@/lib/middleware/error-handler';
+import { recordAuditEvent } from '@/lib/services/audit.service';
+import { toMedication } from '@/lib/services/medication.service';
 
-const createMedicationSchema = z.object({
-  patientId: z.string().min(1, 'Patient ID is required'),
+const medicationSchema = z.object({
+  patientId: z.string().uuid('Patient ID is required'),
   name: z.string().min(1, 'Medication name is required'),
   dosage: z.string().min(1, 'Dosage is required'),
   frequency: z.string().min(1, 'Frequency is required'),
@@ -21,56 +22,35 @@ const createMedicationSchema = z.object({
   tags: z.array(z.string()).optional(),
 });
 
+async function currentUser() {
+  const user = await getCurrentUser();
+  if (!user) throw new AppError('Unauthorized', 401);
+  return user;
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await currentUser();
+    const patientId = request.nextUrl.searchParams.get('patientId');
+    const isActiveParam = request.nextUrl.searchParams.get('isActive');
 
-    if (!session?.user?.id) {
-      throw new AppError('Unauthorized', 401);
+    if (!patientId || !z.string().uuid().safeParse(patientId).success) {
+      throw new AppError('A valid patient ID is required', 400);
     }
-
-    const { searchParams } = new URL(request.url);
-    const patientId = searchParams.get('patientId');
-    const isActive = searchParams.get('isActive');
-
-    if (!patientId) {
-      throw new AppError('patientId query parameter is required', 400);
+    if (isActiveParam !== null && isActiveParam !== 'true' && isActiveParam !== 'false') {
+      throw new AppError('isActive must be true or false', 400);
     }
+    if (!(await canAccessPatient(user.id, patientId))) throw new AppError('Patient not found', 404);
 
-    const db = await getDatabase();
-    const patientsCollection = db.collection('patients');
-    const medicationsCollection = db.collection('medications');
-
-    // Verify patient belongs to user
-    if (!ObjectId.isValid(patientId)) {
-      throw new AppError('Invalid patient ID', 400);
-    }
-
-    const patient = await patientsCollection.findOne({
-      _id: new ObjectId(patientId),
-      userId: session.user.id,
-    });
-
-    if (!patient) {
-      throw new AppError('Patient not found', 404);
-    }
-
-    const query: any = { patientId };
-    if (isActive !== null) {
-      query.isActive = isActive === 'true';
-    }
-
-    const medications = await medicationsCollection
-      .find(query)
-      .sort({ startDate: -1 })
-      .toArray();
-
-    return NextResponse.json(
-      medications.map((medication) => ({
-        ...medication,
-        id: medication._id.toString(),
-      }))
-    );
+    const isActive = isActiveParam === null ? null : isActiveParam === 'true';
+    const medications = await sql`
+      SELECT *
+      FROM medications
+      WHERE patient_id = ${patientId}::uuid
+        AND (${isActive}::boolean IS NULL OR is_active = ${isActive}::boolean)
+      ORDER BY start_date DESC, created_at DESC
+    `;
+    return NextResponse.json(medications.map(toMedication));
   } catch (error) {
     return handleError(error);
   }
@@ -78,72 +58,32 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await currentUser();
+    const parsed = medicationSchema.safeParse(await request.json());
+    if (!parsed.success) throw new AppError(parsed.error.issues[0].message, 400, 'VALIDATION_ERROR');
+    const data = parsed.data;
+    if (!(await canAccessPatient(user.id, data.patientId))) throw new AppError('Patient not found', 404);
 
-    if (!session?.user?.id) {
-      throw new AppError('Unauthorized', 401);
-    }
-
-    const body = await request.json();
-    const validationResult = createMedicationSchema.safeParse(body);
-
-    if (!validationResult.success) {
-      throw new AppError(
-        validationResult.error.issues[0].message,
-        400,
-        'VALIDATION_ERROR'
-      );
-    }
-
-    const data = validationResult.data;
-
-    const db = await getDatabase();
-    const patientsCollection = db.collection('patients');
-    const medicationsCollection = db.collection('medications');
-
-    // Verify patient belongs to user
-    if (!ObjectId.isValid(data.patientId)) {
-      throw new AppError('Invalid patient ID', 400);
-    }
-
-    const patient = await patientsCollection.findOne({
-      _id: new ObjectId(data.patientId),
-      userId: session.user.id,
-    });
-
-    if (!patient) {
-      throw new AppError('Patient not found', 404);
-    }
-
-    const newMedication = {
+    const [medication] = await sql`
+      INSERT INTO medications (
+        patient_id, name, dosage, frequency, route, start_date, end_date,
+        instructions, prescribed_by, source, is_active, tags
+      ) VALUES (
+        ${data.patientId}::uuid, ${data.name}, ${data.dosage}, ${data.frequency}, ${data.route},
+        ${data.startDate}::date, ${data.endDate || null}::date, ${data.instructions || null},
+        ${data.prescribedBy || null}, ${data.source || null}, ${data.isActive ?? true}, ${data.tags || []}
+      )
+      RETURNING *
+    `;
+    await recordAuditEvent({
+      actorId: user.id,
       patientId: data.patientId,
-      name: data.name,
-      dosage: data.dosage,
-      frequency: data.frequency,
-      route: data.route,
-      startDate: new Date(data.startDate),
-      endDate: data.endDate ? new Date(data.endDate) : null,
-      instructions: data.instructions || '',
-      prescribedBy: data.prescribedBy || '',
-      source: data.source || '',
-      isActive: data.isActive !== undefined ? data.isActive : true,
-      tags: data.tags || [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const result = await medicationsCollection.insertOne(newMedication);
-
-    return NextResponse.json(
-      {
-        ...newMedication,
-        id: result.insertedId.toString(),
-        _id: result.insertedId,
-      },
-      { status: 201 }
-    );
+      eventType: 'created',
+      entityType: 'medication',
+      entityId: medication.id,
+    });
+    return NextResponse.json(toMedication(medication), { status: 201 });
   } catch (error) {
     return handleError(error);
   }
 }
-

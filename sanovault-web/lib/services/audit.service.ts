@@ -4,7 +4,7 @@ export type AuditEventInput = {
   actorId: string;
   patientId?: string | null;
   eventType: 'created' | 'updated' | 'deleted';
-  entityType: 'patient' | 'health_record' | 'document';
+  entityType: 'patient' | 'health_record' | 'document' | 'medication';
   entityId: string;
   /**
    * Keep this deliberately non-sensitive. Metadata may describe an operation
