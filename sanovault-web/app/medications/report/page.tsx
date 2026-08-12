@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import AppNav from '@/components/layout/AppNav';
 
 type Country = 'IN' | 'US' | 'GB';
@@ -27,6 +27,14 @@ const labels: Record<Country, string> = { IN: 'India', US: 'USA', GB: 'UK' };
 const genericName = (ingredients: Ingredient[]) => ingredients.map((ingredient) => `${ingredient.canonicalInn} ${ingredient.strength} ${ingredient.strengthUnit}`.trim()).join(' + ');
 
 export default function MedicationReportPage() {
+  return (
+    <Suspense fallback={<ReportLoading />}>
+      <MedicationReportContent />
+    </Suspense>
+  );
+}
+
+function MedicationReportContent() {
   const searchParams = useSearchParams();
   const patientId = searchParams.get('patientId') || '';
   const [country, setCountry] = useState<Country>('US');
@@ -70,6 +78,14 @@ export default function MedicationReportPage() {
           </section>
         </div>
       </main>
+    </div>
+  );
+}
+
+function ReportLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <p className="text-gray-600">Preparing medication list…</p>
     </div>
   );
 }
