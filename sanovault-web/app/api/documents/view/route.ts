@@ -6,6 +6,8 @@ import { getR2SignedUrl } from '@/lib/r2';
 import { getDocumentById } from '@/lib/services/document.service';
 import { handleError, AppError } from '@/lib/middleware/error-handler';
 
+const SIGNED_URL_TTL_SECONDS = 5 * 60;
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
@@ -17,8 +19,16 @@ export async function POST(request: NextRequest) {
     if (!(await canAccessDocument(user.id, documentId))) throw new AppError('Forbidden', 403);
     if (!document.r2Key) throw new AppError('This document is not stored in Cloudflare R2', 409);
 
-    const url = await getR2SignedUrl(document.r2Key, 3600);
-    return NextResponse.json({ url, fileName: document.fileName, fileType: document.fileType });
+    const url = await getR2SignedUrl(document.r2Key, SIGNED_URL_TTL_SECONDS);
+    return NextResponse.json(
+      { url, fileName: document.fileName, fileType: document.fileType },
+      {
+        headers: {
+          'Cache-Control': 'private, no-store',
+          'Referrer-Policy': 'no-referrer',
+        },
+      }
+    );
   } catch (error) {
     return handleError(error);
   }
