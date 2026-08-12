@@ -26,18 +26,33 @@ export function handleError(error: unknown): NextResponse {
   }
 
   if (error instanceof Error) {
-    console.error('Unhandled error:', error);
+    const errorId = crypto.randomUUID();
+
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Unhandled error:', error);
+    } else {
+      // Do not log raw errors in production: database, storage, and AI
+      // provider errors can contain query fragments, object keys, or PHI.
+      console.error('Unhandled server error', { errorId, errorType: error.name || 'Error' });
+    }
+
     return NextResponse.json(
       {
         error: 'Internal server error',
         message: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        requestId: process.env.NODE_ENV === 'development' ? undefined : errorId,
       },
       { status: 500 }
     );
   }
 
+  const errorId = crypto.randomUUID();
+  console.error('Unhandled server error', { errorId, errorType: typeof error });
   return NextResponse.json(
-    { error: 'Unknown error occurred' },
+    {
+      error: 'Unknown error occurred',
+      requestId: process.env.NODE_ENV === 'development' ? undefined : errorId,
+    },
     { status: 500 }
   );
 }
