@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth/session';
 import { sql } from '@/lib/db/neon';
-import { sendHouseholdInviteEmail } from '@/lib/email/resend';
+import { sendHouseholdInviteEmail } from '@/lib/email/send';
+import { appBaseUrl } from '@/lib/email/templates';
 import {
   generateInviteToken,
   getHouseholdForMember,
@@ -14,10 +15,6 @@ const idSchema = z.string().uuid();
 const inviteSchema = z.object({
   email: z.string().trim().email('Valid email is required'),
 });
-
-function appBaseUrl(request: NextRequest) {
-  return process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
-}
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -91,7 +88,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       RETURNING *
     `;
 
-    const acceptUrl = `${appBaseUrl(request)}/households/invites/${token}`;
+    const acceptUrl = `${appBaseUrl()}/households/invites/${token}`;
     const emailResult = await sendHouseholdInviteEmail({
       to: email,
       householdName: household.name,
