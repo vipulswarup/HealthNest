@@ -12,11 +12,15 @@ interface ResultPoint {
   metric: string;
   label: string;
   panel: string;
-  value: number;
+  value: number | null;
+  valueType: 'numeric' | 'range' | 'qualitative';
+  rawValue: string;
   unit: string | null;
   referenceLow: number | null;
   referenceHigh: number | null;
   status: string;
+  referenceText?: string | null;
+  mappingConfidence?: 'verified' | 'alias' | 'unmapped';
   date: string;
   reportId: string;
   documentPath?: string;
@@ -63,8 +67,10 @@ interface SummaryResponse {
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value));
 
-const formatValue = (result: { value: number; unit: string | null }) =>
-  `${result.value}${result.unit ? ` ${result.unit}` : ''}`;
+const formatValue = (result: { value: number | null; rawValue?: string; unit: string | null }) => {
+  const displayed = result.rawValue || (result.value === null ? '—' : String(result.value));
+  return `${displayed}${result.unit ? ` ${result.unit}` : ''}`;
+};
 
 function Sparkline({ values }: { values: number[] }) {
   if (values.length < 2) {
@@ -405,7 +411,12 @@ function BloodSummaryContent() {
                                 onChange={() => toggleMetric(comparison.metric)}
                                 className="h-4 w-4 rounded border-slate-300 accent-[#0175C2]"
                               />
-                              <span>{comparison.label}</span>
+                              <span>
+                                {comparison.label}
+                                {comparison.results.some((result) => result.mappingConfidence === 'unmapped') && (
+                                  <span className="ml-1 text-xs text-amber-700">(as reported)</span>
+                                )}
+                              </span>
                             </label>
                           ))}
                         </div>
@@ -477,29 +488,37 @@ function BloodSummaryContent() {
                                 {comparison.label}
                               </td>
                               <td className="px-5 py-4">
-                                <Sparkline values={comparison.results.map((item) => item.value)} />
+                                {comparison.results.filter((item) => item.value !== null).length >= 2 ? (
+                                  <Sparkline values={comparison.results.flatMap((item) => item.value === null ? [] : [item.value])} />
+                                ) : comparison.results.some((item) => item.valueType !== 'numeric') ? (
+                                  <span className="text-xs text-slate-500">Text result</span>
+                                ) : (
+                                  <span className="text-xs text-slate-400">Need 2+ points</span>
+                                )}
                               </td>
                               <td className="px-5 py-4">
                                 <div className="flex flex-wrap gap-2">
                                   {comparison.results.map((result) => (
                                     <Link
-                                      key={`${result.reportId}-${result.date}-${result.value}`}
+                                      key={`${result.reportId}-${result.date}-${result.rawValue || result.value}`}
                                       href={result.documentPath || `/health-records/${result.reportId}`}
                                       className={`rounded-md px-2 py-1 hover:underline ${
-                                        result.status === 'high' || result.status === 'low'
+                                        result.status === 'high' || result.status === 'low' || result.status === 'abnormal'
                                           ? 'bg-amber-100 text-amber-900'
                                           : 'bg-slate-100 text-slate-800'
                                       }`}
                                     >
                                       {formatDate(result.date)}: {formatValue(result)}
-                                      {result.status === 'high' ? ' ↑' : result.status === 'low' ? ' ↓' : ''}
+                                      {result.status === 'high' ? ' ↑' : result.status === 'low' ? ' ↓' : result.status === 'abnormal' ? ' ⚠' : ''}
                                     </Link>
                                   ))}
                                 </div>
                               </td>
                               <td className="px-5 py-4 text-slate-700">
-                                {comparison.change === null
-                                  ? 'Not comparable (mixed/missing units)'
+                                {comparison.results.some((item) => item.valueType !== 'numeric')
+                                  ? 'Not applicable'
+                                  : comparison.change === null
+                                    ? 'Not comparable (mixed/missing units)'
                                   : `${comparison.change > 0 ? '+' : ''}${comparison.change.toFixed(2)}${
                                       comparison.unit ? ` ${comparison.unit}` : ''
                                     } (${comparison.direction})`}

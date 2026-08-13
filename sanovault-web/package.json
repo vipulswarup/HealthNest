@@ -10,6 +10,7 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "init-db": "npm run db:migrate",
     "test:blood-summary": "tsx scripts/seed-and-test-blood-summary.ts",
+    "test:blood-summary:unit": "tsx --test tests/reports/blood-summary.test.ts",
     "test:security": "tsx --test tests/security/*.test.ts"
   },
   "dependencies": {

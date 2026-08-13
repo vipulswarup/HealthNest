@@ -68,6 +68,7 @@ function renderDataItem(key: string, value: unknown, level = 0): ReactElement | 
 }
 
 function referenceRange(result: LabResult): string {
+  if (result.referenceText) return result.referenceText;
   if (result.referenceLow !== null && result.referenceHigh !== null) {
     return `${result.referenceLow} – ${result.referenceHigh}`;
   }
@@ -79,6 +80,7 @@ function referenceRange(result: LabResult): string {
 function statusStyle(status: LabResult['status']) {
   if (status === 'low') return 'bg-amber-100 text-amber-800';
   if (status === 'high') return 'bg-rose-100 text-rose-800';
+  if (status === 'abnormal') return 'bg-rose-100 text-rose-800';
   if (status === 'normal') return 'bg-emerald-100 text-emerald-800';
   return 'bg-slate-100 text-slate-700';
 }
@@ -121,7 +123,7 @@ function LabResultsTable({ results, manuallyConfirmed, editedAt }: {
             {results.map((result) => (
               <tr key={result.metric}>
                 <td className="px-4 py-3 font-medium text-slate-900">{result.label}</td>
-                <td className="px-4 py-3 text-slate-800">{result.value}{result.unit ? ` ${result.unit}` : ''}</td>
+                <td className="px-4 py-3 text-slate-800">{result.rawValue || result.value}{result.unit ? ` ${result.unit}` : ''}</td>
                 <td className="px-4 py-3 text-slate-700">{referenceRange(result)}{result.unit && (result.referenceLow !== null || result.referenceHigh !== null) ? ` ${result.unit}` : ''}</td>
                 <td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusStyle(result.status)}`}>{statusLabel(result.status)}</span></td>
               </tr>

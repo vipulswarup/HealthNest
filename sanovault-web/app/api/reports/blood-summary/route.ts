@@ -7,6 +7,8 @@ import { AppError, handleError } from '@/lib/middleware/error-handler';
 import {
   buildBloodReportSummary,
   hasManualLabOverride,
+  LAB_METRIC_OPTIONS,
+  LabAliasMapping,
   readManualLabResults,
 } from '@/lib/reports/blood-summary';
 
@@ -59,20 +61,44 @@ export async function GET(request: NextRequest) {
       ORDER BY effective_date DESC, hr.created_at DESC
     `;
 
+    const confirmedMappingRows = await sql`
+      SELECT source, data
+      FROM health_records
+      WHERE patient_id = ${patientId}::uuid
+        AND data ? 'labResultsManual'
+        AND (data->>'labResultsManual') = 'true'
+    `;
+    const canonicalMetrics = new Set(LAB_METRIC_OPTIONS.map((option) => option.metric));
+    const mappingsBySource = new Map<string, Map<string, LabAliasMapping>>();
+    for (const row of confirmedMappingRows) {
+      const source = String(row.source || 'Unknown source').trim().toLowerCase();
+      const sourceMappings = mappingsBySource.get(source) || new Map<string, LabAliasMapping>();
+      for (const result of readManualLabResults(row.data || {})) {
+        if (!result.rawLabel || !canonicalMetrics.has(result.metric)) continue;
+        sourceMappings.set(result.rawLabel.trim().toLowerCase(), {
+          rawLabel: result.rawLabel,
+          metric: result.metric,
+        });
+      }
+      mappingsBySource.set(source, sourceMappings);
+    }
+
     const summary = buildBloodReportSummary(
       records.map((record) => {
         const data = record.data || {};
         const useManualResults = hasManualLabOverride(data);
+        const source = String(record.source || 'Unknown source');
         return {
           id: String(record.id),
           date: new Date(record.effective_date || record.document_date || record.created_at),
-          source: String(record.source || 'Unknown source'),
+          source,
           documentPath: record.document_id
             ? `/health-records/${record.id}/document`
             : `/health-records/${record.id}`,
           ocrText: record.ocr_text ? String(record.ocr_text) : undefined,
           useManualResults,
           manualResults: useManualResults ? readManualLabResults(data) : undefined,
+          aliasMappings: [...(mappingsBySource.get(source.trim().toLowerCase())?.values() || [])],
         };
       }),
     );

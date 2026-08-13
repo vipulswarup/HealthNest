@@ -10,20 +10,32 @@ import {
 type DraftRow = {
   localId: string;
   metric: string;
+  label: string;
+  rawLabel?: string;
+  panel: LabResult['panel'];
   value: string;
   unit: string;
   referenceLow: string;
   referenceHigh: string;
+  referenceText: string;
+  status: LabResult['status'];
+  mappingConfidence: LabResult['mappingConfidence'];
 };
 
 function toDraft(results: LabResult[]): DraftRow[] {
   return results.map((result, index) => ({
     localId: `${result.metric}-${index}`,
     metric: result.metric,
-    value: String(result.value),
+    label: result.label,
+    rawLabel: result.rawLabel,
+    panel: result.panel,
+    value: result.rawValue || (result.value === null ? '' : String(result.value)),
     unit: result.unit || '',
     referenceLow: result.referenceLow === null || result.referenceLow === undefined ? '' : String(result.referenceLow),
     referenceHigh: result.referenceHigh === null || result.referenceHigh === undefined ? '' : String(result.referenceHigh),
+    referenceText: result.referenceText || '',
+    status: result.status,
+    mappingConfidence: result.mappingConfidence,
   }));
 }
 
@@ -38,22 +50,34 @@ function toLabResults(drafts: DraftRow[]): LabResult[] {
   const byMetric = new Map<string, LabResult>();
   for (const draft of drafts) {
     const option = LAB_METRIC_OPTIONS.find((item) => item.metric === draft.metric);
-    if (!option) continue;
     const value = parseOptionalNumber(draft.value);
-    if (value === null) continue;
+    const trimmedValue = draft.value.trim();
+    if (!trimmedValue) continue;
+    const rangeMatch = trimmedValue.match(/^(-?\d+(?:[,.]\d+)?)\s*(?:-|–|—|to)\s*(-?\d+(?:[,.]\d+)?)$/i);
     const referenceLow = parseOptionalNumber(draft.referenceLow);
     const referenceHigh = parseOptionalNumber(draft.referenceHigh);
     const unit = draft.unit.trim() || null;
-    byMetric.set(option.metric, {
-      metric: option.metric,
-      label: option.label,
-      panel: option.panel,
+    byMetric.set(draft.metric, {
+      metric: draft.metric,
+      label: option?.label || draft.label,
+      panel: option?.panel || draft.panel,
       value,
+      valueType: 'numeric',
+      rawValue: trimmedValue,
+      rangeValueLow: rangeMatch ? Number(rangeMatch[1].replace(',', '.')) : null,
+      rangeValueHigh: rangeMatch ? Number(rangeMatch[2].replace(',', '.')) : null,
       unit,
       referenceLow,
       referenceHigh,
-      status: valueStatus(value, referenceLow, referenceHigh),
+      referenceText: draft.referenceText.trim() || null,
+      rawLabel: draft.rawLabel,
+      mappingConfidence: draft.mappingConfidence || (option ? 'verified' : 'unmapped'),
+      status: draft.status === 'unknown' && value !== null
+        ? valueStatus(value, referenceLow, referenceHigh)
+        : draft.status,
     });
+    const saved = byMetric.get(draft.metric)!;
+    saved.valueType = value !== null ? 'numeric' : rangeMatch ? 'range' : 'qualitative';
   }
   return [...byMetric.values()];
 }
@@ -92,10 +116,16 @@ export function LabResultsEditor({ results, onChange, disabled = false }: LabRes
       {
         localId: `${nextMetric.metric}-${Date.now()}`,
         metric: nextMetric.metric,
+        label: nextMetric.label,
+        rawLabel: nextMetric.label,
+        panel: nextMetric.panel,
         value: '',
         unit: '',
         referenceLow: '',
         referenceHigh: '',
+        referenceText: '',
+        status: 'unknown',
+        mappingConfidence: 'verified',
       },
     ]);
   };
@@ -107,6 +137,8 @@ export function LabResultsEditor({ results, onChange, disabled = false }: LabRes
           <thead className="bg-slate-50 text-left text-slate-600">
             <tr>
               <th className="px-3 py-2 font-medium">Test</th>
+              <th className="px-3 py-2 font-medium">Reference text</th>
+              <th className="px-3 py-2 font-medium">Status</th>
               <th className="px-3 py-2 font-medium">Value</th>
               <th className="px-3 py-2 font-medium">Unit</th>
               <th className="px-3 py-2 font-medium">Ref low</th>
@@ -117,7 +149,7 @@ export function LabResultsEditor({ results, onChange, disabled = false }: LabRes
           <tbody className="divide-y divide-slate-100 bg-white">
             {drafts.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-3 py-4 text-slate-500">
+                <td colSpan={8} className="px-3 py-4 text-slate-500">
                   No lab values yet. Add a test, or keep using auto-extraction.
                 </td>
               </tr>
@@ -128,7 +160,13 @@ export function LabResultsEditor({ results, onChange, disabled = false }: LabRes
                     <select
                       value={row.metric}
                       disabled={disabled}
-                      onChange={(e) => updateRow(row.localId, { metric: e.target.value })}
+                      onChange={(e) => {
+                        const option = LAB_METRIC_OPTIONS.find((item) => item.metric === e.target.value);
+                        updateRow(row.localId, {
+                          metric: e.target.value,
+                          ...(option ? { label: option.label, panel: option.panel, mappingConfidence: 'verified' as const } : {}),
+                        });
+                      }}
                       className="w-full min-w-[10rem] rounded-md border border-slate-300 px-2 py-1.5"
                     >
                       {LAB_METRIC_OPTIONS.filter(
@@ -138,6 +176,33 @@ export function LabResultsEditor({ results, onChange, disabled = false }: LabRes
                           {option.label}
                         </option>
                       ))}
+                      {!LAB_METRIC_OPTIONS.some((option) => option.metric === row.metric) && (
+                        <option value={row.metric}>{row.label} (as reported)</option>
+                      )}
+                    </select>
+                  </td>
+                  <td className="px-3 py-2">
+                    <input
+                      type="text"
+                      value={row.referenceText}
+                      disabled={disabled}
+                      onChange={(e) => updateRow(row.localId, { referenceText: e.target.value })}
+                      className="w-36 rounded-md border border-slate-300 px-2 py-1.5"
+                      placeholder="As reported"
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <select
+                      value={row.status}
+                      disabled={disabled}
+                      onChange={(e) => updateRow(row.localId, { status: e.target.value as LabResult['status'] })}
+                      className="rounded-md border border-slate-300 px-2 py-1.5"
+                    >
+                      <option value="unknown">Unknown</option>
+                      <option value="normal">Normal</option>
+                      <option value="low">Low</option>
+                      <option value="high">High</option>
+                      <option value="abnormal">Abnormal</option>
                     </select>
                   </td>
                   <td className="px-3 py-2">
