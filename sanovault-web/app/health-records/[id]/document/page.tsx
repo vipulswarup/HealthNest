@@ -39,6 +39,7 @@ export default function DocumentPreviewPage() {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [categories, setCategories] = useState<HealthRecordCategory[]>([]);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [documentFileType, setDocumentFileType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -84,6 +85,7 @@ export default function DocumentPreviewPage() {
         if (!documentResponse.ok) throw new Error('Failed to generate document URL');
         const documentData = await documentResponse.json();
         setSignedUrl(documentData.url);
+        setDownloadUrl(documentData.downloadUrl || documentData.url);
         setDocumentFileType(documentData.fileType || null);
       } else {
         setError('No document attached to this health record');
@@ -178,7 +180,7 @@ export default function DocumentPreviewPage() {
               </div>
               <div className="flex space-x-2">
                 <a
-                  href={signedUrl}
+                  href={downloadUrl || signedUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-4 py-2 bg-[#0175C2] text-white rounded-lg hover:bg-[#015a96] transition-colors text-sm font-medium"
@@ -215,7 +217,7 @@ export default function DocumentPreviewPage() {
               <div className="p-12 text-center">
                 <p className="text-gray-600 mb-4">Preview not available for this file type</p>
                 <a
-                  href={signedUrl}
+                  href={downloadUrl || signedUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-block px-6 py-2 bg-[#0175C2] text-white rounded-lg hover:bg-[#015a96] transition-colors"

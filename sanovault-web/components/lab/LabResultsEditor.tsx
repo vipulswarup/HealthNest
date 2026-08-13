@@ -158,6 +158,8 @@ export function LabResultsEditor({ results, onChange, disabled = false }: LabRes
                 <tr key={row.localId}>
                   <td className="px-3 py-2">
                     <select
+                      name={`labMetric-${row.localId}`}
+                      aria-label="Lab test"
                       value={row.metric}
                       disabled={disabled}
                       onChange={(e) => {
@@ -184,6 +186,8 @@ export function LabResultsEditor({ results, onChange, disabled = false }: LabRes
                   <td className="px-3 py-2">
                     <input
                       type="text"
+                      name={`labReferenceText-${row.localId}`}
+                      aria-label="Reference text"
                       value={row.referenceText}
                       disabled={disabled}
                       onChange={(e) => updateRow(row.localId, { referenceText: e.target.value })}
@@ -193,6 +197,8 @@ export function LabResultsEditor({ results, onChange, disabled = false }: LabRes
                   </td>
                   <td className="px-3 py-2">
                     <select
+                      name={`labStatus-${row.localId}`}
+                      aria-label="Lab result status"
                       value={row.status}
                       disabled={disabled}
                       onChange={(e) => updateRow(row.localId, { status: e.target.value as LabResult['status'] })}
@@ -208,6 +214,8 @@ export function LabResultsEditor({ results, onChange, disabled = false }: LabRes
                   <td className="px-3 py-2">
                     <input
                       type="text"
+                      name={`labValue-${row.localId}`}
+                      aria-label="Lab result value"
                       inputMode="decimal"
                       value={row.value}
                       disabled={disabled}
@@ -218,6 +226,8 @@ export function LabResultsEditor({ results, onChange, disabled = false }: LabRes
                   <td className="px-3 py-2">
                     <input
                       type="text"
+                      name={`labUnit-${row.localId}`}
+                      aria-label="Lab result unit"
                       value={row.unit}
                       disabled={disabled}
                       onChange={(e) => updateRow(row.localId, { unit: e.target.value })}
@@ -228,6 +238,8 @@ export function LabResultsEditor({ results, onChange, disabled = false }: LabRes
                   <td className="px-3 py-2">
                     <input
                       type="text"
+                      name={`labReferenceLow-${row.localId}`}
+                      aria-label="Reference range low"
                       inputMode="decimal"
                       value={row.referenceLow}
                       disabled={disabled}
@@ -238,6 +250,8 @@ export function LabResultsEditor({ results, onChange, disabled = false }: LabRes
                   <td className="px-3 py-2">
                     <input
                       type="text"
+                      name={`labReferenceHigh-${row.localId}`}
+                      aria-label="Reference range high"
                       inputMode="decimal"
                       value={row.referenceHigh}
                       disabled={disabled}

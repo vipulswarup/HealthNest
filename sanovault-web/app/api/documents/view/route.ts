@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { canAccessDocument } from '@/lib/households/access';
 import { getR2SignedUrl } from '@/lib/r2';
 import { getDocumentById } from '@/lib/services/document.service';
+import { needsBrowserPreviewConversion } from '@/lib/images/normalize';
 import { handleError, AppError } from '@/lib/middleware/error-handler';
 
 const SIGNED_URL_TTL_SECONDS = 5 * 60;
@@ -19,9 +20,12 @@ export async function POST(request: NextRequest) {
     if (!(await canAccessDocument(user.id, documentId))) throw new AppError('Forbidden', 403);
     if (!document.r2Key) throw new AppError('This document is not stored in Cloudflare R2', 409);
 
-    const url = await getR2SignedUrl(document.r2Key, SIGNED_URL_TTL_SECONDS);
+    const downloadUrl = await getR2SignedUrl(document.r2Key, SIGNED_URL_TTL_SECONDS);
+    const url = needsBrowserPreviewConversion(document.fileType)
+      ? `/api/documents/preview?documentId=${encodeURIComponent(documentId)}`
+      : downloadUrl;
     return NextResponse.json(
-      { url, fileName: document.fileName, fileType: document.fileType },
+      { url, downloadUrl, fileName: document.fileName, fileType: document.fileType },
       {
         headers: {
           'Cache-Control': 'private, no-store',

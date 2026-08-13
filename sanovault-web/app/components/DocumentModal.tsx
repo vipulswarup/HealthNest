@@ -15,6 +15,7 @@ export default function DocumentModal({ isOpen, onClose, documentId, fileName }:
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [documentFileType, setDocumentFileType] = useState<string | null>(null);
@@ -39,6 +40,7 @@ export default function DocumentModal({ isOpen, onClose, documentId, fileName }:
 
       const data = await response.json();
       setSignedUrl(data.url);
+      setDownloadUrl(data.downloadUrl || data.url);
       setDocumentFileType(data.fileType || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load document');
@@ -52,6 +54,7 @@ export default function DocumentModal({ isOpen, onClose, documentId, fileName }:
       fetchSignedUrl();
     } else {
       setSignedUrl(null);
+      setDownloadUrl(null);
       setError(null);
     }
   }, [isOpen, documentId, fetchSignedUrl]);
@@ -211,7 +214,7 @@ export default function DocumentModal({ isOpen, onClose, documentId, fileName }:
                     <div className="text-center py-12">
                       <p className="text-gray-600 mb-4">Preview not available for this file type</p>
                       <a
-                        href={signedUrl}
+                        href={downloadUrl || signedUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-block px-6 py-2 bg-[#0175C2] text-white rounded-lg hover:bg-[#015a96] transition-colors"
@@ -235,7 +238,7 @@ export default function DocumentModal({ isOpen, onClose, documentId, fileName }:
             </button>
             {signedUrl && (
               <a
-                href={signedUrl}
+                href={downloadUrl || signedUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-3 inline-flex w-full justify-center rounded-md border border-transparent bg-[#0175C2] px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-[#015a96] sm:mt-0 sm:w-auto sm:text-sm"

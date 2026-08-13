@@ -32,7 +32,10 @@ export async function POST(request: NextRequest) {
     const bytes = Buffer.from(await file.arrayBuffer());
     const verifiedFile = verifyUploadSignature(bytes, file.type);
     if (!verifiedFile) {
-      throw new AppError('File content does not match an allowed PDF, JPEG, PNG, HEIC, or HEIF type', 400);
+      throw new AppError(
+        'File content does not match an allowed PDF, JPEG, PNG, WebP, TIFF, HEIC/HEIF, AVIF, GIF, or BMP type',
+        400,
+      );
     }
 
     const storageKey = `${user.id}/${randomUUID()}.${verifiedFile.extension}`;

@@ -44,10 +44,12 @@ function NewHealthRecordContent() {
   }>>([]);
   const [currentQueueIndex, setCurrentQueueIndex] = useState(0);
   const [documentPreviewUrl, setDocumentPreviewUrl] = useState<string | null>(null);
+  const [documentDownloadUrl, setDocumentDownloadUrl] = useState<string | null>(null);
   const [savedCount, setSavedCount] = useState(0);
   
   // Processing states
   const [ocrStatus, setOcrStatus] = useState<'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'>('PENDING');
+  const [ocrError, setOcrError] = useState('');
   const [aiStatus, setAiStatus] = useState<'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'>('PENDING');
   const [ocrText, setOcrText] = useState('');
   const [labEditorOpen, setLabEditorOpen] = useState(false);
@@ -246,7 +248,9 @@ function NewHealthRecordContent() {
   const resetExtractionState = () => {
     setUploadedDocument(null);
     clearPreviewUrl();
+    setDocumentDownloadUrl(null);
     setOcrStatus('PENDING');
+    setOcrError('');
     setAiStatus('PENDING');
     setAiResults(null);
     setOcrText('');
@@ -283,6 +287,7 @@ function NewHealthRecordContent() {
       if (!response.ok) return;
       const data = await response.json();
       if (data.url) {
+        setDocumentDownloadUrl(data.downloadUrl || data.url);
         setDocumentPreviewUrl((prev) => {
           if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
           return data.url;
@@ -371,18 +376,21 @@ function NewHealthRecordContent() {
     try {
       // 1. Trigger OCR
       setOcrStatus('PROCESSING');
+      setOcrError('');
       const ocrRes = await fetch('/api/ocr/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentId }),
       });
       
+      const ocrPayload = await ocrRes.json().catch(() => ({}));
       if (!ocrRes.ok) {
         setOcrStatus('FAILED');
-        throw new Error('OCR failed');
+        const message = ocrPayload.error || ocrPayload.message || 'OCR failed';
+        setOcrError(message);
+        throw new Error(message);
       }
 
-      const ocrPayload = await ocrRes.json();
       const extractedText = typeof ocrPayload.text === 'string' ? ocrPayload.text : '';
       setOcrText(extractedText);
       setLabResults(parseBloodResults(extractedText));
@@ -630,7 +638,7 @@ function NewHealthRecordContent() {
             Preview{previewName ? `: ${previewName}` : ''}
           </span>
           <a
-            href={documentPreviewUrl}
+            href={documentDownloadUrl || documentPreviewUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="shrink-0 text-xs font-medium text-[#0175C2] hover:text-[#015a96]"
@@ -688,7 +696,7 @@ function NewHealthRecordContent() {
           {renderDocumentPreview()}
 
           <div className="space-y-3">
-            <OCRProgress label="Text Extraction (OCR)" status={ocrStatus} />
+            <OCRProgress label="Text Extraction (OCR)" status={ocrStatus} error={ocrError} />
             <OCRProgress label="AI Analysis" status={aiStatus} />
           </div>
 
@@ -782,6 +790,7 @@ function NewHealthRecordContent() {
           </label>
           <select
             id="patientId"
+            name="patientId"
             required
             value={formData.patientId}
             onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
@@ -802,6 +811,7 @@ function NewHealthRecordContent() {
           </label>
           <select
             id="recordType"
+            name="recordType"
             required
             value={formData.recordType}
             onChange={(e) => setFormData({ ...formData, recordType: e.target.value })}
@@ -828,6 +838,7 @@ function NewHealthRecordContent() {
             <input
               type="text"
               id="source"
+              name="source"
               required
               value={sourceInput || formData.source}
               onChange={(e) => handleSourceChange(e.target.value)}
@@ -884,6 +895,7 @@ function NewHealthRecordContent() {
           <input
             type="date"
             id="documentDate"
+            name="documentDate"
             value={formData.documentDate}
             onChange={(e) => setFormData({ ...formData, documentDate: e.target.value })}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
@@ -901,6 +913,7 @@ function NewHealthRecordContent() {
             <input
               type="text"
               id="doctorName"
+              name="doctorName"
               value={doctorInput || formData.doctorName}
               onChange={(e) => handleDoctorChange(e.target.value)}
               onFocus={() => {

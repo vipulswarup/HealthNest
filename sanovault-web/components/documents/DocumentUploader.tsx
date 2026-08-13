@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useId, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
-const ACCEPTED = '.pdf,.jpg,.jpeg,.png,.heic,.heif';
+const ACCEPTED = '.pdf,.jpg,.jpeg,.png,.webp,.tif,.tiff,.heic,.heif,.avif,.gif,.bmp';
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
 interface DocumentUploaderProps {
@@ -24,6 +24,7 @@ export function DocumentUploader({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputId = useId();
   const router = useRouter();
 
   const validateFiles = (files: File[]) => {
@@ -32,11 +33,20 @@ export function DocumentUploader({
       'image/jpeg',
       'image/jpg',
       'image/png',
+      'image/webp',
+      'image/tif',
+      'image/tiff',
       'image/heic',
       'image/heif',
+      'image/heic-sequence',
+      'image/heif-sequence',
+      'image/avif',
+      'image/gif',
+      'image/bmp',
+      'image/x-ms-bmp',
     ]);
     for (const file of files) {
-      if (!allowed.has(file.type) && !/\.(pdf|jpe?g|png|heic|heif)$/i.test(file.name)) {
+      if (!allowed.has(file.type.toLowerCase()) && !/\.(pdf|jpe?g|png|webp|tiff?|heic|heif|avif|gif|bmp)$/i.test(file.name)) {
         throw new Error(`Unsupported file type: ${file.name}`);
       }
       if (file.size > MAX_FILE_SIZE) {
@@ -116,7 +126,12 @@ export function DocumentUploader({
         }}
         onClick={() => fileInputRef.current?.click()}
       >
+        <label htmlFor={fileInputId} className="sr-only">
+          Upload health record documents
+        </label>
         <input
+          id={fileInputId}
+          name="healthRecordDocuments"
           type="file"
           ref={fileInputRef}
           className="hidden"
@@ -152,7 +167,9 @@ export function DocumentUploader({
                 ? 'Drag and drop files here, or click to select multiple'
                 : 'Drag and drop your file here, or click to select'}
             </p>
-            <p className="mt-1 text-xs text-gray-500">PDF, JPG, PNG, HEIC up to 50MB each</p>
+            <p className="mt-1 text-xs text-gray-500">
+              PDF, JPEG, PNG, WebP, TIFF, HEIC/HEIF, AVIF, GIF, or BMP up to 50MB each
+            </p>
           </div>
         )}
       </div>

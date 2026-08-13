@@ -14,7 +14,7 @@ const securityHeaders = [
       "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com",
       "font-src 'self' data:",
       "connect-src 'self'",
-      "frame-src 'self' https://*.r2.cloudflarestorage.com",
+      "frame-src 'self' blob: https://*.r2.cloudflarestorage.com",
     ].join("; "),
   },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -34,6 +34,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  // Keep libheif's WebAssembly loader intact in server functions. Bundling it
+  // triggers a dynamic-require warning and is unnecessary for this Node-only path.
+  serverExternalPackages: ['heic-convert'],
   async headers() {
     return [
       {

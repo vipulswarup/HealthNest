@@ -2,7 +2,8 @@ import { AppError } from '@/lib/middleware/error-handler';
 import path from 'path';
 import { PNG } from 'pngjs';
 import { extractImages, extractText, getDocumentProxy } from 'unpdf';
-import { getR2Object, getR2SignedUrl } from '../r2';
+import { normalizeImageToJpeg } from '../images/normalize';
+import { getR2Object } from '../r2';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 /** Llama 4 Scout was shut down 2026-07-17; qwen3.6 still accepts image inputs on Groq. */
@@ -46,6 +47,17 @@ function mimeFromExtension(ext: string): string {
       return 'image/heic';
     case '.heif':
       return 'image/heif';
+    case '.webp':
+      return 'image/webp';
+    case '.tif':
+    case '.tiff':
+      return 'image/tiff';
+    case '.avif':
+      return 'image/avif';
+    case '.gif':
+      return 'image/gif';
+    case '.bmp':
+      return 'image/bmp';
     case '.pdf':
       return 'application/pdf';
     default:
@@ -271,20 +283,7 @@ async function extractViaGroqVision(images: ImagePayload[]): Promise<string> {
   return text;
 }
 
-async function extractFromImageBuffer(buffer: Buffer, mime: string, r2Key?: string): Promise<string> {
-  if (mime === 'image/heic' || mime === 'image/heif') {
-    throw new Error('HEIC/HEIF OCR is not supported in production. Please upload PDF, JPG, or PNG.');
-  }
-
-  if (r2Key) {
-    try {
-      const url = await getR2SignedUrl(r2Key, 600);
-      return extractViaGroqVision([{ mime, dataUrl: url }]);
-    } catch {
-      // Fall back to an in-memory data URL without logging the signed URL or provider error.
-    }
-  }
-
+async function extractFromImageBuffer(buffer: Buffer, mime: string): Promise<string> {
   return extractViaGroqVision([
     { mime, dataUrl: `data:${mime};base64,${buffer.toString('base64')}` },
   ]);
@@ -341,9 +340,15 @@ export async function extractTextFromImage(
   const fileName = path.basename(input) || `document${extension}`;
 
   try {
-    const buffer = await readInputBuffer(input, isR2Key);
+    const originalBuffer = await readInputBuffer(input, isR2Key);
+    const isImage = mime.startsWith('image/');
+    const buffer = isImage
+      ? await normalizeImageToJpeg(originalBuffer, mime, MAX_VISION_IMAGE_EDGE)
+      : originalBuffer;
+    const processingMime = isImage ? 'image/jpeg' : mime;
+    const processingFileName = isImage ? `${path.parse(fileName).name}.jpg` : fileName;
 
-    const externalText = await extractViaExternalService(buffer, fileName, mime);
+    const externalText = await extractViaExternalService(buffer, processingFileName, processingMime);
     if (externalText && externalText.length >= MIN_USEFUL_TEXT_CHARS) {
       return externalText;
     }
@@ -367,7 +372,7 @@ export async function extractTextFromImage(
       return visionText;
     }
 
-    const imageText = await extractFromImageBuffer(buffer, mime, isR2Key ? input : undefined);
+    const imageText = await extractFromImageBuffer(buffer, processingMime);
     return imageText;
   } catch {
     throw new AppError('Failed to process document with OCR', 502);
