@@ -57,7 +57,7 @@ interface SummaryResponse {
   reports: SummaryReport[];
   comparisons: Comparison[];
   panels: PanelBlock[];
-  keyFindings: Array<{ severity: string; text: string }>;
+  keyFindings: Array<{ severity: string; text: string; metric?: string }>;
 }
 
 const formatDate = (value: string) =>
@@ -107,6 +107,7 @@ function BloodSummaryContent() {
   const patientId = searchParams.get('patientId');
   const [patients, setPatients] = useState<Array<{ id: string; firstName: string; lastName?: string }>>([]);
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
+  const [selectedMetrics, setSelectedMetrics] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [editingReport, setEditingReport] = useState<SummaryReport | null>(null);
@@ -173,11 +174,14 @@ function BloodSummaryContent() {
   const loadSummary = async (selectedPatientId: string) => {
     setLoading(true);
     setError('');
+    setSummary(null);
+    setSelectedMetrics(new Set());
     try {
       const response = await fetch(`/api/reports/blood-summary?patientId=${encodeURIComponent(selectedPatientId)}`);
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || 'Could not generate the report');
       setSummary(payload);
+      setSelectedMetrics(new Set(payload.comparisons.map((comparison: Comparison) => comparison.metric)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not generate the report');
     } finally {
@@ -191,11 +195,16 @@ function BloodSummaryContent() {
     async function run() {
       setLoading(true);
       setError('');
+      setSummary(null);
+      setSelectedMetrics(new Set());
       try {
         const response = await fetch(`/api/reports/blood-summary?patientId=${encodeURIComponent(patientId!)}`);
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || 'Could not generate the report');
-        if (!cancelled) setSummary(payload);
+        if (!cancelled) {
+          setSummary(payload);
+          setSelectedMetrics(new Set(payload.comparisons.map((comparison: Comparison) => comparison.metric)));
+        }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Could not generate the report');
       } finally {
@@ -215,6 +224,33 @@ function BloodSummaryContent() {
     setDraftResults(report.results || []);
     setEditError('');
   };
+
+  const toggleMetric = (metric: string) => {
+    setSelectedMetrics((current) => {
+      const next = new Set(current);
+      if (next.has(metric)) next.delete(metric);
+      else next.add(metric);
+      return next;
+    });
+  };
+
+  const availablePanels = summary?.panels?.length
+    ? summary.panels
+    : summary
+      ? [{ panel: 'other', label: 'Results', comparisons: summary.comparisons }]
+      : [];
+  const selectedCount = summary
+    ? summary.comparisons.filter((comparison) => selectedMetrics.has(comparison.metric)).length
+    : 0;
+  const visiblePanels = availablePanels
+    .map((panel) => ({
+      ...panel,
+      comparisons: panel.comparisons.filter((comparison) => selectedMetrics.has(comparison.metric)),
+    }))
+    .filter((panel) => panel.comparisons.length > 0);
+  const visibleFindings = summary?.keyFindings.filter(
+    (finding) => !finding.metric || selectedMetrics.has(finding.metric),
+  ) || [];
 
   const saveManualResults = async (clearOverride = false) => {
     if (!editingReport || !patientId) return;
@@ -275,14 +311,14 @@ function BloodSummaryContent() {
           </div>
           <button
             onClick={() => window.print()}
-            disabled={!summary}
+            disabled={!summary || selectedCount === 0}
             className="rounded-lg bg-[#0175C2] px-4 py-2 font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             Print / Save PDF
           </button>
         </div>
 
-        <section className="mb-6 rounded-xl bg-white p-5 shadow-sm print:shadow-none">
+        <section className="mb-6 rounded-xl bg-white p-5 shadow-sm print:hidden">
           <label htmlFor="patient" className="mb-2 block text-sm font-medium text-slate-700">
             Patient
           </label>
@@ -323,6 +359,68 @@ function BloodSummaryContent() {
               </div>
             ) : (
               <>
+                <section className="mb-6 rounded-xl bg-white p-5 shadow-sm print:hidden" aria-labelledby="test-selection-heading">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h2 id="test-selection-heading" className="text-lg font-semibold text-slate-900">Choose tests to include</h2>
+                      <p className="mt-1 text-sm text-slate-600">
+                        Uncheck tests that are not relevant for this doctor. Your saved lab results will not be changed.
+                      </p>
+                    </div>
+                    <div className="text-sm font-medium text-slate-700" aria-live="polite">
+                      {selectedCount} of {summary.comparisons.length} selected
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMetrics(new Set(summary.comparisons.map((comparison) => comparison.metric)))}
+                      disabled={selectedCount === summary.comparisons.length}
+                      className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Select all
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMetrics(new Set())}
+                      disabled={selectedCount === 0}
+                      className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                  <div className="mt-5 grid gap-5 md:grid-cols-2">
+                    {availablePanels.map((panel) => (
+                      <fieldset key={panel.panel} className="rounded-lg border border-slate-200 p-4">
+                        <legend className="px-1 text-sm font-semibold text-slate-900">{panel.label}</legend>
+                        <div className="mt-1 grid gap-1 sm:grid-cols-2">
+                          {panel.comparisons.map((comparison) => (
+                            <label
+                              key={comparison.metric}
+                              className="flex min-h-10 cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedMetrics.has(comparison.metric)}
+                                onChange={() => toggleMetric(comparison.metric)}
+                                className="h-4 w-4 rounded border-slate-300 accent-[#0175C2]"
+                              />
+                              <span>{comparison.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </fieldset>
+                    ))}
+                  </div>
+                </section>
+
+                {selectedCount === 0 ? (
+                  <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm print:hidden">
+                    <h2 className="font-semibold text-slate-900">Select at least one test</h2>
+                    <p className="mt-1 text-sm text-slate-600">Choose the tests you want before printing or saving the report as a PDF.</p>
+                  </div>
+                ) : (
+                  <>
                 <section className="mb-6 rounded-xl bg-white p-6 shadow-sm print:shadow-none">
                   <h2 className="text-lg font-semibold text-slate-900">
                     {summary.patient.firstName} {summary.patient.lastName}
@@ -333,7 +431,10 @@ function BloodSummaryContent() {
                   </p>
                   <h3 className="mt-5 text-base font-semibold text-slate-900">Key findings</h3>
                   <ul className="mt-3 space-y-2">
-                    {summary.keyFindings.map((finding, index) => (
+                    {(visibleFindings.length > 0
+                      ? visibleFindings
+                      : [{ severity: 'information', text: 'No flagged findings among the selected tests.' }]
+                    ).map((finding, index) => (
                       <li
                         key={index}
                         className={`rounded-md px-3 py-2 text-sm ${
@@ -353,7 +454,7 @@ function BloodSummaryContent() {
                   </p>
                 </section>
 
-                {(summary.panels?.length ? summary.panels : [{ panel: 'other', label: 'Results', comparisons: summary.comparisons }]).map((panel) => (
+                {visiblePanels.map((panel) => (
                   <section key={panel.panel} className="mb-6 overflow-hidden rounded-xl bg-white shadow-sm print:shadow-none">
                     <div className="border-b border-slate-200 p-5">
                       <h3 className="text-lg font-semibold text-slate-900">{panel.label}</h3>
@@ -439,6 +540,8 @@ function BloodSummaryContent() {
                     ))}
                   </ul>
                 </section>
+                  </>
+                )}
               </>
             )}
           </>

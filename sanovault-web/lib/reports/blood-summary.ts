@@ -57,6 +57,8 @@ export interface MetricComparison {
 export interface KeyFinding {
   severity: 'attention' | 'change' | 'information';
   text: string;
+  /** Metric that produced this finding. Omitted for report-wide information. */
+  metric?: string;
 }
 
 export interface PanelSummary {
@@ -457,6 +459,7 @@ export function buildBloodReportSummary(inputs: BloodReportInput[]) {
         : (latest.referenceLow !== null ? `below ${latest.referenceLow}` : 'below the lab reference');
       keyFindings.push({
         severity: 'attention',
+        metric: comparison.metric,
         text: `${comparison.label} was ${latest.value}${unit} on ${formatDate(latest.date)}, ${boundary}${unit} on that lab's stated range.`,
       });
     }
@@ -468,6 +471,7 @@ export function buildBloodReportSummary(inputs: BloodReportInput[]) {
     ) {
       keyFindings.push({
         severity: 'change',
+        metric: comparison.metric,
         text: `${comparison.label} ${comparison.direction} from ${comparison.results[0].value}${unit} on ${formatDate(comparison.results[0].date)} to ${latest.value}${unit} on ${formatDate(latest.date)}.`,
       });
     }
