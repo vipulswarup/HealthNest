@@ -1,6 +1,7 @@
 import { sql } from '@/lib/db/neon';
 
 export type ActiveHouseholdId = string;
+export type DatabaseRow = Record<string, unknown>;
 
 async function firstMembership(userId: string): Promise<string | null> {
   const [row] = await sql`
@@ -29,7 +30,7 @@ export async function canAccessPatient(userId: string, patientId: string): Promi
 export async function getAccessiblePatient(
   userId: string,
   patientId: string
-): Promise<Record<string, any> | null> {
+): Promise<DatabaseRow | null> {
   const [row] = await sql`
     SELECT p.*
     FROM patients p
@@ -100,7 +101,7 @@ export async function setActiveHouseholdId(userId: string, householdId: string):
 export async function listPatientsForContext(
   userId: string,
   activeHouseholdId: ActiveHouseholdId
-): Promise<Record<string, any>[]> {
+): Promise<DatabaseRow[]> {
   const member = await isHouseholdMember(userId, activeHouseholdId);
   if (!member) return [];
   return sql`
@@ -113,7 +114,7 @@ export async function listPatientsForContext(
 }
 
 /** Patients the user can access via any household membership. */
-export async function listAccessiblePatients(userId: string): Promise<Record<string, any>[]> {
+export async function listAccessiblePatients(userId: string): Promise<DatabaseRow[]> {
   return sql`
     SELECT DISTINCT ON (p.id) p.*
     FROM patients p
@@ -126,7 +127,7 @@ export async function listAccessiblePatients(userId: string): Promise<Record<str
 export async function listHouseholdPatients(
   userId: string,
   householdId: string
-): Promise<Record<string, any>[]> {
+): Promise<DatabaseRow[]> {
   if (!(await isHouseholdMember(userId, householdId))) return [];
   return sql`
     SELECT p.*
@@ -174,7 +175,7 @@ export async function unlinkPatientFromHousehold(
 }
 
 /** Patients that would have zero households if this household were removed. */
-export async function listOrphanRiskPatients(householdId: string): Promise<Record<string, any>[]> {
+export async function listOrphanRiskPatients(householdId: string): Promise<DatabaseRow[]> {
   return sql`
     SELECT p.id, p.first_name, p.last_name
     FROM patients p
@@ -226,7 +227,7 @@ export async function canAccessDocument(userId: string, documentId: string): Pro
 export async function getAccessibleDocument(
   userId: string,
   documentId: string
-): Promise<Record<string, any> | null> {
+): Promise<DatabaseRow | null> {
   const [row] = await sql`
     SELECT d.*
     FROM documents d
@@ -264,7 +265,7 @@ export async function getAccessibleDocument(
 export async function listAccessibleDocuments(
   userId: string,
   activeHouseholdId: ActiveHouseholdId
-): Promise<Record<string, any>[]> {
+): Promise<DatabaseRow[]> {
   if (!(await isHouseholdMember(userId, activeHouseholdId))) return [];
   return sql`
     SELECT d.*
@@ -300,7 +301,7 @@ export async function dissolveHouseholdIfEmpty(householdId: string): Promise<boo
 export async function assertCanDissolveOrLeave(householdId: string): Promise<void> {
   const orphans = await listOrphanRiskPatients(householdId);
   if (orphans.length > 0) {
-    const err = new Error('ORPHAN_PATIENTS') as Error & { patients: Record<string, any>[] };
+    const err = new Error('ORPHAN_PATIENTS') as Error & { patients: DatabaseRow[] };
     err.patients = orphans;
     throw err;
   }

@@ -1,4 +1,4 @@
-export function toHealthRecord(row: Record<string, any>) {
+export function toHealthRecord(row: Record<string, unknown>) {
   return {
     id: row.id,
     patientId: row.patient_id,

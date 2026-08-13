@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import AppNav from '@/components/layout/AppNav';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 type Member = {
   householdId: string;
@@ -25,14 +26,27 @@ type Invite = {
 
 type Patient = { id: string; firstName: string; lastName?: string };
 
-function formatOrphanError(data: any): string {
-  const names = (data?.details?.patients || [])
-    .map((p: any) => [p.firstName, p.lastName].filter(Boolean).join(' '))
+type OrphanErrorResponse = {
+  error?: string;
+  details?: { patients?: Array<{ firstName?: string; lastName?: string }> };
+};
+
+type PendingAction =
+  | { kind: 'unlink-patient'; id: string; label: string }
+  | { kind: 'remove-member'; id: string; label: string }
+  | { kind: 'revoke-invite'; id: string; label: string }
+  | { kind: 'leave' }
+  | { kind: 'dissolve' };
+
+function formatOrphanError(data: unknown): string {
+  const response = (data && typeof data === 'object' ? data : {}) as OrphanErrorResponse;
+  const names = (response.details?.patients || [])
+    .map((patient) => [patient.firstName, patient.lastName].filter(Boolean).join(' '))
     .filter(Boolean);
   if (names.length) {
-    return `${data.error} Affected: ${names.join(', ')}.`;
+    return `${response.error || 'Request failed'} Affected: ${names.join(', ')}.`;
   }
-  return data.error || 'Request failed';
+  return response.error || 'Request failed';
 }
 
 export default function HouseholdDetailPage() {
@@ -53,6 +67,7 @@ export default function HouseholdDetailPage() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -106,7 +121,7 @@ export default function HouseholdDetailPage() {
       return;
     }
     void load();
-  }, [session?.user?.id, status, router, load]);
+  }, [session, status, router, load]);
 
   const rename = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,7 +194,6 @@ export default function HouseholdDetailPage() {
   };
 
   const unlinkPatient = async (patientId: string) => {
-    if (!confirm('Remove this patient from the household? They must remain in at least one other household.')) return;
     setBusy(true);
     setError('');
     try {
@@ -210,7 +224,6 @@ export default function HouseholdDetailPage() {
   };
 
   const removeMember = async (userId: string) => {
-    if (!confirm('Remove this member from the household?')) return;
     setBusy(true);
     setError('');
     try {
@@ -228,7 +241,6 @@ export default function HouseholdDetailPage() {
   };
 
   const leave = async () => {
-    if (!confirm('Leave this household? You will lose access unless patients are also in another household you belong to.')) return;
     setBusy(true);
     setError('');
     try {
@@ -243,7 +255,6 @@ export default function HouseholdDetailPage() {
   };
 
   const dissolve = async () => {
-    if (!confirm('Dissolve this household for everyone? Patients that only exist here must be linked elsewhere first.')) return;
     setBusy(true);
     setError('');
     try {
@@ -269,12 +280,51 @@ export default function HouseholdDetailPage() {
   }
 
   const currentUserId = session.user?.id;
+  const confirmAction = () => {
+    if (!pendingAction) return;
+    const action = pendingAction;
+    setPendingAction(null);
+    if (action.kind === 'unlink-patient') void unlinkPatient(action.id);
+    if (action.kind === 'remove-member') void removeMember(action.id);
+    if (action.kind === 'revoke-invite') void revokeInvite(action.id);
+    if (action.kind === 'leave') void leave();
+    if (action.kind === 'dissolve') void dissolve();
+  };
+
+  const confirmationCopy = (() => {
+    if (!pendingAction) return { title: '', description: '', label: 'Confirm', tone: 'danger' as const };
+    if (pendingAction.kind === 'unlink-patient') return {
+      title: `Unlink ${pendingAction.label}?`,
+      description: 'This removes access through this household. The patient must remain linked to at least one other household.',
+      label: 'Unlink patient', tone: 'danger' as const,
+    };
+    if (pendingAction.kind === 'remove-member') return {
+      title: `Remove ${pendingAction.label}?`,
+      description: 'They will immediately lose access to this household and its patients unless they have access elsewhere.',
+      label: 'Remove member', tone: 'danger' as const,
+    };
+    if (pendingAction.kind === 'revoke-invite') return {
+      title: `Revoke the invite for ${pendingAction.label}?`,
+      description: 'The existing invitation link will stop working.',
+      label: 'Revoke invite', tone: 'danger' as const,
+    };
+    if (pendingAction.kind === 'leave') return {
+      title: 'Leave this household?',
+      description: 'You will lose access to this household and its patients unless they are also linked to another household you belong to.',
+      label: 'Leave household', tone: 'warning' as const,
+    };
+    return {
+      title: 'Dissolve this household?',
+      description: 'This removes the household for everyone. Patients that exist only here must be linked elsewhere first.',
+      label: 'Dissolve household', tone: 'danger' as const,
+    };
+  })();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-slate-50">
       <AppNav />
       <main className="max-w-3xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
-        <div className="bg-white rounded-2xl shadow-xl p-6 space-y-6">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
           {loading ? (
             <p className="text-gray-600">Loading...</p>
           ) : (
@@ -287,7 +337,7 @@ export default function HouseholdDetailPage() {
               </div>
 
               {error && (
-                <div className="rounded-md bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">{error}</div>
+                <div role="alert" className="rounded-md bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">{error}</div>
               )}
               {message && (
                 <div className="rounded-md bg-green-50 border border-green-200 text-green-800 px-4 py-3 text-sm break-all">
@@ -322,7 +372,7 @@ export default function HouseholdDetailPage() {
                         <button
                           type="button"
                           disabled={busy}
-                          onClick={() => void unlinkPatient(p.id)}
+                          onClick={() => setPendingAction({ kind: 'unlink-patient', id: p.id, label: [p.firstName, p.lastName].filter(Boolean).join(' ') })}
                           className="text-sm text-red-600 hover:underline disabled:opacity-50"
                         >
                           Unlink
@@ -364,7 +414,7 @@ export default function HouseholdDetailPage() {
                         {m.email && <p className="text-sm text-gray-700">{m.email}</p>}
                       </div>
                       {m.userId !== currentUserId && (
-                        <button type="button" disabled={busy} onClick={() => void removeMember(m.userId)} className="text-sm text-red-600 hover:underline disabled:opacity-50">
+                        <button type="button" disabled={busy} onClick={() => setPendingAction({ kind: 'remove-member', id: m.userId, label: [m.firstName, m.lastName].filter(Boolean).join(' ') || m.email || 'this member' })} className="text-sm text-red-600 hover:underline disabled:opacity-50">
                           Remove
                         </button>
                       )}
@@ -397,7 +447,7 @@ export default function HouseholdDetailPage() {
                           <span>
                             {invite.email} · expires {new Date(invite.expiresAt).toLocaleDateString()}
                           </span>
-                          <button type="button" disabled={busy} onClick={() => void revokeInvite(invite.id)} className="text-red-600 hover:underline disabled:opacity-50">
+                          <button type="button" disabled={busy} onClick={() => setPendingAction({ kind: 'revoke-invite', id: invite.id, label: invite.email })} className="text-red-600 hover:underline disabled:opacity-50">
                             Revoke
                           </button>
                         </li>
@@ -407,10 +457,10 @@ export default function HouseholdDetailPage() {
               </section>
 
               <div className="flex flex-wrap gap-3 pt-2 border-t border-gray-100">
-                <button type="button" disabled={busy} onClick={() => void leave()} className="text-sm font-medium text-amber-800 hover:underline disabled:opacity-50">
+                <button type="button" disabled={busy} onClick={() => setPendingAction({ kind: 'leave' })} className="text-sm font-medium text-amber-800 hover:underline disabled:opacity-50">
                   Leave household
                 </button>
-                <button type="button" disabled={busy} onClick={() => void dissolve()} className="text-sm font-medium text-red-700 hover:underline disabled:opacity-50">
+                <button type="button" disabled={busy} onClick={() => setPendingAction({ kind: 'dissolve' })} className="text-sm font-medium text-red-700 hover:underline disabled:opacity-50">
                   Dissolve household
                 </button>
               </div>
@@ -418,6 +468,16 @@ export default function HouseholdDetailPage() {
           )}
         </div>
       </main>
+      <ConfirmDialog
+        open={Boolean(pendingAction)}
+        title={confirmationCopy.title}
+        description={confirmationCopy.description}
+        confirmLabel={confirmationCopy.label}
+        tone={confirmationCopy.tone}
+        busy={busy}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={confirmAction}
+      />
     </div>
   );
 }

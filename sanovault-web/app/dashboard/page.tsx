@@ -1,11 +1,11 @@
 'use client';
 
-import { useSession } from '@/lib/auth/client';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import AppNav from '@/components/layout/AppNav';
 import { useHouseholdContext } from '@/components/households/useHouseholdContext';
+import { useSession } from '@/lib/auth/client';
 
 type PendingInvite = {
   id: string;
@@ -14,107 +14,228 @@ type PendingInvite = {
   invitedByName?: string;
 };
 
+type Patient = { id: string; firstName: string; lastName?: string };
+type HealthRecord = {
+  id: string;
+  patientId: string;
+  recordType: string;
+  source: string;
+  documentDate?: string;
+  createdAt: string;
+};
+type Medication = { id: string; isActive: boolean };
+
+const iconClassName = 'h-5 w-5';
+
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { householdId, households, loading: householdsLoading } = useHouseholdContext();
   const [pending, setPending] = useState<PendingInvite[]>([]);
-  const { households, loading: householdsLoading } = useHouseholdContext();
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [records, setRecords] = useState<HealthRecord[]>([]);
+  const [medications, setMedications] = useState<Medication[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    if (status === 'loading') return;
+    if (status === 'loading' || householdsLoading) return;
     if (!session) {
-      router.push('/auth/signin');
+      router.replace('/auth/signin');
       return;
     }
-    void fetch('/api/households/invites/pending')
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data) => setPending(Array.isArray(data) ? data : []))
-      .catch(() => setPending([]));
-  }, [session?.user?.id, status, router]);
 
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+    let active = true;
+    const loadDashboard = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const inviteResponse = await fetch('/api/households/invites/pending');
+        if (active && inviteResponse.ok) {
+          const inviteData = await inviteResponse.json();
+          setPending(Array.isArray(inviteData) ? inviteData : []);
+        }
 
-  if (!session) {
-    return null;
+        if (households.length === 0 || !householdId) {
+          if (active) {
+            setPatients([]);
+            setRecords([]);
+            setMedications([]);
+          }
+          return;
+        }
+
+        const [patientsResponse, recordsResponse] = await Promise.all([
+          fetch('/api/patients'),
+          fetch('/api/health-records'),
+        ]);
+        if (!patientsResponse.ok || !recordsResponse.ok) throw new Error('Could not load your dashboard');
+        const patientData = await patientsResponse.json() as Patient[];
+        const recordData = await recordsResponse.json() as HealthRecord[];
+
+        const medicationLists = await Promise.all(patientData.map(async (patient) => {
+          const response = await fetch(`/api/medications?patientId=${patient.id}`);
+          return response.ok ? await response.json() as Medication[] : [];
+        }));
+
+        if (active) {
+          setPatients(patientData);
+          setRecords(recordData);
+          setMedications(medicationLists.flat());
+        }
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : 'Could not load your dashboard');
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    void loadDashboard();
+    return () => { active = false; };
+  }, [householdId, households.length, householdsLoading, router, session, status]);
+
+  const patientsById = useMemo(
+    () => Object.fromEntries(patients.map((patient) => [patient.id, patient])),
+    [patients],
+  );
+  const activeMedicationCount = medications.filter((medication) => medication.isActive).length;
+  const primaryPatientId = patients[0]?.id;
+
+  if (status === 'loading' || householdsLoading) {
+    return <div className="min-h-screen grid place-items-center bg-slate-50 text-gray-600" role="status">Loading your vault…</div>;
   }
+  if (!session) return null;
+
+  const formatDate = (value: string) => new Intl.DateTimeFormat('en-IN', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  }).format(new Date(value));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-slate-50">
       <AppNav />
-
-      <main className="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          {!householdsLoading && households.length === 0 && (
-            <div className="bg-white border border-blue-100 rounded-xl p-6 mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Create your first household</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Patients and records live in households. Create one to get started, then invite family members.
-              </p>
-              <Link
-                href="/households"
-                className="inline-block bg-[#0175C2] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#015a96]"
-              >
-                Go to Households
-              </Link>
-            </div>
-          )}
-
-          {pending.length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-              <p className="font-medium text-amber-900 mb-2">Pending household invitations</p>
-              <ul className="space-y-2">
-                {pending.map((invite) => (
-                  <li key={invite.id} className="flex items-center justify-between gap-3 text-sm">
-                    <span>
-                      {invite.invitedByName || 'Someone'} invited you to{' '}
-                      <strong>{invite.householdName || 'a household'}</strong>
-                    </span>
-                    <Link
-                      href={`/households/invites/${invite.token}`}
-                      className="text-[#0175C2] font-medium hover:underline shrink-0"
-                    >
-                      Review
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                Welcome{session.user?.firstName ? `, ${session.user.firstName}` : ''}!
-              </h2>
-              <p className="text-gray-600">
-                Your health record management dashboard is coming soon.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Link href="/health-records" className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-blue-100">
-                <h3 className="font-semibold text-gray-900 text-lg mb-2">Health Records</h3>
-                <p className="text-sm text-gray-600">Manage your health records and documents</p>
-              </Link>
-              <Link href="/patients" className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-green-100">
-                <h3 className="font-semibold text-gray-900 text-lg mb-2">Patients</h3>
-                <p className="text-sm text-gray-600">Manage family members&apos; health profiles</p>
-              </Link>
-              <Link href="/households" className="bg-gradient-to-br from-slate-50 to-slate-100 p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-slate-200">
-                <h3 className="font-semibold text-gray-900 text-lg mb-2">Households</h3>
-                <p className="text-sm text-gray-600">Invite family and share a vault</p>
-              </Link>
-            </div>
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-medium text-[#0175C2]">Your health vault</p>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight text-gray-950">
+              Welcome back{session.user.firstName ? `, ${session.user.firstName}` : ''}
+            </h1>
+            <p className="mt-2 max-w-2xl text-gray-600">Review what changed, add a record, or continue caring for your household.</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/patients/new" className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+              Add patient
+            </Link>
+            <Link
+              href={primaryPatientId ? `/health-records/new?patientId=${primaryPatientId}` : '/patients/new'}
+              className="rounded-lg bg-[#0175C2] px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-[#015a96]"
+            >
+              Upload record
+            </Link>
           </div>
         </div>
+
+        {!householdsLoading && households.length === 0 && (
+          <section className="mt-8 rounded-2xl border border-blue-200 bg-blue-50 p-6">
+            <h2 className="text-lg font-semibold text-blue-950">Create your first household</h2>
+            <p className="mt-1 text-sm text-blue-900">Patients and records live inside a household so access stays organized.</p>
+            <Link href="/households" className="mt-4 inline-flex rounded-lg bg-[#0175C2] px-4 py-2 text-sm font-medium text-white hover:bg-[#015a96]">Create household</Link>
+          </section>
+        )}
+
+        {pending.length > 0 && (
+          <section className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5" aria-labelledby="pending-invites-title">
+            <h2 id="pending-invites-title" className="font-semibold text-amber-950">Pending household invitations</h2>
+            <ul className="mt-3 divide-y divide-amber-200">
+              {pending.map((invite) => (
+                <li key={invite.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm text-amber-950">
+                  <span>{invite.invitedByName || 'A member'} invited you to <strong>{invite.householdName || 'a household'}</strong>.</span>
+                  <Link href={`/households/invites/${invite.token}`} className="font-medium text-[#0175C2] hover:underline">Review invite</Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {error && <div role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>}
+
+        {households.length > 0 && (
+          <>
+            <section className="mt-8 grid gap-4 sm:grid-cols-3" aria-label="Vault overview">
+              <Link href="/patients" className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md">
+                <div className="flex items-center justify-between">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                    <svg className={iconClassName} viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2m7-10a4 4 0 100-8 4 4 0 000 8zm13 10v-2a4 4 0 00-3-3.87m-2-12a4 4 0 010 7.75" /></svg>
+                  </span>
+                  <span className="text-3xl font-bold text-gray-950">{loading ? '—' : patients.length}</span>
+                </div>
+                <h2 className="mt-4 font-semibold text-gray-950">Patients</h2>
+                <p className="mt-1 text-sm text-gray-600">Profiles in this household</p>
+              </Link>
+              <Link href={primaryPatientId ? `/health-records?patientId=${primaryPatientId}` : '/health-records'} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md">
+                <div className="flex items-center justify-between">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-[#0175C2]">
+                    <svg className={iconClassName} viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5l5 5v11a2 2 0 01-2 2z" /></svg>
+                  </span>
+                  <span className="text-3xl font-bold text-gray-950">{loading ? '—' : records.length}</span>
+                </div>
+                <h2 className="mt-4 font-semibold text-gray-950">Health records</h2>
+                <p className="mt-1 text-sm text-gray-600">Documents and clinical entries</p>
+              </Link>
+              <Link href={primaryPatientId ? `/medications?patientId=${primaryPatientId}` : '/medications'} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md">
+                <div className="flex items-center justify-between">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+                    <svg className={iconClassName} viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10.5 6.5l7 7m-9.9 4.9a4.95 4.95 0 01-7-7l7.8-7.8a4.95 4.95 0 017 7l-7.8 7.8z" /></svg>
+                  </span>
+                  <span className="text-3xl font-bold text-gray-950">{loading ? '—' : activeMedicationCount}</span>
+                </div>
+                <h2 className="mt-4 font-semibold text-gray-950">Active medications</h2>
+                <p className="mt-1 text-sm text-gray-600">Across household patients</p>
+              </Link>
+            </section>
+
+            <div className="mt-8 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+              <section className="rounded-2xl border border-gray-200 bg-white shadow-sm" aria-labelledby="recent-records-title">
+                <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+                  <div>
+                    <h2 id="recent-records-title" className="font-semibold text-gray-950">Recent records</h2>
+                    <p className="mt-0.5 text-sm text-gray-500">Latest additions to the active household</p>
+                  </div>
+                  <Link href="/health-records" className="text-sm font-medium text-[#0175C2] hover:underline">View all</Link>
+                </div>
+                {records.length === 0 && !loading ? (
+                  <div className="px-5 py-10 text-center text-sm text-gray-600">No records yet. Upload the first one to start building the timeline.</div>
+                ) : (
+                  <ul className="divide-y divide-gray-100">
+                    {records.slice(0, 4).map((record) => {
+                      const patient = patientsById[record.patientId];
+                      return (
+                        <li key={record.id}>
+                          <Link href={`/health-records/${record.id}`} className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-slate-50">
+                            <div className="min-w-0">
+                              <p className="truncate font-medium text-gray-950">{record.recordType.replaceAll('_', ' ')}</p>
+                              <p className="mt-1 truncate text-sm text-gray-500">{record.source}{patient ? ` · ${patient.firstName} ${patient.lastName || ''}` : ''}</p>
+                            </div>
+                            <time className="shrink-0 text-sm text-gray-500">{formatDate(record.documentDate || record.createdAt)}</time>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
+
+              <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm" aria-labelledby="quick-actions-title">
+                <h2 id="quick-actions-title" className="font-semibold text-gray-950">Quick actions</h2>
+                <div className="mt-4 space-y-2">
+                  <Link href={primaryPatientId ? `/reports/blood-summary?patientId=${primaryPatientId}` : '/reports/blood-summary'} className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:border-blue-200 hover:bg-blue-50">Blood work summary <span aria-hidden="true">→</span></Link>
+                  <Link href={primaryPatientId ? `/medications/report?patientId=${primaryPatientId}` : '/medications'} className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:border-blue-200 hover:bg-blue-50">Doctor-facing medication list <span aria-hidden="true">→</span></Link>
+                  <Link href="/households" className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:border-blue-200 hover:bg-blue-50">Manage household access <span aria-hidden="true">→</span></Link>
+                </div>
+              </section>
+            </div>
+          </>
+        )}
       </main>
     </div>
   );

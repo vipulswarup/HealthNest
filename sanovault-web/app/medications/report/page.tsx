@@ -67,12 +67,12 @@ function MedicationReportContent() {
   }, [load, patientId]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-slate-50">
       <AppNav />
       <main className="max-w-4xl mx-auto py-8 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3 print:hidden"><Link href="/medications" className="text-sm font-medium text-[#0175C2] hover:underline">← Back to medications</Link><button onClick={() => window.print()} className="rounded-lg bg-[#0175C2] px-4 py-2 text-sm font-medium text-white hover:bg-[#015a96]">Print list</button></div>
-          <section className="rounded-2xl bg-white p-6 shadow-xl print:shadow-none">
+          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm print:border-0 print:shadow-none">
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-gray-200 pb-5"><div><p className="text-sm font-medium uppercase tracking-wide text-[#0175C2]">SanoVault medication list</p><h1 className="mt-1 text-3xl font-bold text-gray-900">{report ? `${report.patient.firstName} ${report.patient.lastName}`.trim() : 'Medication list'}</h1><p className="mt-1 text-sm text-gray-600">For clinical review — not prescribing guidance.</p></div><label className="text-sm font-medium text-gray-700 print:hidden">Doctor&apos;s country<select value={country} onChange={(event) => setCountry(event.target.value as Country)} className="mt-1 block rounded-lg border border-gray-300 px-3 py-2">{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
             {loading ? <p className="py-10 text-center text-gray-600">Preparing medication list…</p> : error ? <p className="py-10 text-center text-red-700">{error}</p> : report && <div className="mt-6 space-y-8"><MedicationSection title="Active medications" medications={report.active} country={country} /><MedicationSection title="Past medications" medications={report.past} country={country} /></div>}
           </section>

@@ -52,7 +52,7 @@ export default function HouseholdsPage() {
       return;
     }
     void load();
-  }, [session?.user?.id, status, router, load]);
+  }, [session, status, router, load]);
 
   const createHousehold = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,10 +87,10 @@ export default function HouseholdsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-slate-50">
       <AppNav />
       <main className="max-w-3xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
-        <div className="bg-white rounded-2xl shadow-xl p-6">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Households</h1>
           <p className="text-gray-600 text-sm mb-6">
             Share a vault with family members so you can view and manage each other&apos;s records.

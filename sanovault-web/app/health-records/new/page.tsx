@@ -2,9 +2,9 @@
 
 import { useSession } from '@/lib/auth/client';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect, Suspense } from 'react';
-import Image from 'next/image';
+import { useCallback, useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import AppNav from '@/components/layout/AppNav';
 import { DEFAULT_TAGS } from '@/lib/constants/tags';
 import { DocumentUploader } from '@/components/documents/DocumentUploader';
 import { OCRProgress } from '@/components/documents/OCRProgress';
@@ -70,7 +70,7 @@ function NewHealthRecordContent() {
     doctorName: '',
     documentDate: '',
     tags: [] as string[],
-    data: {} as Record<string, any>,
+    data: {} as Record<string, unknown>,
   });
 
   // Sync sourceInput with formData.source when it changes externally
@@ -78,30 +78,16 @@ function NewHealthRecordContent() {
     if (formData.source && formData.source !== sourceInput) {
       setSourceInput(formData.source);
     }
-  }, [formData.source]);
+  }, [formData.source, sourceInput]);
 
   // Sync doctorInput with formData.doctorName when it changes externally
   useEffect(() => {
     if (formData.doctorName && formData.doctorName !== doctorInput) {
       setDoctorInput(formData.doctorName);
     }
-  }, [formData.doctorName]);
+  }, [doctorInput, formData.doctorName]);
 
-  useEffect(() => {
-    if (status === 'loading') return;
-
-    if (!session) {
-      router.push('/auth/signin');
-      return;
-    }
-
-    fetchPatients();
-    fetchCategories();
-    fetchSources();
-    fetchDoctors();
-  }, [session?.user?.id, status, router]);
-
-  const fetchPatients = async () => {
+  const fetchPatients = useCallback(async () => {
     try {
       const response = await fetch('/api/patients');
       if (!response.ok) {
@@ -110,15 +96,13 @@ function NewHealthRecordContent() {
       const data = await response.json();
       setPatients(data);
 
-      if (patientId && !formData.patientId) {
-        setFormData({ ...formData, patientId });
-      }
+      setFormData((current) => patientId && !current.patientId ? { ...current, patientId } : current);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
-  };
+  }, [patientId]);
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const response = await fetch('/api/health-record-categories');
       if (!response.ok) {
@@ -134,16 +118,14 @@ function NewHealthRecordContent() {
       }
       setCategories(data);
       // Set default record type to first category if none selected
-      if (!formData.recordType && data.length > 0) {
-        setFormData(prev => ({ ...prev, recordType: data[0].code }));
-      }
+      if (data.length > 0) setFormData(prev => prev.recordType ? prev : ({ ...prev, recordType: data[0].code }));
     } catch (err) {
       console.error('Failed to fetch categories:', err);
       setError('Failed to load record types. Please check the console for details and ensure the database is initialized.');
     }
-  };
+  }, []);
 
-  const fetchSources = async () => {
+  const fetchSources = useCallback(async () => {
     try {
       setSourcesLoading(true);
       const response = await fetch('/api/healthcare-sources');
@@ -159,9 +141,9 @@ function NewHealthRecordContent() {
     } finally {
       setSourcesLoading(false);
     }
-  };
+  }, []);
 
-  const fetchDoctors = async () => {
+  const fetchDoctors = useCallback(async () => {
     try {
       setDoctorsLoading(true);
       const response = await fetch('/api/doctors');
@@ -176,7 +158,19 @@ function NewHealthRecordContent() {
     } finally {
       setDoctorsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (!session) {
+      router.push('/auth/signin');
+      return;
+    }
+    void fetchPatients();
+    void fetchCategories();
+    void fetchSources();
+    void fetchDoctors();
+  }, [fetchCategories, fetchDoctors, fetchPatients, fetchSources, router, session, status]);
 
   const handleSourceChange = (value: string) => {
     setSourceInput(value);
@@ -430,7 +424,7 @@ function NewHealthRecordContent() {
         const allTags = analyzeData.tags && Array.isArray(analyzeData.tags) ? analyzeData.tags : [];
         // Normalize and deduplicate tags
         const normalizedTags = allTags
-          .map((tag: any) => String(tag).toLowerCase().trim().replace(/\s+/g, '_'))
+          .map((tag: unknown) => String(tag).toLowerCase().trim().replace(/\s+/g, '_'))
           .filter((tag: string, index: number, arr: string[]) => tag && arr.indexOf(tag) === index); // Remove empty and duplicates
         
         console.log('AI Tags:', allTags);
@@ -822,7 +816,7 @@ function NewHealthRecordContent() {
             ))}
           </select>
           {categories.length === 0 && (
-            <p className="mt-1 text-sm text-gray-500">If categories don't load, make sure to run: tsx scripts/init-health-record-categories.ts</p>
+            <p className="mt-1 text-sm text-gray-500">If categories don&apos;t load, make sure to run: tsx scripts/init-health-record-categories.ts</p>
           )}
         </div>
 
@@ -1106,39 +1100,18 @@ function NewHealthRecordContent() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <nav className="bg-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center space-x-3">
-              <Link href="/dashboard">
-                <Image
-                  src="/logo.png"
-                  alt="SanoVault Logo"
-                  width={40}
-                  height={40}
-                  className="rounded-full cursor-pointer"
-                />
-              </Link>
-              <Link href="/dashboard">
-                <h1 className="text-xl font-bold text-gray-900 cursor-pointer">SanoVault</h1>
-              </Link>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/health-records"
-                className="text-sm text-gray-700 hover:text-[#0175C2] transition-colors"
-              >
-                ← Back to Health Records
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-slate-50">
+      <AppNav />
 
       <main className={`mx-auto py-8 sm:px-6 lg:px-8 ${currentStep === 2 && documentPreviewUrl ? 'max-w-7xl' : 'max-w-3xl'}`}>
         <div className="px-4 py-6 sm:px-0">
-          <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+          <Link
+            href="/health-records"
+            className="mb-5 inline-block text-sm font-medium text-[#0175C2] hover:underline"
+          >
+            ← Back to health records
+          </Link>
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Add Health Record</h2>
               <div className="flex items-center space-x-2">

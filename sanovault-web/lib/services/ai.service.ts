@@ -125,7 +125,7 @@ export async function classifyDocument(text: string): Promise<{ classification: 
     }
 }
 
-export async function extractData(text: string, documentType: string): Promise<Record<string, any>> {
+export async function extractData(text: string, documentType: string): Promise<Record<string, unknown>> {
     const systemPrompt = extractionPrompt.replace('{{DOCUMENT_TYPE}}', documentType);
     const response = await callGroq(text, systemPrompt);
     try {
@@ -137,59 +137,6 @@ export async function extractData(text: string, documentType: string): Promise<R
 
 function normalizeTag(tag: string): string {
     return tag.toLowerCase().trim().replace(/\s+/g, '_');
-}
-
-function matchTagToExisting(aiTag: string): string | null {
-    const normalized = normalizeTag(aiTag);
-    const defaultTagsLower = DEFAULT_TAGS.map(t => t.toLowerCase());
-    
-    // Exact match
-    if (defaultTagsLower.includes(normalized)) {
-        return DEFAULT_TAGS[defaultTagsLower.indexOf(normalized)];
-    }
-    
-    // Fuzzy matching for common variations
-    const tagVariations: Record<string, string> = {
-        'lab': 'lab_report',
-        'laboratory': 'lab_report',
-        'lab_test': 'lab_report',
-        'lab_result': 'lab_report',
-        'scan': 'scan_result',
-        'imaging': 'scan_result',
-        'radiology': 'scan_result',
-        'xray': 'scan_result',
-        'ct_scan': 'scan_result',
-        'mri': 'scan_result',
-        'prescription': 'prescription',
-        'meds': 'medication',
-        'medication': 'medication',
-        'drug': 'medication',
-        'discharge': 'discharge_summary',
-        'discharge_note': 'discharge_summary',
-        'consult': 'consultation',
-        'consultation': 'consultation',
-        'visit': 'consultation',
-        'appointment': 'consultation',
-        'symptom': 'symptom',
-        'symptoms': 'symptom',
-        'vitals': 'vital_signs',
-        'vital': 'vital_signs',
-        'vital_sign': 'vital_signs',
-    };
-    
-    if (tagVariations[normalized]) {
-        return tagVariations[normalized];
-    }
-    
-    // Check if tag contains any default tag as substring
-    for (const defaultTag of DEFAULT_TAGS) {
-        const defaultTagLower = defaultTag.toLowerCase();
-        if (normalized.includes(defaultTagLower) || defaultTagLower.includes(normalized)) {
-            return defaultTag;
-        }
-    }
-    
-    return null;
 }
 
 export interface TagSuggestionResult {

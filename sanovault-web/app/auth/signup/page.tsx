@@ -22,6 +22,8 @@ function SignUpContent() {
   const [agreedToBetaAcknowledgement, setAgreedToBetaAcknowledgement] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     if (emailFromInvite) setEmail(emailFromInvite);
@@ -87,15 +89,15 @@ function SignUpContent() {
   })();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white rounded-2xl shadow-xl p-8">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-lg w-full space-y-8 border border-gray-200 bg-white rounded-2xl shadow-sm p-6 sm:p-8">
         <div className="text-center">
           <div className="flex justify-center mb-4">
             <Image
               src="/logo.png"
               alt="SanoVault Logo"
-              width={80}
-              height={80}
+              width={56}
+              height={56}
               className="rounded-full"
               priority
             />
@@ -112,7 +114,7 @@ function SignUpContent() {
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
+            <div role="alert" className="rounded-md bg-red-50 p-4">
               <div className="text-sm text-red-800">{error}</div>
             </div>
           )}
@@ -166,35 +168,41 @@ function SignUpContent() {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Password
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                minLength={8}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-[#0175C2] focus:border-[#0175C2] sm:text-sm"
-                placeholder="Password (min 8 characters)"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  className="mt-1 appearance-none relative block w-full px-3 py-2 pr-16 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-[#0175C2] focus:border-[#0175C2] sm:text-sm"
+                  placeholder="Password (min 8 characters)"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute inset-y-0 right-0 px-3 text-sm font-medium text-gray-600" aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? 'Hide' : 'Show'}</button>
+              </div>
             </div>
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
                 Confirm Password
               </label>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                required
-                minLength={8}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-[#0175C2] focus:border-[#0175C2] sm:text-sm"
-                placeholder="Confirm password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
+              <div className="relative">
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  className="mt-1 appearance-none relative block w-full px-3 py-2 pr-16 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-[#0175C2] focus:border-[#0175C2] sm:text-sm"
+                  placeholder="Confirm password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+                <button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} className="absolute inset-y-0 right-0 px-3 text-sm font-medium text-gray-600" aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}>{showConfirmPassword ? 'Hide' : 'Show'}</button>
+              </div>
             </div>
             <label className="flex cursor-pointer gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-gray-800">
               <input
@@ -204,7 +212,8 @@ function SignUpContent() {
                 className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#0175C2] focus:ring-[#0175C2]"
               />
               <span>
-                I understand SanoVault is a beta, experimental service and is not currently represented as HIPAA, GDPR, or DPDP compliant. I agree to the beta acknowledgement before creating my account.
+                I understand SanoVault is an experimental beta and is not currently represented as HIPAA, GDPR, or DPDP compliant. I agree to the{' '}
+                <a href={betaAcknowledgementUrl} className="font-medium text-[#0175C2] underline" target="_blank" rel="noreferrer">beta acknowledgement</a> before creating my account.
               </span>
             </label>
           </div>

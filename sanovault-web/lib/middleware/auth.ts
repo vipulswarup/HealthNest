@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
 
 export async function requireAuth(_request: NextRequest) {
+  void _request;
   const user = await getCurrentUser();
 
   if (!user) {
@@ -22,6 +23,7 @@ export async function requireAuth(_request: NextRequest) {
 }
 
 export async function getUserId(_request: NextRequest): Promise<string | null> {
+  void _request;
   const user = await getCurrentUser();
   return user?.id || null;
 }

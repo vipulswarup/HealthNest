@@ -18,7 +18,7 @@ export interface DocumentMetadata {
   // AI Data
   aiStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   classification?: string; // e.g., "Lab Report", "Prescription"
-  extractedData?: Record<string, any>;
+  extractedData?: Record<string, unknown>;
   suggestedTags?: string[];
   confidenceScore?: number;
   

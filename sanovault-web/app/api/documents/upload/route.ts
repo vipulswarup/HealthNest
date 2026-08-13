@@ -10,6 +10,13 @@ import { recordAuditEvent } from '@/lib/services/audit.service';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
+function storageErrorCode(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object') return undefined;
+  const value = error as { name?: unknown; Code?: unknown };
+  if (typeof value.Code === 'string') return value.Code;
+  return typeof value.name === 'string' ? value.name : undefined;
+}
+
 export async function POST(request: NextRequest) {
   let r2Key: string | undefined;
   try {
@@ -49,12 +56,12 @@ export async function POST(request: NextRequest) {
       metadata: { fileSize: file.size, fileType: verifiedFile.mimeType },
     });
     return NextResponse.json(document, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
     if (r2Key) await deleteFromR2(r2Key).catch(() => undefined);
-    if (error?.name === 'AccessDenied' || error?.Code === 'AccessDenied') {
+    if (storageErrorCode(error) === 'AccessDenied') {
       return handleError(new AppError('Access denied to file storage. Check the R2 credentials and bucket permissions.', 403));
     }
-    if (error?.name === 'NoSuchBucket' || error?.Code === 'NoSuchBucket') {
+    if (storageErrorCode(error) === 'NoSuchBucket') {
       return handleError(new AppError('Document storage bucket is missing. Create the configured R2 bucket and retry.', 503));
     }
     return handleError(error);

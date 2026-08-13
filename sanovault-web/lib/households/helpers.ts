@@ -1,7 +1,7 @@
 import { sql } from '@/lib/db/neon';
 import { randomBytes } from 'crypto';
 
-export function toHousehold(row: Record<string, any>) {
+export function toHousehold(row: Record<string, unknown>) {
   return {
     id: row.id,
     name: row.name,
@@ -11,7 +11,7 @@ export function toHousehold(row: Record<string, any>) {
   };
 }
 
-export function toHouseholdMember(row: Record<string, any>) {
+export function toHouseholdMember(row: Record<string, unknown>) {
   return {
     householdId: row.household_id,
     userId: row.user_id,
@@ -22,7 +22,7 @@ export function toHouseholdMember(row: Record<string, any>) {
   };
 }
 
-export function toHouseholdInvite(row: Record<string, any>) {
+export function toHouseholdInvite(row: Record<string, unknown>) {
   return {
     id: row.id,
     householdId: row.household_id,
@@ -38,7 +38,7 @@ export function toHouseholdInvite(row: Record<string, any>) {
 }
 
 /** Safe to expose to anyone holding an invite URL. */
-export function toPublicHouseholdInvite(row: Record<string, any>) {
+export function toPublicHouseholdInvite(row: Record<string, unknown>) {
   return {
     householdName: row.household_name || undefined,
     invitedByName: row.invited_by_name || undefined,

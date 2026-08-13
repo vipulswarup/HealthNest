@@ -1,12 +1,12 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from '@/lib/auth/client';
 import { LabResultsEditor } from '@/components/lab/LabResultsEditor';
 import { LabResult } from '@/lib/reports/blood-summary';
+import AppNav from '@/components/layout/AppNav';
 
 interface ResultPoint {
   metric: string;
@@ -113,10 +113,54 @@ function BloodSummaryContent() {
   const [draftResults, setDraftResults] = useState<LabResult[]>([]);
   const [savingEdits, setSavingEdits] = useState(false);
   const [editError, setEditError] = useState('');
+  const editDialogRef = useRef<HTMLDivElement>(null);
+  const editCloseRef = useRef<HTMLButtonElement>(null);
+  const closeEditor = useCallback(() => {
+    if (savingEdits) return;
+    setEditingReport(null);
+    setDraftResults([]);
+    setEditError('');
+  }, [savingEdits]);
+
+  useEffect(() => {
+    if (!editingReport) return;
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    editCloseRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !savingEdits) {
+        event.preventDefault();
+        closeEditor();
+        return;
+      }
+      if (event.key !== 'Tab' || !editDialogRef.current) return;
+      const focusable = Array.from(editDialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+      ));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus();
+    };
+  }, [closeEditor, editingReport, savingEdits]);
 
   useEffect(() => {
     if (status !== 'loading' && !session) router.replace('/auth/signin');
-  }, [session?.user?.id, status, router]);
+  }, [session, status, router]);
 
   useEffect(() => {
     if (!session?.user?.id) return;
@@ -172,13 +216,6 @@ function BloodSummaryContent() {
     setEditError('');
   };
 
-  const closeEditor = () => {
-    if (savingEdits) return;
-    setEditingReport(null);
-    setDraftResults([]);
-    setEditError('');
-  };
-
   const saveManualResults = async (clearOverride = false) => {
     if (!editingReport || !patientId) return;
     setSavingEdits(true);
@@ -222,26 +259,15 @@ function BloodSummaryContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <nav className="bg-white shadow-lg print:hidden">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center space-x-3">
-            <Link href="/dashboard">
-              <Image src="/logo.png" alt="SanoVault Logo" width={40} height={40} className="rounded-full cursor-pointer" />
-            </Link>
-            <Link href="/dashboard">
-              <h1 className="text-xl font-bold text-gray-900 cursor-pointer">SanoVault</h1>
-            </Link>
-          </div>
-          <Link href="/health-records" className="text-sm text-gray-700 hover:text-[#0175C2]">
-            Back to Health Records
-          </Link>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-slate-50">
+      <AppNav />
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4 print:hidden">
           <div>
+            <Link href="/health-records" className="mb-3 inline-block text-sm font-medium text-[#0175C2] hover:underline">
+              ← Back to health records
+            </Link>
             <h1 className="text-3xl font-bold text-slate-900">Blood work summary</h1>
             <p className="mt-1 text-slate-600">
               90-day trends for Blood, Iron, Kidney, Liver, Cholesterol, Thyroid, and related panels.
@@ -420,16 +446,18 @@ function BloodSummaryContent() {
       </main>
 
       {editingReport && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 sm:items-center print:hidden">
-          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl bg-white p-5 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 sm:items-center print:hidden" onMouseDown={(event) => {
+          if (event.target === event.currentTarget && !savingEdits) closeEditor();
+        }}>
+          <div ref={editDialogRef} role="dialog" aria-modal="true" aria-labelledby="edit-lab-values-title" tabIndex={-1} className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl bg-white p-5 shadow-xl">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h3 className="text-lg font-semibold text-slate-900">Edit lab values</h3>
+                <h2 id="edit-lab-values-title" className="text-lg font-semibold text-slate-900">Edit lab values</h2>
                 <p className="mt-1 text-sm text-slate-600">
                   {formatDate(editingReport.date)} · {editingReport.source}
                 </p>
               </div>
-              <button type="button" onClick={closeEditor} className="text-sm text-slate-600 hover:underline">
+              <button ref={editCloseRef} type="button" onClick={closeEditor} className="min-h-11 rounded-md px-3 text-sm text-slate-600 hover:bg-slate-100">
                 Close
               </button>
             </div>

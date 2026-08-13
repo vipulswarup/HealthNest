@@ -5,7 +5,7 @@ export interface HealthRecord {
   createdAt: Date;
   updatedAt: Date;
   recordType: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   tags: string[];
   source: string;
   doctorName?: string;
@@ -20,7 +20,7 @@ export interface HealthRecord {
 export interface CreateHealthRecordInput {
   patientId: string;
   recordType: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   tags?: string[];
   source: string;
   doctorName?: string;
@@ -34,7 +34,7 @@ export interface CreateHealthRecordInput {
 
 export interface UpdateHealthRecordInput {
   recordType?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   tags?: string[];
   source?: string;
   doctorName?: string;

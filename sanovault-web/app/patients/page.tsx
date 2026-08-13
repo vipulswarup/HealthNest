@@ -72,12 +72,12 @@ export default function PatientsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-slate-50">
       <AppNav />
 
       <main className="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Patients</h2>
               <Link
@@ -121,7 +121,7 @@ export default function PatientsPage() {
                   <Link
                     key={patient.id}
                     href={`/patients/${patient.id}`}
-                    className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow border border-blue-100 cursor-pointer"
+                    className="cursor-pointer rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-blue-200 hover:shadow-md"
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div>

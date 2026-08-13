@@ -2,11 +2,13 @@
 
 import { useSession } from '@/lib/auth/client';
 import { useRouter, useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import Image from 'next/image';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import RecordDataDisplay from '@/app/components/RecordDataDisplay';
 import { HealthRecordCategory } from '@/lib/types/health-record-category.types';
+import AppNav from '@/components/layout/AppNav';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface HealthRecord {
   id: string;
@@ -19,7 +21,7 @@ interface HealthRecord {
   updatedAt: string;
   tags: string[];
   documentId?: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   hospitalSystemName?: string;
   hospitalIdentifierType?: string;
   hospitalIdentifierValue?: string;
@@ -34,6 +36,7 @@ interface Patient {
 export default function HealthRecordDetailPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { notify } = useToast();
   const params = useParams();
   const recordId = params.id as string;
 
@@ -42,25 +45,14 @@ export default function HealthRecordDetailPage() {
   const [categories, setCategories] = useState<HealthRecordCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const getRecordTypeLabel = (code: string): string => {
     const category = categories.find(cat => cat.code === code);
     return category?.displayName || code;
   };
 
-  useEffect(() => {
-    if (status === 'loading') return;
-
-    if (!session) {
-      router.push('/auth/signin');
-      return;
-    }
-
-    fetchRecord();
-    fetchCategories();
-  }, [session?.user?.id, status, router, recordId]);
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const response = await fetch('/api/health-record-categories');
       if (response.ok) {
@@ -70,9 +62,9 @@ export default function HealthRecordDetailPage() {
     } catch (err) {
       console.error('Failed to fetch categories:', err);
     }
-  };
+  }, []);
 
-  const fetchRecord = async () => {
+  const fetchRecord = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/health-records/${recordId}`);
@@ -83,32 +75,27 @@ export default function HealthRecordDetailPage() {
       setRecord(data);
       
       if (data.patientId) {
-        fetchPatient(data.patientId);
+        const patientResponse = await fetch(`/api/patients/${data.patientId}`);
+        if (patientResponse.ok) setPatient(await patientResponse.json());
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
-  };
+  }, [recordId]);
 
-  const fetchPatient = async (patientId: string) => {
-    try {
-      const response = await fetch(`/api/patients/${patientId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setPatient(data);
-      }
-    } catch (err) {
-      console.error('Error fetching patient:', err);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this health record?')) {
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (!session) {
+      router.push('/auth/signin');
       return;
     }
+    void fetchRecord();
+    void fetchCategories();
+  }, [fetchCategories, fetchRecord, router, session, status]);
 
+  const handleDelete = async () => {
     try {
       const response = await fetch(`/api/health-records/${recordId}`, {
         method: 'DELETE',
@@ -118,9 +105,12 @@ export default function HealthRecordDetailPage() {
         throw new Error('Failed to delete health record');
       }
 
-      router.push('/health-records');
+      notify('Health record deleted.', 'success');
+      router.push(record?.patientId ? `/health-records?patientId=${record.patientId}` : '/health-records');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete health record');
+      notify(err instanceof Error ? err.message : 'Failed to delete health record', 'error');
+    } finally {
+      setDeleteDialogOpen(false);
     }
   };
 
@@ -168,28 +158,11 @@ export default function HealthRecordDetailPage() {
 
   if (error || !record) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <nav className="bg-white shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex items-center space-x-3">
-                <Link href="/dashboard">
-                  <Image
-                    src="/logo.png"
-                    alt="SanoVault Logo"
-                    width={40}
-                    height={40}
-                    className="rounded-full cursor-pointer"
-                  />
-                </Link>
-                <h1 className="text-xl font-bold text-gray-900">SanoVault</h1>
-              </div>
-            </div>
-          </div>
-        </nav>
+      <div className="min-h-screen bg-slate-50">
+        <AppNav />
         <main className="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">
-            <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+            <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
               <p className="text-red-600">{error || 'Health record not found'}</p>
               <Link
                 href="/health-records"
@@ -205,39 +178,18 @@ export default function HealthRecordDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <nav className="bg-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center space-x-3">
-              <Link href="/dashboard">
-                <Image
-                  src="/logo.png"
-                  alt="SanoVault Logo"
-                  width={40}
-                  height={40}
-                  className="rounded-full cursor-pointer"
-                />
-              </Link>
-              <Link href="/dashboard">
-                <h1 className="text-xl font-bold text-gray-900 cursor-pointer">SanoVault</h1>
-              </Link>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/health-records"
-                className="text-sm text-gray-700 hover:text-[#0175C2] transition-colors"
-              >
-                ← Back to Health Records
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-slate-50">
+      <AppNav />
 
       <main className="max-w-4xl mx-auto py-8 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <div className="bg-white rounded-2xl shadow-xl p-8">
+          <Link
+            href={record.patientId ? `/health-records?patientId=${record.patientId}` : '/health-records'}
+            className="mb-5 inline-block text-sm font-medium text-[#0175C2] hover:underline"
+          >
+            ← Back to health records
+          </Link>
+          <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -253,7 +205,7 @@ export default function HealthRecordDetailPage() {
                 )}
               </div>
               <button
-                onClick={handleDelete}
+                onClick={() => setDeleteDialogOpen(true)}
                 className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg font-medium transition-colors text-sm"
               >
                 Delete
@@ -355,6 +307,14 @@ export default function HealthRecordDetailPage() {
           </div>
         </div>
       </main>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        title="Delete this health record?"
+        description="This permanently removes the record and its extracted health information. The action cannot be undone."
+        confirmLabel="Delete record"
+        onCancel={() => setDeleteDialogOpen(false)}
+        onConfirm={() => void handleDelete()}
+      />
     </div>
   );
 }

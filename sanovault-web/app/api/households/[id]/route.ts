@@ -7,6 +7,7 @@ import { getHouseholdForMember, toHousehold } from '@/lib/households/helpers';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
 
 const idSchema = z.string().uuid();
+type OrphanPatient = { id?: unknown; first_name?: unknown; last_name?: unknown };
 const updateSchema = z.object({
   name: z.string().trim().min(1).max(100),
 });
@@ -21,7 +22,7 @@ async function memberHousehold(params: Promise<{ id: string }>, userId: string) 
 
 function orphanError(err: unknown): never {
   if (err instanceof Error && err.message === 'ORPHAN_PATIENTS') {
-    const patients = (err as Error & { patients?: Record<string, any>[] }).patients || [];
+    const patients = (err as Error & { patients?: OrphanPatient[] }).patients || [];
     throw new AppError(
       'Cannot dissolve: some patients belong only to this household. Link them to another household or delete them first.',
       400,

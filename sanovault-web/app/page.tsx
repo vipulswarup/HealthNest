@@ -2,51 +2,21 @@
 
 import { useSession } from '@/lib/auth/client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
-    if (status === 'loading') {
-      return;
-    }
-
-    try {
-      if (!session) {
-        router.push('/auth/signin');
-      } else {
-        router.push('/dashboard');
-      }
-    } catch (err) {
-      console.error('Navigation error:', err);
-      setError('An error occurred. Please try again.');
-    }
-  }, [session?.user?.id, status, router]);
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <a
-            href="/auth/signin"
-            className="text-[#0175C2] hover:text-[#015a96] underline"
-          >
-            Go to Sign In
-          </a>
-        </div>
-      </div>
-    );
-  }
+    if (status === 'loading') return;
+    router.replace(session ? '/dashboard' : '/auth/signin');
+  }, [session, status, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading...</p>
+        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-[#0175C2]"></div>
+        <p className="mt-4 text-gray-600" role="status">Loading SanoVault…</p>
       </div>
     </div>
   );

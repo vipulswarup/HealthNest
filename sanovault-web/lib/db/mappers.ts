@@ -1,4 +1,4 @@
-export function toPatient(row: Record<string, any>) {
+export function toPatient(row: Record<string, unknown>) {
   return {
     id: row.id,
     userId: row.owner_id,

@@ -49,6 +49,7 @@ function SignInContent() {
   const [loading, setLoading] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [message, setMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (emailFromInvite) setEmail(emailFromInvite);
@@ -109,7 +110,7 @@ function SignInContent() {
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-2">
-      <section className="relative flex flex-col justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-100 px-6 py-12 sm:px-10 lg:px-14 lg:py-16">
+      <section className="relative hidden flex-col justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-100 px-6 py-12 sm:px-10 lg:flex lg:px-14 lg:py-16">
         <div className="mx-auto w-full max-w-md lg:mx-0 lg:max-w-lg">
           <div className="flex items-center gap-3">
             <Image
@@ -150,6 +151,10 @@ function SignInContent() {
 
       <section className="flex flex-col justify-center bg-white px-6 py-12 sm:px-10 lg:px-14 lg:py-16">
         <div className="mx-auto w-full max-w-md">
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <Image src="/logo.png" alt="SanoVault Logo" width={48} height={48} className="rounded-full" priority />
+            <span className="text-2xl font-bold tracking-tight text-gray-950">SanoVault</span>
+          </div>
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-gray-900">
               Welcome back
@@ -161,12 +166,12 @@ function SignInContent() {
 
           <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
             {message && (
-              <div className="rounded-lg bg-green-50 px-4 py-3">
+              <div role="status" className="rounded-lg bg-green-50 px-4 py-3">
                 <div className="text-sm text-green-800">{message}</div>
               </div>
             )}
             {error && (
-              <div className="rounded-lg bg-red-50 px-4 py-3">
+              <div role="alert" className="rounded-lg bg-red-50 px-4 py-3">
                 <div className="text-sm text-red-800">{error}</div>
               </div>
             )}
@@ -189,20 +194,31 @@ function SignInContent() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className={inputClassName}
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="flex items-center justify-between gap-4">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
+                <a href={`/auth/forgot-password?${new URLSearchParams({ callbackUrl, email: email.trim().toLowerCase() })}`} className="text-sm font-medium text-[#0175C2] hover:underline">Forgot password?</a>
+              </div>
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  className={`${inputClassName} pr-16`}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  className="absolute inset-y-0 right-0 mt-1.5 px-3 text-sm font-medium text-gray-600 hover:text-gray-950"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
             </div>
 
             <button

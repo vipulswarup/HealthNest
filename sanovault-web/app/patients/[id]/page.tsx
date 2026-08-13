@@ -2,10 +2,10 @@
 
 import { useSession } from '@/lib/auth/client';
 import { useRouter, useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import Image from 'next/image';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { HealthRecordCategory } from '@/lib/types/health-record-category.types';
+import AppNav from '@/components/layout/AppNav';
 
 interface EmergencyContact {
   name: string;
@@ -31,7 +31,7 @@ interface HealthRecord {
   tags: string[];
   createdAt: string;
   documentId?: string;
-  data: any;
+  data: Record<string, unknown>;
 }
 
 export default function PatientDetailPage() {
@@ -52,20 +52,7 @@ export default function PatientDetailPage() {
     return category?.displayName || code;
   };
 
-  useEffect(() => {
-    if (status === 'loading') return;
-
-    if (!session) {
-      router.push('/auth/signin');
-      return;
-    }
-
-    fetchPatient();
-    fetchHealthRecords();
-    fetchCategories();
-  }, [session?.user?.id, status, router, patientId]);
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const response = await fetch('/api/health-record-categories');
       if (response.ok) {
@@ -75,9 +62,9 @@ export default function PatientDetailPage() {
     } catch (err) {
       console.error('Failed to fetch categories:', err);
     }
-  };
+  }, []);
 
-  const fetchPatient = async () => {
+  const fetchPatient = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/patients/${patientId}`);
@@ -91,9 +78,9 @@ export default function PatientDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [patientId]);
 
-  const fetchHealthRecords = async () => {
+  const fetchHealthRecords = useCallback(async () => {
     try {
       setRecordsLoading(true);
       const response = await fetch(`/api/health-records?patientId=${patientId}`);
@@ -107,7 +94,18 @@ export default function PatientDetailPage() {
     } finally {
       setRecordsLoading(false);
     }
-  };
+  }, [patientId]);
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (!session) {
+      router.push('/auth/signin');
+      return;
+    }
+    void fetchPatient();
+    void fetchHealthRecords();
+    void fetchCategories();
+  }, [fetchCategories, fetchHealthRecords, fetchPatient, router, session, status]);
 
   if (status === 'loading' || loading) {
     return (
@@ -126,28 +124,11 @@ export default function PatientDetailPage() {
 
   if (error || !patient) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <nav className="bg-white shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex items-center space-x-3">
-                <Link href="/dashboard">
-                  <Image
-                    src="/logo.png"
-                    alt="SanoVault Logo"
-                    width={40}
-                    height={40}
-                    className="rounded-full cursor-pointer"
-                  />
-                </Link>
-                <h1 className="text-xl font-bold text-gray-900">SanoVault</h1>
-              </div>
-            </div>
-          </div>
-        </nav>
+      <div className="min-h-screen bg-slate-50">
+        <AppNav />
         <main className="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">
-            <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+            <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
               <p className="text-red-600">{error || 'Patient not found'}</p>
               <Link
                 href="/patients"
@@ -163,43 +144,40 @@ export default function PatientDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <nav className="bg-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center space-x-3">
-              <Link href="/dashboard">
-                <Image
-                  src="/logo.png"
-                  alt="SanoVault Logo"
-                  width={40}
-                  height={40}
-                  className="rounded-full cursor-pointer"
-                />
-              </Link>
-              <h1 className="text-xl font-bold text-gray-900">SanoVault</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/patients"
-                className="text-sm text-gray-700 hover:text-[#0175C2] transition-colors"
-              >
-                Back to Patients
-              </Link>
-              <Link
-                href={`/patients/${patientId}/records/new`}
-                className="px-4 py-2 bg-[#0175C2] text-white rounded-lg hover:bg-[#015a96] transition-colors text-sm font-medium"
-              >
-                Add Health Record
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-slate-50">
+      <AppNav />
 
       <main className="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <Link
+              href="/patients"
+              className="text-sm font-medium text-[#0175C2] hover:underline"
+            >
+              ← Back to patients
+            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={`/medications?patientId=${patientId}`}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Medications
+              </Link>
+              <Link
+                href={`/health-records?patientId=${patientId}`}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                All records
+              </Link>
+              <Link
+                href={`/patients/${patientId}/records/new`}
+                className="rounded-lg bg-[#0175C2] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#015a96]"
+              >
+                Add health record
+              </Link>
+            </div>
+          </div>
+          <div className="mb-6 rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
               {patient.firstName} {patient.lastName || ''}
             </h2>
@@ -260,7 +238,7 @@ export default function PatientDetailPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-gray-900">Health Records</h3>
               <Link

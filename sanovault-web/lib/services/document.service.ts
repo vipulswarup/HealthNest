@@ -2,7 +2,27 @@ import { sql } from '@/lib/db/neon';
 import { CreateDocumentInput, DocumentMetadata } from '@/lib/types/document.types';
 import { getActiveHouseholdId, listAccessibleDocuments } from '@/lib/households/access';
 
-type DocumentRow = Record<string, any>;
+type DocumentRow = {
+  id: string;
+  owner_id: string;
+  file_name: string;
+  file_size: number | string;
+  file_type: string;
+  r2_key: string;
+  uploaded_at: Date;
+  status: DocumentMetadata['status'];
+  ocr_status?: DocumentMetadata['ocrStatus'] | null;
+  ocr_text?: string | null;
+  ai_status?: DocumentMetadata['aiStatus'] | null;
+  classification?: string | null;
+  extracted_data?: Record<string, unknown> | null;
+  suggested_tags?: string[] | null;
+  confidence_score?: number | string | null;
+  is_approved: boolean;
+  approved_at?: Date | null;
+  approved_tags?: string[] | null;
+  rejection_reason?: string | null;
+};
 
 function toDocument(row: DocumentRow): DocumentMetadata {
   return {
@@ -35,19 +55,19 @@ export async function createDocument(input: CreateDocumentInput): Promise<Docume
     VALUES (${input.userId}, ${input.fileName}, ${input.fileSize}, ${input.fileType}, ${input.r2Key}, 'r2')
     RETURNING *
   `;
-  return toDocument(row);
+  return toDocument(row as DocumentRow);
 }
 
 export async function getDocumentById(id: string): Promise<DocumentMetadata | null> {
   const [row] = await sql`SELECT * FROM documents WHERE id = ${id}::uuid`;
-  return row ? toDocument(row) : null;
+  return row ? toDocument(row as DocumentRow) : null;
 }
 
 export async function listUserDocuments(userId: string): Promise<DocumentMetadata[]> {
   const activeHouseholdId = await getActiveHouseholdId(userId);
   if (!activeHouseholdId) return [];
   const rows = await listAccessibleDocuments(userId, activeHouseholdId);
-  return rows.map(toDocument);
+  return rows.map((row) => toDocument(row as DocumentRow));
 }
 
 export async function updateDocumentStatus(

@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     if (data.documentId) {
       const document = await getAccessibleDocument(user.id, data.documentId);
       if (!document) throw new AppError('Document not found', 404);
-      if (!ocrText && document.ocr_text) ocrText = document.ocr_text;
+      if (!ocrText && typeof document.ocr_text === 'string') ocrText = document.ocr_text;
     }
     const [record] = await sql`
       INSERT INTO health_records (patient_id, record_type, data, tags, source, doctor_name, document_date, document_id, ocr_text, hospital_system_name, hospital_identifier_type, hospital_identifier_value)

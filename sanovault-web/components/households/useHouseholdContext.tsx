@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useSession } from '@/lib/auth/client';
 
 export type HouseholdSummary = {
   id: string;
@@ -18,7 +19,10 @@ export type ActiveHouseholdState = {
   setActive: (householdId: string) => Promise<void>;
 };
 
-export function useHouseholdContext(): ActiveHouseholdState {
+const HouseholdContext = createContext<ActiveHouseholdState | null>(null);
+
+export function HouseholdProvider({ children }: { children: React.ReactNode }) {
+  const { status } = useSession();
   const [householdId, setHouseholdId] = useState<string | null>(null);
   const [households, setHouseholds] = useState<HouseholdSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,8 +48,8 @@ export function useHouseholdContext(): ActiveHouseholdState {
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    if (status === 'authenticated') void refresh();
+  }, [refresh, status]);
 
   const setActive = useCallback(async (next: string) => {
     const res = await fetch('/api/me/active-household', {
@@ -58,10 +62,19 @@ export function useHouseholdContext(): ActiveHouseholdState {
       throw new Error(data.error || 'Failed to switch household');
     }
     setHouseholdId(next);
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('household-context-changed', { detail: { householdId: next } }));
-    }
+    window.dispatchEvent(new CustomEvent('household-context-changed', { detail: { householdId: next } }));
   }, []);
 
-  return { householdId, households, loading, refresh, setActive };
+  const value = useMemo(
+    () => ({ householdId, households, loading, refresh, setActive }),
+    [householdId, households, loading, refresh, setActive],
+  );
+
+  return <HouseholdContext.Provider value={value}>{children}</HouseholdContext.Provider>;
+}
+
+export function useHouseholdContext(): ActiveHouseholdState {
+  const context = useContext(HouseholdContext);
+  if (!context) throw new Error('useHouseholdContext must be used within HouseholdProvider');
+  return context;
 }

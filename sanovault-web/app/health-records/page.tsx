@@ -1,10 +1,12 @@
 'use client';
 
 import { useSession } from '@/lib/auth/client';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import AppNav from '@/components/layout/AppNav';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/ToastProvider';
 import { HealthRecordCategory } from '@/lib/types/health-record-category.types';
 import { HealthcareSource } from '@/lib/types/healthcare-source.types';
 
@@ -26,46 +28,49 @@ interface Patient {
   lastName?: string;
 }
 
-export default function HealthRecordsPage() {
+function HealthRecordsContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { notify } = useToast();
+  const requestedPatientId = searchParams.get('patientId') || '';
   const [records, setRecords] = useState<HealthRecord[]>([]);
   const [patients, setPatients] = useState<Record<string, Patient>>({});
   const [categories, setCategories] = useState<HealthRecordCategory[]>([]);
   const [sources, setSources] = useState<HealthcareSource[]>([]);
-  const [selectedPatientId, setSelectedPatientId] = useState<string>('');
+  const [selectedPatientId, setSelectedPatientId] = useState<string>(requestedPatientId);
   const [loading, setLoading] = useState(true);
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [error, setError] = useState('');
   
   // Search and filter state
-  const [keyword, setKeyword] = useState('');
-  const [filterSource, setFilterSource] = useState('');
-  const [filterRecordType, setFilterRecordType] = useState('');
-  const [filterTag, setFilterTag] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
+  const [filterSource, setFilterSource] = useState(searchParams.get('source') || '');
+  const [filterRecordType, setFilterRecordType] = useState(searchParams.get('recordType') || '');
+  const [filterTag, setFilterTag] = useState(searchParams.get('tag') || '');
+  const [startDate, setStartDate] = useState(searchParams.get('startDate') || '');
+  const [endDate, setEndDate] = useState(searchParams.get('endDate') || '');
+  const [showFilters, setShowFilters] = useState(
+    ['source', 'recordType', 'tag', 'startDate', 'endDate'].some((key) => searchParams.has(key)),
+  );
+  const [recordPendingDelete, setRecordPendingDelete] = useState<string | null>(null);
+
+  const updateQuery = useCallback((updates: Record<string, string>) => {
+    const params = new URLSearchParams(window.location.search);
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+      else params.delete(key);
+    });
+    const query = params.toString();
+    router.replace(query ? `/health-records?${query}` : '/health-records', { scroll: false });
+  }, [router]);
 
   const getRecordTypeLabel = (code: string): string => {
     const category = categories.find(cat => cat.code === code);
     return category?.displayName || code;
   };
 
-  useEffect(() => {
-    if (status === 'loading') return;
-
-    if (!session?.user?.id) {
-      router.push('/auth/signin');
-      return;
-    }
-
-    fetchPatients();
-    fetchCategories();
-    fetchSources();
-  }, [session?.user?.id, status, router]);
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const response = await fetch('/api/health-record-categories');
       if (response.ok) {
@@ -75,9 +80,9 @@ export default function HealthRecordsPage() {
     } catch (err) {
       console.error('Failed to fetch categories:', err);
     }
-  };
+  }, []);
 
-  const fetchSources = async () => {
+  const fetchSources = useCallback(async () => {
     try {
       const response = await fetch('/api/healthcare-sources');
       if (response.ok) {
@@ -87,17 +92,14 @@ export default function HealthRecordsPage() {
     } catch (err) {
       console.error('Failed to fetch sources:', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchRecords();
-    }, keyword ? 300 : 0); // Debounce keyword search by 300ms
+    const timeoutId = window.setTimeout(() => updateQuery({ keyword }), 300);
+    return () => window.clearTimeout(timeoutId);
+  }, [keyword, updateQuery]);
 
-    return () => clearTimeout(timeoutId);
-  }, [selectedPatientId, keyword, filterSource, filterRecordType, filterTag, startDate, endDate]);
-
-  const fetchPatients = async () => {
+  const fetchPatients = useCallback(async () => {
     try {
       const response = await fetch('/api/patients');
       if (!response.ok) {
@@ -110,17 +112,21 @@ export default function HealthRecordsPage() {
       });
       setPatients(patientsMap);
       
-      if (data.length > 0 && !selectedPatientId) {
-        setSelectedPatientId(data[0].id);
+      if (data.length > 0) {
+        const nextPatientId = requestedPatientId && data.some((patient: Patient) => patient.id === requestedPatientId)
+          ? requestedPatientId
+          : data[0].id;
+        setSelectedPatientId(nextPatientId);
+        if (nextPatientId !== requestedPatientId) updateQuery({ patientId: nextPatientId });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
-  };
+  }, [requestedPatientId, updateQuery]);
 
-  const fetchRecords = async () => {
+  const fetchRecords = useCallback(async () => {
     try {
       setRecordsLoading(true);
       const params = new URLSearchParams();
@@ -158,13 +164,27 @@ export default function HealthRecordsPage() {
     } finally {
       setRecordsLoading(false);
     }
-  };
+  }, [endDate, filterRecordType, filterSource, filterTag, keyword, selectedPatientId, startDate]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this health record?')) {
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (!session?.user?.id) {
+      router.push('/auth/signin');
       return;
     }
+    void fetchPatients();
+    void fetchCategories();
+    void fetchSources();
+  }, [fetchCategories, fetchPatients, fetchSources, router, session?.user?.id, status]);
 
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      void fetchRecords();
+    }, keyword ? 300 : 0);
+    return () => clearTimeout(timeoutId);
+  }, [fetchRecords, keyword]);
+
+  const handleDelete = async (id: string) => {
     try {
       const response = await fetch(`/api/health-records/${id}`, {
         method: 'DELETE',
@@ -174,15 +194,19 @@ export default function HealthRecordsPage() {
         throw new Error('Failed to delete health record');
       }
 
-      fetchRecords();
+      await fetchRecords();
+      notify('Health record deleted.', 'success');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete health record');
+      notify(err instanceof Error ? err.message : 'Failed to delete health record', 'error');
+    } finally {
+      setRecordPendingDelete(null);
     }
   };
 
   const handleTagClick = (tag: string) => {
     setFilterTag(tag);
     setShowFilters(true);
+    updateQuery({ tag });
   };
 
   const clearFilters = () => {
@@ -192,6 +216,7 @@ export default function HealthRecordsPage() {
     setFilterTag('');
     setStartDate('');
     setEndDate('');
+    updateQuery({ keyword: '', source: '', recordType: '', tag: '', startDate: '', endDate: '' });
   };
 
   const hasActiveFilters = keyword || filterSource || filterRecordType || filterTag || startDate || endDate;
@@ -227,13 +252,13 @@ export default function HealthRecordsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-slate-50">
       <AppNav />
 
       <main className="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="flex justify-between items-center mb-6 gap-3 flex-wrap">
-            <h2 className="text-3xl font-bold text-gray-900">Health Records</h2>
+            <h1 className="text-3xl font-bold text-gray-900">Health Records</h1>
             <Link
               href={selectedPatientId ? `/reports/blood-summary?patientId=${selectedPatientId}` : '/reports/blood-summary'}
               className="text-sm text-[#0175C2] hover:underline"
@@ -251,7 +276,7 @@ export default function HealthRecordsPage() {
           </div>
 
           {Object.keys(patients).length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+            <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
               <div className="text-6xl mb-4">👥</div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
                 No patients found
@@ -276,7 +301,10 @@ export default function HealthRecordsPage() {
                   <select
                     id="patient"
                     value={selectedPatientId}
-                    onChange={(e) => setSelectedPatientId(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedPatientId(e.target.value);
+                      updateQuery({ patientId: e.target.value });
+                    }}
                     className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
                   >
                     <option value="">All Patients</option>
@@ -334,7 +362,10 @@ export default function HealthRecordsPage() {
                       <select
                         id="filterSource"
                         value={filterSource}
-                        onChange={(e) => setFilterSource(e.target.value)}
+                        onChange={(e) => {
+                          setFilterSource(e.target.value);
+                          updateQuery({ source: e.target.value });
+                        }}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
                       >
                         <option value="">All Sources</option>
@@ -353,7 +384,10 @@ export default function HealthRecordsPage() {
                       <select
                         id="filterRecordType"
                         value={filterRecordType}
-                        onChange={(e) => setFilterRecordType(e.target.value)}
+                        onChange={(e) => {
+                          setFilterRecordType(e.target.value);
+                          updateQuery({ recordType: e.target.value });
+                        }}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
                       >
                         <option value="">All Types</option>
@@ -372,7 +406,10 @@ export default function HealthRecordsPage() {
                       <select
                         id="filterTag"
                         value={filterTag}
-                        onChange={(e) => setFilterTag(e.target.value)}
+                        onChange={(e) => {
+                          setFilterTag(e.target.value);
+                          updateQuery({ tag: e.target.value });
+                        }}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
                       >
                         <option value="">All Tags</option>
@@ -392,7 +429,10 @@ export default function HealthRecordsPage() {
                         type="date"
                         id="startDate"
                         value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
+                        onChange={(e) => {
+                          setStartDate(e.target.value);
+                          updateQuery({ startDate: e.target.value });
+                        }}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
                       />
                     </div>
@@ -405,7 +445,10 @@ export default function HealthRecordsPage() {
                         type="date"
                         id="endDate"
                         value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
+                        onChange={(e) => {
+                          setEndDate(e.target.value);
+                          updateQuery({ endDate: e.target.value });
+                        }}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
                       />
                     </div>
@@ -419,7 +462,11 @@ export default function HealthRecordsPage() {
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
                           Keyword: {keyword}
                           <button
-                            onClick={() => setKeyword('')}
+                            onClick={() => {
+                              setKeyword('');
+                              updateQuery({ keyword: '' });
+                            }}
+                            aria-label="Remove keyword filter"
                             className="ml-2 hover:text-blue-600"
                           >
                             ×
@@ -430,7 +477,11 @@ export default function HealthRecordsPage() {
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
                           Source: {filterSource}
                           <button
-                            onClick={() => setFilterSource('')}
+                            onClick={() => {
+                              setFilterSource('');
+                              updateQuery({ source: '' });
+                            }}
+                            aria-label="Remove source filter"
                             className="ml-2 hover:text-green-600"
                           >
                             ×
@@ -441,7 +492,11 @@ export default function HealthRecordsPage() {
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800">
                           Type: {getRecordTypeLabel(filterRecordType)}
                           <button
-                            onClick={() => setFilterRecordType('')}
+                            onClick={() => {
+                              setFilterRecordType('');
+                              updateQuery({ recordType: '' });
+                            }}
+                            aria-label="Remove record type filter"
                             className="ml-2 hover:text-purple-600"
                           >
                             ×
@@ -452,7 +507,11 @@ export default function HealthRecordsPage() {
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-yellow-100 text-yellow-800">
                           Tag: {filterTag}
                           <button
-                            onClick={() => setFilterTag('')}
+                            onClick={() => {
+                              setFilterTag('');
+                              updateQuery({ tag: '' });
+                            }}
+                            aria-label="Remove tag filter"
                             className="ml-2 hover:text-yellow-600"
                           >
                             ×
@@ -463,7 +522,11 @@ export default function HealthRecordsPage() {
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-800">
                           From: {startDate}
                           <button
-                            onClick={() => setStartDate('')}
+                            onClick={() => {
+                              setStartDate('');
+                              updateQuery({ startDate: '' });
+                            }}
+                            aria-label="Remove start date filter"
                             className="ml-2 hover:text-gray-600"
                           >
                             ×
@@ -474,7 +537,11 @@ export default function HealthRecordsPage() {
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-800">
                           To: {endDate}
                           <button
-                            onClick={() => setEndDate('')}
+                            onClick={() => {
+                              setEndDate('');
+                              updateQuery({ endDate: '' });
+                            }}
+                            aria-label="Remove end date filter"
                             className="ml-2 hover:text-gray-600"
                           >
                             ×
@@ -493,7 +560,7 @@ export default function HealthRecordsPage() {
               )}
 
               {records.length === 0 ? (
-                <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+                <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
                   <div className="text-6xl mb-4">📋</div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">
                     {hasActiveFilters ? 'No records match your filters' : 'No health records yet'}
@@ -585,7 +652,7 @@ export default function HealthRecordsPage() {
                             View
                           </Link>
                           <button
-                            onClick={() => handleDelete(record.id)}
+                            onClick={() => setRecordPendingDelete(record.id)}
                             className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg font-medium transition-colors text-sm"
                           >
                             Delete
@@ -600,6 +667,24 @@ export default function HealthRecordsPage() {
           )}
         </div>
       </main>
+      <ConfirmDialog
+        open={Boolean(recordPendingDelete)}
+        title="Delete this health record?"
+        description="This permanently removes the record and its extracted health information. The action cannot be undone."
+        confirmLabel="Delete record"
+        onCancel={() => setRecordPendingDelete(null)}
+        onConfirm={() => {
+          if (recordPendingDelete) void handleDelete(recordPendingDelete);
+        }}
+      />
     </div>
+  );
+}
+
+export default function HealthRecordsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen grid place-items-center text-gray-600" role="status">Loading health records…</div>}>
+      <HealthRecordsContent />
+    </Suspense>
   );
 }

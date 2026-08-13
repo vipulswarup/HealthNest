@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   LAB_METRIC_OPTIONS,
   LabResult,
@@ -58,12 +58,6 @@ function toLabResults(drafts: DraftRow[]): LabResult[] {
   return [...byMetric.values()];
 }
 
-function resultsSignature(results: LabResult[]): string {
-  return results
-    .map((item) => `${item.metric}:${item.value}:${item.unit}:${item.referenceLow}:${item.referenceHigh}`)
-    .join('|');
-}
-
 interface LabResultsEditorProps {
   results: LabResult[];
   onChange: (results: LabResult[]) => void;
@@ -72,15 +66,6 @@ interface LabResultsEditorProps {
 
 export function LabResultsEditor({ results, onChange, disabled = false }: LabResultsEditorProps) {
   const [drafts, setDrafts] = useState<DraftRow[]>(() => toDraft(results));
-  const [sourceSignature, setSourceSignature] = useState(() => resultsSignature(results));
-
-  useEffect(() => {
-    const nextSignature = resultsSignature(results);
-    if (nextSignature !== sourceSignature) {
-      setDrafts(toDraft(results));
-      setSourceSignature(nextSignature);
-    }
-  }, [results, sourceSignature]);
 
   const usedMetrics = new Set(drafts.map((row) => row.metric));
   const availableToAdd = LAB_METRIC_OPTIONS.filter((item) => !usedMetrics.has(item.metric));
@@ -88,7 +73,6 @@ export function LabResultsEditor({ results, onChange, disabled = false }: LabRes
   const commit = (next: DraftRow[]) => {
     setDrafts(next);
     const sanitized = toLabResults(next);
-    setSourceSignature(resultsSignature(sanitized));
     onChange(sanitized);
   };
 

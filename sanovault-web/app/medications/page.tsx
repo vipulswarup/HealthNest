@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AppNav from '@/components/layout/AppNav';
 import { useSession } from '@/lib/auth/client';
+import { useToast } from '@/components/ui/ToastProvider';
 
 type Country = 'IN' | 'US' | 'GB';
 type Ingredient = { canonicalInn: string; localAlias?: string | null; strength: string; strengthUnit: string };
@@ -46,11 +47,14 @@ function genericName(ingredients: Ingredient[]): string {
   return ingredients.map((ingredient) => `${ingredient.canonicalInn} ${ingredient.strength} ${ingredient.strengthUnit}`.trim()).join(' + ');
 }
 
-export default function MedicationsPage() {
+function MedicationsContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { notify } = useToast();
+  const requestedPatientId = searchParams.get('patientId') || '';
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [patientId, setPatientId] = useState('');
+  const [patientId, setPatientId] = useState(requestedPatientId);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -69,6 +73,7 @@ export default function MedicationsPage() {
   const [indication, setIndication] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [stoppedReason, setStoppedReason] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
 
   const activeCount = useMemo(() => medications.filter((medication) => medication.isActive).length, [medications]);
 
@@ -78,8 +83,30 @@ export default function MedicationsPage() {
       router.push('/auth/signin');
       return;
     }
-    void loadPatients();
-  }, [router, session?.user?.id, status]);
+    let cancelled = false;
+    async function load() {
+      try {
+        const response = await fetch('/api/patients');
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Could not load patients');
+        if (cancelled) return;
+        setPatients(data);
+        const nextPatientId = requestedPatientId && data.some((patient: Patient) => patient.id === requestedPatientId)
+          ? requestedPatientId
+          : data[0]?.id || '';
+        setPatientId(nextPatientId);
+        if (nextPatientId && nextPatientId !== requestedPatientId) {
+          router.replace(`/medications?patientId=${nextPatientId}`, { scroll: false });
+        }
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load patients');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void load();
+    return () => { cancelled = true; };
+  }, [requestedPatientId, router, session?.user?.id, status]);
 
   useEffect(() => {
     if (!patientId) {
@@ -105,20 +132,6 @@ export default function MedicationsPage() {
     }, 300);
     return () => window.clearTimeout(timer);
   }, [brandName, country]);
-
-  async function loadPatients() {
-    try {
-      const response = await fetch('/api/patients');
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Could not load patients');
-      setPatients(data);
-      setPatientId((current) => current || data[0]?.id || '');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load patients');
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function loadMedications(id: string) {
     try {
@@ -196,6 +209,8 @@ export default function MedicationsPage() {
       if (!response.ok) throw new Error(data.error || 'Could not save medication');
       resetForm();
       await loadMedications(patientId);
+      setShowAddForm(false);
+      notify('Medication saved.', 'success');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save medication');
     } finally {
@@ -209,7 +224,7 @@ export default function MedicationsPage() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-slate-50">
       <AppNav />
       <main className="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0 space-y-6">
@@ -218,22 +233,37 @@ export default function MedicationsPage() {
               <h1 className="text-3xl font-bold text-gray-900">Medications</h1>
               <p className="mt-1 text-gray-600">Keep the original brand name and a portable generic composition.</p>
             </div>
-            {patientId && <Link href={`/medications/report?patientId=${patientId}`} className="rounded-lg border border-[#0175C2] px-4 py-2 text-sm font-medium text-[#0175C2] hover:bg-blue-50">Doctor-facing list</Link>}
+            <div className="flex flex-wrap gap-3">
+              {patientId && <Link href={`/medications/report?patientId=${patientId}`} className="rounded-lg border border-[#0175C2] px-4 py-2 text-sm font-medium text-[#0175C2] hover:bg-blue-50">Doctor-facing list</Link>}
+              {patientId && (
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm((open) => !open)}
+                  className="rounded-lg bg-[#0175C2] px-4 py-2 text-sm font-medium text-white hover:bg-[#015a96]"
+                  aria-expanded={showAddForm}
+                >
+                  {showAddForm ? 'Close form' : 'Add medication'}
+                </button>
+              )}
+            </div>
           </div>
 
-          {error && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
+          {error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
           {patients.length === 0 ? (
-            <div className="rounded-2xl bg-white p-8 text-center shadow-xl"><p className="text-gray-600">Add a patient before recording medications.</p><Link href="/patients/new" className="mt-4 inline-block text-[#0175C2] hover:underline">Add patient</Link></div>
+            <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm"><p className="text-gray-600">Add a patient before recording medications.</p><Link href="/patients/new" className="mt-4 inline-block text-[#0175C2] hover:underline">Add patient</Link></div>
           ) : <>
-            <section className="rounded-2xl bg-white p-6 shadow-xl">
+            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <label htmlFor="medication-patient" className="block text-sm font-medium text-gray-700">Patient</label>
-              <select id="medication-patient" value={patientId} onChange={(event) => setPatientId(event.target.value)} className="mt-2 w-full max-w-md rounded-lg border border-gray-300 px-3 py-2">
+              <select id="medication-patient" value={patientId} onChange={(event) => {
+                setPatientId(event.target.value);
+                router.replace(`/medications?patientId=${event.target.value}`, { scroll: false });
+              }} className="mt-2 w-full max-w-md rounded-lg border border-gray-300 px-3 py-2">
                 {patients.map((patient) => <option key={patient.id} value={patient.id}>{patient.firstName} {patient.lastName || ''}</option>)}
               </select>
               <p className="mt-3 text-sm text-gray-600">{activeCount} active medication{activeCount === 1 ? '' : 's'} recorded.</p>
             </section>
 
-            <section className="rounded-2xl bg-white p-6 shadow-xl">
+            {showAddForm && <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <h2 className="text-xl font-semibold text-gray-900">Add medication</h2>
               <p className="mt-1 text-sm text-gray-600">A catalogue match is required to mark a composition confirmed. You can still save an unconfirmed entry.</p>
               <form onSubmit={submit} className="mt-6 space-y-5">
@@ -249,12 +279,20 @@ export default function MedicationsPage() {
                 <div className="flex flex-wrap items-center gap-4"><label className="flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={isActive} onChange={(event) => setIsActive(event.target.checked)} /> Active medication</label>{!isActive && <input value={stoppedReason} onChange={(event) => setStoppedReason(event.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Reason stopped (optional)" />}</div>
                 <button disabled={saving} className="rounded-lg bg-[#0175C2] px-5 py-2.5 font-medium text-white hover:bg-[#015a96] disabled:opacity-60">{saving ? 'Saving…' : 'Save medication'}</button>
               </form>
-            </section>
+            </section>}
 
             <section className="rounded-2xl bg-white p-6 shadow-xl"><h2 className="text-xl font-semibold text-gray-900">Medication list</h2><div className="mt-5 space-y-3">{medications.length === 0 ? <p className="py-6 text-center text-gray-500">No medications recorded for this patient.</p> : medications.map((medication) => <article key={medication.id} className={`rounded-xl border p-4 ${medication.composition.requiresWarning ? 'border-amber-300 bg-amber-50' : 'border-gray-200'}`}><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-semibold text-gray-900">{medication.originalBrandName} <span className="text-sm font-normal text-gray-500">({medication.purchaseCountry ? countryLabels[medication.purchaseCountry] : 'Country not recorded'})</span></h3><p className="mt-1 text-sm text-gray-700">{medication.composition.ingredients.length ? genericName(medication.composition.ingredients) : 'Generic composition not recorded'}{medication.composition.formulation ? ` · ${medication.composition.formulation}` : ''}</p>{medication.indication && <p className="mt-1 text-sm text-gray-600">For: {medication.indication}</p>}</div><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${medication.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}`}>{medication.isActive ? 'Active' : 'Past medication'}</span></div>{medication.composition.requiresWarning && <p className="mt-3 text-sm font-medium text-amber-900">Warning: this composition is unconfirmed or requires review. Confirm it from a verified catalogue match before relying on it.</p>}<p className="mt-3 text-sm text-gray-600">{medication.dosage} · {medication.frequency} · {medication.route}</p>{medication.instructions && <p className="mt-1 text-sm text-gray-600">Original instructions: {medication.instructions}</p>}{!medication.isActive && medication.stoppedReason && <p className="mt-1 text-sm text-gray-600">Stopped because: {medication.stoppedReason}</p>}</article>)}</div></section>
           </>}
         </div>
       </main>
     </div>
+  );
+}
+
+export default function MedicationsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen grid place-items-center text-gray-600" role="status">Loading medications…</div>}>
+      <MedicationsContent />
+    </Suspense>
   );
 }

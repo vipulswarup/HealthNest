@@ -2,10 +2,11 @@
 
 import { useSession } from '@/lib/auth/client';
 import { useRouter, useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import Image from 'next/image';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { HealthRecordCategory } from '@/lib/types/health-record-category.types';
+import AppNav from '@/components/layout/AppNav';
+import Image from 'next/image';
 
 interface HealthRecord {
   id: string;
@@ -16,7 +17,7 @@ interface HealthRecord {
   updatedAt: string;
   tags: string[];
   documentId?: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   hospitalSystemName?: string;
   hospitalIdentifierType?: string;
   hospitalIdentifierValue?: string;
@@ -47,19 +48,7 @@ export default function DocumentPreviewPage() {
     return category?.displayName || code;
   };
 
-  useEffect(() => {
-    if (status === 'loading') return;
-
-    if (!session) {
-      router.push('/auth/signin');
-      return;
-    }
-
-    fetchRecord();
-    fetchCategories();
-  }, [session?.user?.id, status, router, recordId]);
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const response = await fetch('/api/health-record-categories');
       if (response.ok) {
@@ -69,9 +58,9 @@ export default function DocumentPreviewPage() {
     } catch (err) {
       console.error('Failed to fetch categories:', err);
     }
-  };
+  }, []);
 
-  const fetchRecord = async () => {
+  const fetchRecord = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/health-records/${recordId}`);
@@ -82,11 +71,20 @@ export default function DocumentPreviewPage() {
       setRecord(data);
       
       if (data.patientId) {
-        fetchPatient(data.patientId);
+        const patientResponse = await fetch(`/api/patients/${data.patientId}`);
+        if (patientResponse.ok) setPatient(await patientResponse.json());
       }
 
       if (data.documentId) {
-        fetchSignedUrl(data.documentId);
+        const documentResponse = await fetch('/api/documents/view', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ documentId: data.documentId }),
+        });
+        if (!documentResponse.ok) throw new Error('Failed to generate document URL');
+        const documentData = await documentResponse.json();
+        setSignedUrl(documentData.url);
+        setDocumentFileType(documentData.fileType || null);
       } else {
         setError('No document attached to this health record');
       }
@@ -95,41 +93,17 @@ export default function DocumentPreviewPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [recordId]);
 
-  const fetchPatient = async (patientId: string) => {
-    try {
-      const response = await fetch(`/api/patients/${patientId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setPatient(data);
-      }
-    } catch (err) {
-      console.error('Error fetching patient:', err);
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (!session) {
+      router.push('/auth/signin');
+      return;
     }
-  };
-
-  const fetchSignedUrl = async (documentId: string) => {
-    try {
-      const response = await fetch('/api/documents/view', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ documentId }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate document URL');
-      }
-
-      const data = await response.json();
-      setSignedUrl(data.url);
-      setDocumentFileType(data.fileType || null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load document');
-    }
-  };
+    void fetchRecord();
+    void fetchCategories();
+  }, [fetchCategories, fetchRecord, router, session, status]);
 
 
   if (status === 'loading' || loading) {
@@ -149,28 +123,11 @@ export default function DocumentPreviewPage() {
 
   if (error || !record || !signedUrl) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <nav className="bg-white shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex items-center space-x-3">
-                <Link href="/dashboard">
-                  <Image
-                    src="/logo.png"
-                    alt="SanoVault Logo"
-                    width={40}
-                    height={40}
-                    className="rounded-full cursor-pointer"
-                  />
-                </Link>
-                <h1 className="text-xl font-bold text-gray-900">SanoVault</h1>
-              </div>
-            </div>
-          </div>
-        </nav>
+      <div className="min-h-screen bg-slate-50">
+        <AppNav />
         <main className="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">
-            <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+            <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
               <p className="text-red-600">{error || 'Document not found'}</p>
               <div className="mt-4 space-x-4">
                 <Link
@@ -196,50 +153,17 @@ export default function DocumentPreviewPage() {
   const fileType = documentFileType?.startsWith('image/') ? 'image' : documentFileType === 'application/pdf' ? 'pdf' : 'unknown';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <nav className="bg-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center space-x-3">
-              <Link href="/dashboard">
-                <Image
-                  src="/logo.png"
-                  alt="SanoVault Logo"
-                  width={40}
-                  height={40}
-                  className="rounded-full cursor-pointer"
-                />
-              </Link>
-              <Link href="/dashboard">
-                <h1 className="text-xl font-bold text-gray-900 cursor-pointer">SanoVault</h1>
-              </Link>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link
-                href={`/health-records/${recordId}`}
-                className="text-sm text-gray-700 hover:text-[#0175C2] transition-colors"
-              >
-                ← Back to Record
-              </Link>
-              <Link
-                href="/health-records"
-                className="text-sm text-gray-700 hover:text-[#0175C2] transition-colors"
-              >
-                Health Records
-              </Link>
-              <Link
-                href="/dashboard"
-                className="text-sm text-gray-700 hover:text-[#0175C2] transition-colors"
-              >
-                Dashboard
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-slate-50">
+      <AppNav />
 
       <main className="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8">
         <div className="px-4 sm:px-0">
+          <Link
+            href={`/health-records/${recordId}`}
+            className="mb-4 inline-block text-sm font-medium text-[#0175C2] hover:underline"
+          >
+            ← Back to record
+          </Link>
           <div className="bg-white rounded-lg shadow-md p-4 mb-4">
             <div className="flex items-center justify-between">
               <div>
@@ -268,9 +192,12 @@ export default function DocumentPreviewPage() {
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             {fileType === 'image' ? (
               <div className="p-4">
-                <img
+                <Image
                   src={signedUrl}
                   alt={`${getRecordTypeLabel(record.recordType)} document`}
+                  width={1200}
+                  height={1600}
+                  unoptimized
                   className="max-w-full h-auto mx-auto rounded-lg"
                   onError={() => setError('Failed to load image')}
                 />

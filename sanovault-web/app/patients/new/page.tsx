@@ -30,7 +30,7 @@ export default function NewPatientPage() {
     if (!session) {
       router.push('/auth/signin');
     }
-  }, [session?.user?.id, status, router]);
+  }, [session, status, router]);
 
   useEffect(() => {
     if (householdsLoading) return;
@@ -98,15 +98,15 @@ export default function NewPatientPage() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-slate-50">
       <AppNav />
       <main className="max-w-3xl mx-auto py-8 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Add New Patient</h2>
+          <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+            <h1 className="text-2xl font-bold text-gray-900 mb-6">Add New Patient</h1>
 
             {error && (
-              <div className="mb-6 rounded-md bg-red-50 p-4">
+              <div className="mb-6 rounded-md bg-red-50 p-4" role="alert">
                 <div className="text-sm text-red-800">{error}</div>
               </div>
             )}
