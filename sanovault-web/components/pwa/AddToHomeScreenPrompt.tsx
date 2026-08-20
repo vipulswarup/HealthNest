@@ -49,7 +49,7 @@ export default function AddToHomeScreenPrompt() {
   };
 
   return (
-    <div className="print:hidden fixed inset-x-0 bottom-0 z-40 border-t border-blue-200 bg-white p-4 shadow-[0_-8px_24px_rgba(15,23,42,0.12)] sm:inset-x-auto sm:bottom-4 sm:right-4 sm:max-w-sm sm:rounded-2xl sm:border">
+    <div className="print:hidden fixed inset-x-0 bottom-20 z-40 border-t border-blue-200 bg-white p-4 shadow-[0_-8px_24px_rgba(15,23,42,0.12)] xl:bottom-4 sm:inset-x-auto sm:right-4 sm:max-w-sm sm:rounded-2xl sm:border">
       <p className="text-base font-semibold text-gray-950">Add SanoVault to your Home Screen</p>
       <p className="mt-1 text-sm leading-6 text-gray-600">
         {ios

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import AppNav from '@/components/layout/AppNav';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { familyInviteMessage, whatsappShareHref } from '@/lib/share/whatsapp';
 
 type Member = {
   householdId: string;
@@ -63,6 +64,8 @@ export default function HouseholdDetailPage() {
   const [linkable, setLinkable] = useState<Patient[]>([]);
   const [linkPatientId, setLinkPatientId] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteUrl, setInviteUrl] = useState('');
+  const [origin, setOrigin] = useState('https://sanovault.com');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -123,6 +126,10 @@ export default function HouseholdDetailPage() {
     void load();
   }, [session, status, router, load]);
 
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
+
   const rename = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
@@ -158,10 +165,11 @@ export default function HouseholdDetailPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to invite');
       setInviteEmail('');
+      setInviteUrl(data.acceptUrl || `${origin}/households/invites/${data.token}`);
       setMessage(
         data.emailSent
-          ? `Invite sent to ${data.email}`
-          : `Invite created for ${data.email}. Email not sent${data.emailError ? `: ${data.emailError}` : ''}. Share: ${data.acceptUrl}`
+          ? `Invite created for ${data.email}. Send it on WhatsApp too.`
+          : `Invite created for ${data.email}. Send the WhatsApp link below.`
       );
       await load();
     } catch (err) {
@@ -332,7 +340,7 @@ export default function HouseholdDetailPage() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">{name}</h1>
                 <p className="text-sm text-gray-600 mt-1">
-                  Equal members can invite, manage patients, and share access across households.
+                  People in this folder can see the same family reports.
                 </p>
               </div>
 
@@ -359,9 +367,9 @@ export default function HouseholdDetailPage() {
               </form>
 
               <section>
-                <h2 className="text-lg font-semibold text-gray-900 mb-3">Patients in this household</h2>
+                <h2 className="text-lg font-semibold text-gray-900 mb-3">People in this folder</h2>
                 {patients.length === 0 ? (
-                  <p className="text-sm text-gray-600 mb-3">No patients yet. <Link href="/patients/new" className="text-[#0175C2] hover:underline">Add a patient</Link>.</p>
+                  <p className="text-sm text-gray-600 mb-3">No one yet. <Link href="/patients/new" className="text-[#0175C2] hover:underline">Add a person</Link>.</p>
                 ) : (
                   <ul className="divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden mb-3">
                     {patients.map((p) => (
@@ -395,7 +403,7 @@ export default function HouseholdDetailPage() {
                       ))}
                     </select>
                     <button type="submit" disabled={busy} className="bg-[#0175C2] text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                      Link existing patient
+                      Link existing person
                     </button>
                   </form>
                 )}
@@ -425,33 +433,53 @@ export default function HouseholdDetailPage() {
 
               <section>
                 <h2 className="text-lg font-semibold text-gray-900 mb-3">Invite someone</h2>
+                <p className="mb-3 text-sm text-gray-600">Send a WhatsApp link. Add their Google email if you know it.</p>
                 <form onSubmit={sendInvite} className="flex flex-col sm:flex-row gap-3">
                   <input
                     type="email"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="email@example.com"
-                    className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-white placeholder:text-gray-500"
+                    placeholder="their-google@email.com"
+                    className="flex-1 min-h-12 border border-gray-300 rounded-md px-3 py-2 text-base text-gray-900 bg-white placeholder:text-gray-500"
                     required
                   />
-                  <button type="submit" disabled={busy} className="bg-[#0175C2] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#015a96] disabled:opacity-50">
-                    Send invite
+                  <button type="submit" disabled={busy} className="min-h-12 bg-[#0175C2] text-white px-4 py-2 rounded-md text-base font-medium hover:bg-[#015a96] disabled:opacity-50">
+                    Create invite
                   </button>
                 </form>
+                {inviteUrl && (
+                  <a
+                    href={whatsappShareHref(familyInviteMessage(session.user?.name || 'A family member', inviteUrl))}
+                    className="mt-3 inline-flex min-h-12 items-center text-base font-medium text-[#0175C2] hover:underline"
+                  >
+                    Send this invite on WhatsApp
+                  </a>
+                )}
                 {invites.filter((i) => i.status === 'pending').length > 0 && (
                   <ul className="mt-4 space-y-2">
                     {invites
                       .filter((i) => i.status === 'pending')
-                      .map((invite) => (
-                        <li key={invite.id} className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900">
+                      .map((invite) => {
+                        const acceptUrl = `${origin}/households/invites/${invite.token}`;
+                        return (
+                        <li key={invite.id} className="flex flex-wrap items-center justify-between gap-3 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900">
                           <span>
                             {invite.email} · expires {new Date(invite.expiresAt).toLocaleDateString()}
                           </span>
-                          <button type="button" disabled={busy} onClick={() => setPendingAction({ kind: 'revoke-invite', id: invite.id, label: invite.email })} className="text-red-600 hover:underline disabled:opacity-50">
-                            Revoke
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <a
+                              href={whatsappShareHref(familyInviteMessage(session.user?.name || 'A family member', acceptUrl))}
+                              className="font-medium text-[#0175C2] hover:underline"
+                            >
+                              WhatsApp
+                            </a>
+                            <button type="button" disabled={busy} onClick={() => setPendingAction({ kind: 'revoke-invite', id: invite.id, label: invite.email })} className="text-red-600 hover:underline disabled:opacity-50">
+                              Revoke
+                            </button>
+                          </div>
                         </li>
-                      ))}
+                        );
+                      })}
                   </ul>
                 )}
               </section>

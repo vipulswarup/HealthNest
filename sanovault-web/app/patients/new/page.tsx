@@ -103,7 +103,7 @@ export default function NewPatientPage() {
       <main className="max-w-3xl mx-auto py-8 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
-            <h1 className="text-2xl font-bold text-gray-900 mb-6">Add New Patient</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-6">Add a person</h1>
 
             {error && (
               <div className="mb-6 rounded-md bg-red-50 p-4" role="alert">
@@ -114,7 +114,7 @@ export default function NewPatientPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label htmlFor="householdScope" className="block text-sm font-medium text-gray-700 mb-2">
-                  Household *
+                  Family folder *
                 </label>
                 <select
                   id="householdScope"
@@ -130,7 +130,7 @@ export default function NewPatientPage() {
                   ))}
                 </select>
                 <p className="mt-1 text-xs text-gray-600">
-                  Patients always belong to a household and can be shared with multiple households later.
+                  This person will appear for everyone who can see this folder.
                 </p>
               </div>
 
@@ -184,7 +184,7 @@ export default function NewPatientPage() {
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="abhaNumber" className="block text-sm font-medium text-gray-700 mb-2">ABHA Number</label>
+                  <label htmlFor="abhaNumber" className="block text-sm font-medium text-gray-700 mb-2">ABHA number (optional)</label>
                   <input
                     type="text"
                     id="abhaNumber"
@@ -218,7 +218,7 @@ export default function NewPatientPage() {
                   disabled={loading}
                   className="bg-[#0175C2] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-[#015a96] disabled:opacity-50"
                 >
-                  {loading ? 'Creating...' : 'Create Patient'}
+                  {loading ? 'Saving…' : 'Save'}
                 </button>
               </div>
             </form>

@@ -168,7 +168,7 @@ export default function HealthRecordDetailPage() {
                 href="/health-records"
                 className="mt-4 inline-block text-[#0175C2] hover:text-[#015a96]"
               >
-                Back to Health Records
+                Back to reports
               </Link>
             </div>
           </div>

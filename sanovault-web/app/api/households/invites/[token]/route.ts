@@ -99,10 +99,6 @@ export async function POST(
     const invite = await loadInviteByToken(token);
     if (!invite) throw new AppError('Invite not found', 404);
 
-    if (user.email.toLowerCase() !== String(invite.email).toLowerCase()) {
-      throw new AppError('This invite was sent to a different email address', 403);
-    }
-
     if (invite.status !== 'pending') {
       throw new AppError(`Invite is ${invite.status}`, 400);
     }

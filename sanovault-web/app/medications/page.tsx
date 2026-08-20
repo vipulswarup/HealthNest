@@ -250,10 +250,10 @@ function MedicationsContent() {
 
           {error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
           {patients.length === 0 ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm"><p className="text-gray-600">Add a patient before recording medications.</p><Link href="/patients/new" className="mt-4 inline-block text-[#0175C2] hover:underline">Add patient</Link></div>
+            <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm"><p className="text-gray-600">Add a person before recording medicines.</p><Link href="/patients/new" className="mt-4 inline-block text-[#0175C2] hover:underline">Add a person</Link></div>
           ) : <>
             <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <label htmlFor="medication-patient" className="block text-sm font-medium text-gray-700">Patient</label>
+              <label htmlFor="medication-patient" className="block text-sm font-medium text-gray-700">Person</label>
               <select id="medication-patient" value={patientId} onChange={(event) => {
                 setPatientId(event.target.value);
                 router.replace(`/medications?patientId=${event.target.value}`, { scroll: false });

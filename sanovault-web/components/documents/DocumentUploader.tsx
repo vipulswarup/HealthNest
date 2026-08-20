@@ -96,7 +96,7 @@ export function DocumentUploader({
         if (onUploadSuccess) {
           onUploadSuccess(document);
         } else {
-          router.push(`/documents/${document.id}/review`);
+          router.push(`/health-records/new`);
           return;
         }
       }

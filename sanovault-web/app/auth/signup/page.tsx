@@ -6,7 +6,6 @@ import SocialAuthButtons from '@/components/auth/SocialAuthButtons';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { BETA_ACKNOWLEDGEMENT_VERSION } from '@/lib/legal/beta-acknowledgement';
 
 function SignUpContent() {
   const router = useRouter();
@@ -20,11 +19,11 @@ function SignUpContent() {
   const [email, setEmail] = useState(emailFromInvite);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [agreedToBetaAcknowledgement, setAgreedToBetaAcknowledgement] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
 
   useEffect(() => {
     if (emailFromInvite) setEmail(emailFromInvite);
@@ -44,11 +43,6 @@ function SignUpContent() {
       return;
     }
 
-    if (!agreedToBetaAcknowledgement) {
-      setError('You must agree to the beta acknowledgement to create an account.');
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -64,17 +58,7 @@ function SignUpContent() {
         return;
       }
 
-      const acknowledgement = await fetch('/api/users/beta-acknowledgement', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ version: BETA_ACKNOWLEDGEMENT_VERSION }),
-      });
-      if (!acknowledgement.ok) {
-        router.push(`/beta-acknowledgement?${new URLSearchParams({ callbackUrl })}`);
-        return;
-      }
-
-      router.push(callbackUrl);
+      router.push(betaAcknowledgementUrl);
       router.refresh();
     } catch {
       setError('Unable to create account. Please try again.');
@@ -134,6 +118,7 @@ function SignUpContent() {
           onError={setError}
         />
 
+        {showPasswordForm ? (
         <form className="space-y-6 border-t border-gray-200 pt-6" onSubmit={handleSubmit}>
           <p className="text-sm font-medium text-gray-700">Or create an account with a password</p>
           <div className="space-y-4">
@@ -222,18 +207,6 @@ function SignUpContent() {
                 <button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} className="absolute inset-y-0 right-0 px-3 text-sm font-medium text-gray-600" aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}>{showConfirmPassword ? 'Hide' : 'Show'}</button>
               </div>
             </div>
-            <label className="flex cursor-pointer gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-gray-800">
-              <input
-                type="checkbox"
-                checked={agreedToBetaAcknowledgement}
-                onChange={(e) => setAgreedToBetaAcknowledgement(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#0175C2] focus:ring-[#0175C2]"
-              />
-              <span>
-                I understand SanoVault is an experimental beta and is not currently represented as HIPAA, GDPR, or DPDP compliant. I agree to the{' '}
-                <a href={betaAcknowledgementUrl} className="font-medium text-[#0175C2] underline" target="_blank" rel="noreferrer">beta acknowledgement</a> before creating my account.
-              </span>
-            </label>
           </div>
 
           <div>
@@ -245,16 +218,25 @@ function SignUpContent() {
               {loading ? 'Creating account...' : 'Sign up with password'}
             </button>
           </div>
-
-          <div className="text-center">
-            <a
-              href={signInHref}
-              className="font-medium text-[#0175C2] hover:text-[#015a96] transition-colors"
-            >
-              Already have an account? Sign in
-            </a>
-          </div>
         </form>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowPasswordForm(true)}
+            className="w-full text-center text-sm font-medium text-gray-600 hover:text-gray-950"
+          >
+            Use a password instead
+          </button>
+        )}
+
+        <div className="text-center">
+          <a
+            href={signInHref}
+            className="font-medium text-[#0175C2] hover:text-[#015a96] transition-colors"
+          >
+            Already have an account? Sign in
+          </a>
+        </div>
       </div>
     </div>
   );

@@ -134,7 +134,7 @@ export default function PatientDetailPage() {
                 href="/patients"
                 className="mt-4 inline-block text-[#0175C2] hover:text-[#015a96]"
               >
-                Back to Patients
+                Back to family
               </Link>
             </div>
           </div>
@@ -154,7 +154,7 @@ export default function PatientDetailPage() {
               href="/patients"
               className="text-sm font-medium text-[#0175C2] hover:underline"
             >
-              ← Back to patients
+              ← Back to family
             </Link>
             <div className="flex flex-wrap gap-2">
               <Link
@@ -240,12 +240,12 @@ export default function PatientDetailPage() {
 
           <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Health Records</h3>
+              <h3 className="text-xl font-bold text-gray-900">Reports</h3>
               <Link
                 href={`/patients/${patientId}/records/new`}
                 className="px-4 py-2 bg-[#0175C2] text-white rounded-lg hover:bg-[#015a96] transition-colors text-sm font-medium"
               >
-                Add Record
+                Add a report
               </Link>
             </div>
 
@@ -256,12 +256,12 @@ export default function PatientDetailPage() {
               </div>
             ) : healthRecords.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
-                <p>No health records yet</p>
+                <p>No reports yet</p>
                 <Link
                   href={`/patients/${patientId}/records/new`}
                   className="mt-4 inline-block text-[#0175C2] hover:text-[#015a96]"
                 >
-                  Add your first health record
+                  Add a report
                 </Link>
               </div>
             ) : (

@@ -14,8 +14,14 @@ export const RECORD_TYPE_LABELS: Record<string, string> = {
   OTHER: 'Other',
 };
 
-export function getRecordTypeLabel(recordType: string): string {
-  return RECORD_TYPE_LABELS[recordType] || recordType;
+export function humanizeLabel(value: string) {
+  const key = value.trim();
+  if (!key) return '';
+  return RECORD_TYPE_LABELS[key] || RECORD_TYPE_LABELS[key.toUpperCase()] || key.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+export function getRecordTypeLabel(recordType: string) {
+  return humanizeLabel(recordType);
 }
 
 export function getRecordTypeOptions() {

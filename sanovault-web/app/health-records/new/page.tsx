@@ -833,7 +833,7 @@ function NewHealthRecordContent() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label htmlFor="patientId" className="block text-sm font-medium text-gray-700 mb-2">
-            Patient *
+            Person
           </label>
           <select
             id="patientId"
@@ -843,7 +843,7 @@ function NewHealthRecordContent() {
             onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
           >
-            <option value="">Select a patient</option>
+            <option value="">Select a person</option>
             {patients.map((patient) => (
               <option key={patient.id} value={patient.id}>
                 {patient.firstName} {patient.lastName || ''}
@@ -854,7 +854,7 @@ function NewHealthRecordContent() {
 
         <div>
           <label htmlFor="recordType" className="block text-sm font-medium text-gray-700 mb-2">
-            Record Type *
+            What kind of report
           </label>
           <select
             id="recordType"
@@ -865,7 +865,7 @@ function NewHealthRecordContent() {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
             disabled={categories.length === 0}
           >
-            <option value="">{categories.length === 0 ? 'Loading categories...' : 'Select a record type'}</option>
+            <option value="">{categories.length === 0 ? 'Loading…' : 'Choose one'}</option>
             {categories.map((category) => (
               <option key={category.code} value={category.code}>
                 {category.displayName}
@@ -873,13 +873,13 @@ function NewHealthRecordContent() {
             ))}
           </select>
           {categories.length === 0 && (
-            <p className="mt-1 text-sm text-gray-500">If categories don&apos;t load, make sure to run: tsx scripts/init-health-record-categories.ts</p>
+            <p className="mt-1 text-sm text-gray-500">If this list is empty, save anyway as Other and we can sort it later.</p>
           )}
         </div>
 
         <div>
           <label htmlFor="source" className="block text-sm font-medium text-gray-700 mb-2">
-            Source (Hospital/Provider)
+            Hospital or clinic
           </label>
           <div className="relative">
             <input
@@ -1168,7 +1168,7 @@ function NewHealthRecordContent() {
             href="/health-records"
             className="mb-5 inline-block text-sm font-medium text-[#0175C2] hover:underline"
           >
-            ← Back to health records
+            ← Back to reports
           </Link>
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
             <div className="mb-6">

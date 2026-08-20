@@ -7,7 +7,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import AppNav from '@/components/layout/AppNav';
 
-type Patient = { id: string; firstName: string; lastName?: string };
 type InvitePreview = {
   invite: {
     householdName?: string;
@@ -15,8 +14,6 @@ type InvitePreview = {
     invitedByName?: string;
     expiresAt: string;
   };
-  shareablePatients: Patient[];
-  emailMatches: boolean;
   authenticated?: boolean;
 };
 
@@ -27,7 +24,6 @@ export default function AcceptInvitePage() {
   const token = String(params.token || '');
 
   const [preview, setPreview] = useState<InvitePreview | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -47,7 +43,6 @@ export default function AcceptInvitePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Invite not found');
       setPreview(data);
-      setSelected(new Set());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load invite');
     } finally {
@@ -60,15 +55,6 @@ export default function AcceptInvitePage() {
     void load();
   }, [status, session?.user?.id, load]);
 
-  const togglePatient = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
   const accept = async () => {
     setBusy(true);
     setError('');
@@ -76,7 +62,7 @@ export default function AcceptInvitePage() {
       const res = await fetch(`/api/households/invites/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patientIds: Array.from(selected) }),
+        body: JSON.stringify({ patientIds: [] }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to accept');
@@ -117,7 +103,7 @@ export default function AcceptInvitePage() {
   }
 
   const invite = preview?.invite;
-  const householdName = invite?.householdName || 'a household';
+  const householdName = invite?.householdName || 'the family folder';
   const inviterName = invite?.invitedByName || 'Someone';
   const isPending = invite?.status === 'pending';
 
@@ -145,7 +131,7 @@ export default function AcceptInvitePage() {
             </h1>
             {invite && (
               <p className="mt-2 text-sm text-gray-600">
-                <strong>{inviterName}</strong> invited you to share health records on SanoVault.
+                <strong>{inviterName}</strong> invited you to the family health folder.
               </p>
             )}
           </div>
@@ -169,19 +155,19 @@ export default function AcceptInvitePage() {
           {invite && isPending && (
             <div className="space-y-3">
               <Link
-                href={`/auth/signup?${authQuery}`}
-                className="flex w-full justify-center rounded-lg bg-[#0175C2] px-4 py-3 text-sm font-medium text-white hover:bg-[#015a96] transition-colors"
+                href={`/auth/signin?${authQuery}`}
+                className="flex min-h-12 w-full justify-center rounded-lg bg-[#0175C2] px-4 py-3 text-base font-medium text-white hover:bg-[#015a96] transition-colors"
               >
-                Create account
+                Join with Google
               </Link>
               <Link
                 href={`/auth/signin?${authQuery}`}
-                className="flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-900 hover:bg-gray-50 transition-colors"
+                className="flex min-h-12 w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 transition-colors"
               >
-                Already have an account? Sign in
+                Use a sign-in link or password
               </Link>
-              <p className="text-xs text-center text-gray-500">
-                Sign in with the email address that received this invitation.
+              <p className="text-sm text-center text-gray-500">
+                After you sign in, this page will add you to the family folder.
               </p>
             </div>
           )}
@@ -195,7 +181,7 @@ export default function AcceptInvitePage() {
       <AppNav />
       <main className="max-w-xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-2xl shadow-xl p-6 space-y-5">
-          <h1 className="text-2xl font-bold text-gray-900">Household invitation</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Join the family folder</h1>
 
           {error && (
             <div className="rounded-md bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">{error}</div>
@@ -204,59 +190,25 @@ export default function AcceptInvitePage() {
           {preview && (
             <>
               <p className="text-gray-800">
-                <strong>{inviterName}</strong> invited you to join <strong>{householdName}</strong>.
-              </p>
-              <p className="text-sm text-gray-600">
-                Status: {invite?.status}
+                <strong>{inviterName}</strong> invited you to {householdName}.
               </p>
 
-              {!preview.emailMatches && (
-                <div className="rounded-md bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 text-sm">
-                  You are signed in with a different account than this invite. Sign in with the invited account to accept.
-                </div>
-              )}
-
-              {isPending && preview.emailMatches && (
+              {isPending && (
                 <>
-                  <div>
-                    <h2 className="font-semibold text-gray-900 mb-2">Also share patients into this household?</h2>
-                    <p className="text-sm text-gray-600 mb-3">
-                      Optional. Selected patients will also appear in this household (they keep any other household links).
-                    </p>
-                    {preview.shareablePatients.length === 0 ? (
-                      <p className="text-sm text-gray-600">No other patients available to share yet.</p>
-                    ) : (
-                      <ul className="space-y-2">
-                        {preview.shareablePatients.map((p) => (
-                          <li key={p.id}>
-                            <label className="flex items-center gap-2 text-sm text-gray-900">
-                              <input
-                                type="checkbox"
-                                checked={selected.has(p.id)}
-                                onChange={() => togglePatient(p.id)}
-                              />
-                              {[p.firstName, p.lastName].filter(Boolean).join(' ')}
-                            </label>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-
                   <div className="flex flex-wrap gap-3">
                     <button
                       type="button"
                       disabled={busy}
                       onClick={() => void accept()}
-                      className="bg-[#0175C2] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#015a96] disabled:opacity-50"
+                      className="min-h-12 rounded-lg bg-[#0175C2] px-4 py-3 text-base font-medium text-white hover:bg-[#015a96] disabled:opacity-50"
                     >
-                      {busy ? 'Joining...' : 'Accept & join'}
+                      {busy ? 'Joining...' : 'Join family folder'}
                     </button>
                     <button
                       type="button"
                       disabled={busy}
                       onClick={() => void decline()}
-                      className="text-sm font-medium text-gray-700 hover:underline disabled:opacity-50"
+                      className="min-h-12 px-4 text-base font-medium text-gray-700 hover:underline disabled:opacity-50"
                     >
                       Decline
                     </button>
@@ -266,7 +218,7 @@ export default function AcceptInvitePage() {
 
               {!isPending && (
                 <Link href="/households" className="text-sm text-[#0175C2] hover:underline">
-                  Back to households
+                  Back to who can see this
                 </Link>
               )}
             </>

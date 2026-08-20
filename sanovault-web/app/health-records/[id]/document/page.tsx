@@ -136,13 +136,13 @@ export default function DocumentPreviewPage() {
                   href={`/health-records/${recordId}`}
                   className="inline-block text-[#0175C2] hover:text-[#015a96]"
                 >
-                  Back to Health Record
+                  Back to this report
                 </Link>
                 <Link
                   href="/health-records"
                   className="inline-block text-[#0175C2] hover:text-[#015a96]"
                 >
-                  Back to Health Records
+                  Back to reports
                 </Link>
               </div>
             </div>

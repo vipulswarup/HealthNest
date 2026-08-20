@@ -44,6 +44,7 @@ export const config = {
     '/documents/:path*',
     '/reports',
     '/reports/:path*',
+    '/for-the-doctor',
     '/beta-acknowledgement',
     '/households',
     // Allow /households/invites/:token without auth so invitees see a pending-invite gate.

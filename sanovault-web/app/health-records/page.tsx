@@ -9,6 +9,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/ToastProvider';
 import { HealthRecordCategory } from '@/lib/types/health-record-category.types';
 import { HealthcareSource } from '@/lib/types/healthcare-source.types';
+import { humanizeLabel } from '@/lib/constants/labels';
 
 interface HealthRecord {
   id: string;
@@ -67,7 +68,7 @@ function HealthRecordsContent() {
 
   const getRecordTypeLabel = (code: string): string => {
     const category = categories.find(cat => cat.code === code);
-    return category?.displayName || code;
+    return category?.displayName || humanizeLabel(code);
   };
 
   const fetchCategories = useCallback(async () => {
@@ -258,37 +259,36 @@ function HealthRecordsContent() {
       <main className="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="flex justify-between items-center mb-6 gap-3 flex-wrap">
-            <h1 className="text-3xl font-bold text-gray-900">Health Records</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Reports</h1>
             <Link
               href={selectedPatientId ? `/reports/blood-summary?patientId=${selectedPatientId}` : '/reports/blood-summary'}
-              className="text-sm text-[#0175C2] hover:underline"
+              className="min-h-11 text-base text-[#0175C2] hover:underline"
             >
-              Blood Summary
+              Blood work
             </Link>
             {selectedPatientId && (
               <Link
                 href={`/health-records/new?patientId=${selectedPatientId}`}
-                className="bg-[#0175C2] hover:bg-[#015a96] text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                className="min-h-12 bg-[#0175C2] hover:bg-[#015a96] text-white px-4 py-2 rounded-lg font-medium transition-colors"
               >
-                + Add Record
+                Add a report
               </Link>
             )}
           </div>
 
           {Object.keys(patients).length === 0 ? (
             <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-              <div className="text-6xl mb-4">👥</div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                No patients found
+                Add a person first
               </h3>
               <p className="text-gray-600 mb-6">
-                You need to add a patient first before creating health records.
+                Reports need a name, such as Dad or your daughter.
               </p>
               <Link
                 href="/patients/new"
-                className="inline-block bg-[#0175C2] hover:bg-[#015a96] text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                className="inline-block min-h-12 bg-[#0175C2] hover:bg-[#015a96] text-white px-6 py-3 rounded-lg font-medium transition-colors"
               >
-                Add Patient
+                Add a person
               </Link>
             </div>
           ) : (
@@ -296,7 +296,7 @@ function HealthRecordsContent() {
               <div className="bg-white rounded-xl shadow-md p-6 mb-6">
                 <div className="mb-4">
                   <label htmlFor="patient" className="block text-sm font-medium text-gray-700 mb-2">
-                    Patient
+                    Person
                   </label>
                   <select
                     id="patient"
@@ -307,7 +307,7 @@ function HealthRecordsContent() {
                     }}
                     className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
                   >
-                    <option value="">All Patients</option>
+                    <option value="">Everyone</option>
                     {Object.values(patients).map((patient) => (
                       <option key={patient.id} value={patient.id}>
                         {patient.firstName} {patient.lastName || ''}
@@ -340,7 +340,7 @@ function HealthRecordsContent() {
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      Filters {hasActiveFilters && `(${[keyword, filterSource, filterRecordType, filterTag, startDate, endDate].filter(Boolean).length})`}
+                      Find a report {hasActiveFilters && `(${[keyword, filterSource, filterRecordType, filterTag, startDate, endDate].filter(Boolean).length})`}
                     </button>
                     {hasActiveFilters && (
                       <button
@@ -415,7 +415,7 @@ function HealthRecordsContent() {
                         <option value="">All Tags</option>
                         {allTags.map((tag) => (
                           <option key={tag} value={tag}>
-                            {tag}
+                            {humanizeLabel(tag)}
                           </option>
                         ))}
                       </select>
@@ -561,21 +561,20 @@ function HealthRecordsContent() {
 
               {records.length === 0 ? (
                 <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-                  <div className="text-6xl mb-4">📋</div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    {hasActiveFilters ? 'No records match your filters' : 'No health records yet'}
+                    {hasActiveFilters ? 'Nothing matched' : 'No reports yet'}
                   </h3>
                   <p className="text-gray-600 mb-6">
-                    {hasActiveFilters 
-                      ? 'Try adjusting your search criteria or clear filters to see all records.'
-                      : 'Start by adding a health record.'}
+                    {hasActiveFilters
+                      ? 'Try a simpler search, or clear it to see everything.'
+                      : 'Add the first report for this person.'}
                   </p>
                   {selectedPatientId && !hasActiveFilters && (
                     <Link
                       href={`/health-records/new?patientId=${selectedPatientId}`}
                       className="inline-block bg-[#0175C2] hover:bg-[#015a96] text-white px-6 py-3 rounded-lg font-medium transition-colors"
                     >
-                      Add Health Record
+                      Add a report
                     </Link>
                   )}
                   {hasActiveFilters && (
@@ -638,7 +637,7 @@ function HealthRecordsContent() {
                                   onClick={() => handleTagClick(tag)}
                                   className="text-xs bg-gray-100 hover:bg-[#0175C2] hover:text-white text-gray-700 px-2 py-1 rounded transition-colors cursor-pointer"
                                 >
-                                  {tag}
+                                  {humanizeLabel(tag)}
                                 </button>
                               ))}
                             </div>
