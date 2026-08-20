@@ -1,7 +1,5 @@
 import { authClient } from '@/lib/auth/client';
 
-export type NeonSocialProvider = 'google';
-
 function resolveCallbackURL(callbackURL: string) {
   if (callbackURL.startsWith('http://') || callbackURL.startsWith('https://')) {
     return callbackURL;
@@ -21,7 +19,6 @@ export async function signInWithGoogle(callbackURL = '/dashboard') {
     errorCallbackURL: resolveCallbackURL('/auth/signin?error=oauth_google'),
   });
 
-  // Ensure browser follows the OAuth URL when the SDK returns redirect metadata.
   const redirectUrl =
     result && typeof result === 'object' && 'data' in result
       ? (result.data as { url?: string; redirect?: boolean } | null)?.url

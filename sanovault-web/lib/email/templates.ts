@@ -10,7 +10,7 @@ const BRAND = {
 };
 
 export function appBaseUrl(): string {
-  return (process.env.NEXT_PUBLIC_APP_URL || 'https://www.sanovault.com').replace(/\/$/, '');
+  return (process.env.NEXT_PUBLIC_APP_URL || 'https://sanovault.com').replace(/\/$/, '');
 }
 
 export function logoUrl(): string {

@@ -1,12 +1,24 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "./providers";
 import BetaAcknowledgementGate from '@/components/auth/BetaAcknowledgementGate';
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0175C2",
+};
 
 export const metadata: Metadata = {
   title: "SanoVault - Your Health Record Management",
   description: "Manage your health records, medications, and family health information",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "SanoVault",
+    statusBarStyle: "default",
+  },
   icons: {
     icon: [
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },

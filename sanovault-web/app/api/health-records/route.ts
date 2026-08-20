@@ -13,7 +13,7 @@ import { recordAuditEvent } from '@/lib/services/audit.service';
 
 const recordSchema = z.object({
   patientId: z.string().uuid(), recordType: z.string().min(1), data: z.record(z.string(), z.any()), tags: z.array(z.string()).optional(),
-  source: z.string().min(1), doctorName: z.string().optional(), documentDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
+  source: z.string().optional(), doctorName: z.string().optional(), documentDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
   documentId: z.string().uuid().optional(), ocrText: z.string().optional(), hospitalSystemName: z.string().optional(),
   hospitalIdentifierType: z.string().optional(), hospitalIdentifierValue: z.string().optional(),
 });
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
     const [record] = await sql`
       INSERT INTO health_records (patient_id, record_type, data, tags, source, doctor_name, document_date, document_id, ocr_text, hospital_system_name, hospital_identifier_type, hospital_identifier_value)
-      VALUES (${data.patientId}::uuid, ${data.recordType}, ${JSON.stringify(data.data)}::jsonb, ${data.tags || []}, ${data.source}, ${data.doctorName || null}, ${data.documentDate || null}::date, ${data.documentId || null}::uuid, ${ocrText}, ${data.hospitalSystemName || null}, ${data.hospitalIdentifierType || null}, ${data.hospitalIdentifierValue || null})
+      VALUES (${data.patientId}::uuid, ${data.recordType}, ${JSON.stringify(data.data)}::jsonb, ${data.tags || []}, ${data.source?.trim() || 'Not specified'}, ${data.doctorName || null}, ${data.documentDate || null}::date, ${data.documentId || null}::uuid, ${ocrText}, ${data.hospitalSystemName || null}, ${data.hospitalIdentifierType || null}, ${data.hospitalIdentifierValue || null})
       RETURNING *
     `;
     await recordAuditEvent({

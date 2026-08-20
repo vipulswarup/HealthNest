@@ -4,8 +4,10 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AppNav from '@/components/layout/AppNav';
+import PersonPicker from '@/components/patients/PersonPicker';
 import { useHouseholdContext } from '@/components/households/useHouseholdContext';
 import { useSession } from '@/lib/auth/client';
+import { getLastPatientId, setLastPatientId } from '@/lib/patients/last-used';
 
 type PendingInvite = {
   id: string;
@@ -37,6 +39,7 @@ export default function Dashboard() {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [lastPatientId, setLastPatientIdState] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'loading' || householdsLoading) return;
@@ -94,12 +97,16 @@ export default function Dashboard() {
     return () => { active = false; };
   }, [householdId, households.length, householdsLoading, router, session, status]);
 
+  useEffect(() => {
+    const stored = getLastPatientId();
+    setLastPatientIdState(stored && patients.some((patient) => patient.id === stored) ? stored : null);
+  }, [patients]);
+
   const patientsById = useMemo(
     () => Object.fromEntries(patients.map((patient) => [patient.id, patient])),
     [patients],
   );
   const activeMedicationCount = medications.filter((medication) => medication.isActive).length;
-  const primaryPatientId = patients[0]?.id;
 
   if (status === 'loading' || householdsLoading) {
     return <div className="min-h-screen grid place-items-center bg-slate-50 text-gray-600" role="status">Loading your vault…</div>;
@@ -120,17 +127,17 @@ export default function Dashboard() {
             <h1 className="mt-1 text-3xl font-bold tracking-tight text-gray-950">
               Welcome back{session.user.firstName ? `, ${session.user.firstName}` : ''}
             </h1>
-            <p className="mt-2 max-w-2xl text-gray-600">Review what changed, add a record, or continue caring for your household.</p>
+            <p className="mt-2 max-w-2xl text-gray-600">Add a report for the right person, or open what changed.</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/patients/new" className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
-              Add patient
+              Add family member
             </Link>
             <Link
-              href={primaryPatientId ? `/health-records/new?patientId=${primaryPatientId}` : '/patients/new'}
+              href={patients.length > 0 ? '/health-records/new' : '/patients/new'}
               className="rounded-lg bg-[#0175C2] px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-[#015a96]"
             >
-              Upload record
+              Add a report
             </Link>
           </div>
         </div>
@@ -159,6 +166,22 @@ export default function Dashboard() {
 
         {error && <div role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>}
 
+        {households.length > 0 && patients.length > 0 && (
+          <section className="mt-8 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm" aria-labelledby="add-report-heading">
+            <h2 id="add-report-heading" className="font-semibold text-gray-950">Add a report</h2>
+            <p className="mt-1 text-sm text-gray-600">Choose who this is for, then take a photo or pick a file from WhatsApp.</p>
+            <div className="mt-4">
+              <PersonPicker
+                people={patients}
+                lastUsedId={lastPatientId}
+                onSelect={(id) => {
+                  setLastPatientId(id);
+                  router.push(`/health-records/new?patientId=${id}`);
+                }}
+              />
+            </div>
+          </section>
+        )}
         {households.length > 0 && (
           <>
             <section className="mt-8 grid gap-4 sm:grid-cols-3" aria-label="Vault overview">
@@ -169,20 +192,20 @@ export default function Dashboard() {
                   </span>
                   <span className="text-3xl font-bold text-gray-950">{loading ? '—' : patients.length}</span>
                 </div>
-                <h2 className="mt-4 font-semibold text-gray-950">Patients</h2>
-                <p className="mt-1 text-sm text-gray-600">Profiles in this household</p>
+                <h2 className="mt-4 font-semibold text-gray-950">Family</h2>
+                <p className="mt-1 text-sm text-gray-600">People in this household</p>
               </Link>
-              <Link href={primaryPatientId ? `/health-records?patientId=${primaryPatientId}` : '/health-records'} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md">
+              <Link href="/health-records" className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md">
                 <div className="flex items-center justify-between">
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-[#0175C2]">
                     <svg className={iconClassName} viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5l5 5v11a2 2 0 01-2 2z" /></svg>
                   </span>
                   <span className="text-3xl font-bold text-gray-950">{loading ? '—' : records.length}</span>
                 </div>
-                <h2 className="mt-4 font-semibold text-gray-950">Health records</h2>
+                <h2 className="mt-4 font-semibold text-gray-950">Reports</h2>
                 <p className="mt-1 text-sm text-gray-600">Documents and clinical entries</p>
               </Link>
-              <Link href={primaryPatientId ? `/medications?patientId=${primaryPatientId}` : '/medications'} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md">
+              <Link href="/medications" className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md">
                 <div className="flex items-center justify-between">
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
                     <svg className={iconClassName} viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10.5 6.5l7 7m-9.9 4.9a4.95 4.95 0 01-7-7l7.8-7.8a4.95 4.95 0 017 7l-7.8 7.8z" /></svg>
@@ -204,7 +227,7 @@ export default function Dashboard() {
                   <Link href="/health-records" className="text-sm font-medium text-[#0175C2] hover:underline">View all</Link>
                 </div>
                 {records.length === 0 && !loading ? (
-                  <div className="px-5 py-10 text-center text-sm text-gray-600">No records yet. Upload the first one to start building the timeline.</div>
+                  <div className="px-5 py-10 text-center text-sm text-gray-600">No records yet. Add the first report to start building the timeline.</div>
                 ) : (
                   <ul className="divide-y divide-gray-100">
                     {records.slice(0, 4).map((record) => {
@@ -228,8 +251,8 @@ export default function Dashboard() {
               <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm" aria-labelledby="quick-actions-title">
                 <h2 id="quick-actions-title" className="font-semibold text-gray-950">Quick actions</h2>
                 <div className="mt-4 space-y-2">
-                  <Link href={primaryPatientId ? `/reports/blood-summary?patientId=${primaryPatientId}` : '/reports/blood-summary'} className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:border-blue-200 hover:bg-blue-50">Blood work summary <span aria-hidden="true">→</span></Link>
-                  <Link href={primaryPatientId ? `/medications/report?patientId=${primaryPatientId}` : '/medications'} className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:border-blue-200 hover:bg-blue-50">Doctor-facing medication list <span aria-hidden="true">→</span></Link>
+                  <Link href={lastPatientId ? `/reports/blood-summary?patientId=${lastPatientId}` : '/reports/blood-summary'} className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:border-blue-200 hover:bg-blue-50">Blood work summary <span aria-hidden="true">→</span></Link>
+                  <Link href="/medications" className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:border-blue-200 hover:bg-blue-50">Doctor-facing medication list <span aria-hidden="true">→</span></Link>
                   <Link href="/households" className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:border-blue-200 hover:bg-blue-50">Manage household access <span aria-hidden="true">→</span></Link>
                 </div>
               </section>

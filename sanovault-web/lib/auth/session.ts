@@ -19,17 +19,17 @@ export async function getAuthenticatedUser(): Promise<CurrentUser | null> {
   const user = session?.user;
   if (!user) return null;
 
-  const name = user.name?.trim() || user.email;
+  const email = user.email?.trim().toLowerCase() || '';
+  const name = user.name?.trim() || email || 'User';
   const { firstName, lastName } = splitName(name);
-  const email = user.email?.trim().toLowerCase() || null;
   await sql`
     INSERT INTO profiles (user_id, first_name, last_name, email)
-    VALUES (${user.id}, ${firstName}, ${lastName}, ${email})
+    VALUES (${user.id}, ${firstName}, ${lastName}, ${email || null})
     ON CONFLICT (user_id) DO UPDATE SET
       email = COALESCE(EXCLUDED.email, profiles.email),
       updated_at = NOW()
   `;
-  return { id: user.id, email: user.email, name };
+  return { id: user.id, email, name };
 }
 
 /**

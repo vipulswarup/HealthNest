@@ -8,11 +8,13 @@ import AppNav from '@/components/layout/AppNav';
 import { DEFAULT_TAGS } from '@/lib/constants/tags';
 import { DocumentUploader } from '@/components/documents/DocumentUploader';
 import { OCRProgress } from '@/components/documents/OCRProgress';
+import PersonPicker from '@/components/patients/PersonPicker';
 import { LabResultsEditor } from '@/components/lab/LabResultsEditor';
 import { HealthRecordCategory } from '@/lib/types/health-record-category.types';
 import { HealthcareSource } from '@/lib/types/healthcare-source.types';
 import { Doctor } from '@/lib/types/doctor.types';
 import { LabResult, parseBloodResults } from '@/lib/reports/blood-summary';
+import { getLastPatientId, setLastPatientId } from '@/lib/patients/last-used';
 
 function NewHealthRecordContent() {
   const { data: session, status } = useSession();
@@ -55,6 +57,7 @@ function NewHealthRecordContent() {
   const [labEditorOpen, setLabEditorOpen] = useState(false);
   const [labResults, setLabResults] = useState<LabResult[]>([]);
   const [labResultsTouched, setLabResultsTouched] = useState(false);
+  const [lastUsedPatientId, setLastUsedPatientId] = useState<string | null>(null);
   
   // AI extraction results
   const [aiResults, setAiResults] = useState<{
@@ -98,7 +101,12 @@ function NewHealthRecordContent() {
       const data = await response.json();
       setPatients(data);
 
-      setFormData((current) => patientId && !current.patientId ? { ...current, patientId } : current);
+      setFormData((current) => {
+        if (current.patientId) return current;
+        if (patientId) return { ...current, patientId };
+        if (data.length === 1) return { ...current, patientId: data[0].id };
+        return current;
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
@@ -173,6 +181,10 @@ function NewHealthRecordContent() {
     void fetchSources();
     void fetchDoctors();
   }, [fetchCategories, fetchDoctors, fetchPatients, fetchSources, router, session, status]);
+
+  useEffect(() => {
+    setLastUsedPatientId(getLastPatientId());
+  }, []);
 
   const handleSourceChange = (value: string) => {
     setSourceInput(value);
@@ -539,7 +551,7 @@ function NewHealthRecordContent() {
         },
         body: JSON.stringify({
           ...formData,
-          source: formData.source,
+          source: formData.source.trim() || 'Not specified',
           data: recordData,
           documentId: uploadedDocument?.id,
           ocrText: ocrText || undefined,
@@ -557,6 +569,7 @@ function NewHealthRecordContent() {
         updateQueueItem(current.localId, { status: 'saved' });
       }
       setSavedCount((count) => count + 1);
+      if (formData.patientId) setLastPatientId(formData.patientId);
       await advanceQueueOrExit(currentQueueIndex);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -656,12 +669,46 @@ function NewHealthRecordContent() {
     );
   };
 
+  const selectPerson = (id: string) => {
+    setLastPatientId(id);
+    setLastUsedPatientId(id);
+    setFormData((prev) => ({ ...prev, patientId: id }));
+  };
+
+  const selectedPerson = patients.find((person) => person.id === formData.patientId);
+
+  const renderPersonStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h3 className="mb-2 text-lg font-semibold text-gray-900">Who is this report for?</h3>
+        <p className="mb-6 text-sm text-gray-600">
+          Choose the person first. Then you can take a photo or pick a file from WhatsApp.
+        </p>
+      </div>
+      {patients.length === 0 ? (
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 text-center">
+          <p className="text-sm text-gray-700">Add a family member before saving a report.</p>
+          <Link href="/patients/new" className="mt-4 inline-block font-medium text-[#0175C2] hover:underline">
+            Add family member
+          </Link>
+        </div>
+      ) : (
+        <PersonPicker
+          people={patients}
+          selectedId={formData.patientId}
+          lastUsedId={lastUsedPatientId}
+          onSelect={selectPerson}
+        />
+      )}
+    </div>
+  );
+
   const renderStep1 = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Step 1: Upload and scan documents</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Add the document</h3>
         <p className="text-sm text-gray-600 mb-6">
-          Drop one or many files. Each document is scanned, auto-filled, then shown for your confirm/edit before the next one.
+          Take a photo of the paper, or choose a file saved from WhatsApp.
         </p>
       </div>
 
@@ -832,14 +879,13 @@ function NewHealthRecordContent() {
 
         <div>
           <label htmlFor="source" className="block text-sm font-medium text-gray-700 mb-2">
-            Source (Hospital/Provider) *
+            Source (Hospital/Provider)
           </label>
           <div className="relative">
             <input
               type="text"
               id="source"
               name="source"
-              required
               value={sourceInput || formData.source}
               onChange={(e) => handleSourceChange(e.target.value)}
               onFocus={() => {
@@ -1126,13 +1172,30 @@ function NewHealthRecordContent() {
           </Link>
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Add Health Record</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Add a report</h2>
+              {selectedPerson && (
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-blue-50 px-4 py-3">
+                  <p className="text-sm font-medium text-blue-950">
+                    For {selectedPerson.firstName} {selectedPerson.lastName || ''}
+                  </p>
+                  {patients.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, patientId: '' }))}
+                      className="text-sm font-medium text-[#0175C2] hover:underline"
+                    >
+                      Change person
+                    </button>
+                  )}
+                </div>
+              )}
+              {formData.patientId && (
               <div className="flex items-center space-x-2">
                 <div className={`flex items-center ${currentStep >= 1 ? 'text-[#0175C2]' : 'text-gray-400'}`}>
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 1 ? 'bg-[#0175C2] text-white' : 'bg-gray-200 text-gray-500'}`}>
                     {currentStep > 1 ? '✓' : '1'}
                   </div>
-                  <span className="ml-2 text-sm font-medium">Upload & Process</span>
+                  <span className="ml-2 text-sm font-medium">Document</span>
                 </div>
                 <div className="w-12 h-0.5 bg-gray-300"></div>
                 <div className={`flex items-center ${currentStep >= 2 ? 'text-[#0175C2]' : 'text-gray-400'}`}>
@@ -1142,6 +1205,7 @@ function NewHealthRecordContent() {
                   <span className="ml-2 text-sm font-medium">Details</span>
                 </div>
               </div>
+              )}
             </div>
 
             {error && (
@@ -1150,7 +1214,7 @@ function NewHealthRecordContent() {
               </div>
             )}
 
-            {currentStep === 1 ? renderStep1() : renderStep2()}
+            {!formData.patientId ? renderPersonStep() : currentStep === 1 ? renderStep1() : renderStep2()}
           </div>
         </div>
       </main>

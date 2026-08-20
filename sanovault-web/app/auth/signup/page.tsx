@@ -1,6 +1,7 @@
 'use client';
 
 import { authClient } from '@/lib/auth/client';
+import MagicLinkForm from '@/components/auth/MagicLinkForm';
 import SocialAuthButtons from '@/components/auth/SocialAuthButtons';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -108,16 +109,33 @@ function SignUpContent() {
           <p className="mt-2 text-sm text-gray-600">
             {emailFromInvite
               ? 'Finish signing up to accept your household invite'
-              : 'Start managing your health records with SanoVault'}
+              : 'Use Google, an email sign-in link, or a password.'}
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div role="alert" className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-800">{error}</div>
-            </div>
-          )}
+        {error && (
+          <div role="alert" className="rounded-md bg-red-50 p-4">
+            <div className="text-sm text-red-800">{error}</div>
+          </div>
+        )}
+
+        <SocialAuthButtons
+          mode="signup"
+          callbackURL={betaAcknowledgementUrl}
+          disabled={loading}
+          onError={setError}
+        />
+
+        <MagicLinkForm
+          email={email}
+          onEmailChange={setEmail}
+          callbackURL={betaAcknowledgementUrl}
+          disabled={loading}
+          onError={setError}
+        />
+
+        <form className="space-y-6 border-t border-gray-200 pt-6" onSubmit={handleSubmit}>
+          <p className="text-sm font-medium text-gray-700">Or create an account with a password</p>
           <div className="space-y-4">
             <div>
               <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
@@ -224,16 +242,9 @@ function SignUpContent() {
               disabled={loading}
               className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-[#0175C2] hover:bg-[#015a96] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0175C2] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
             >
-              {loading ? 'Creating account...' : 'Sign up'}
+              {loading ? 'Creating account...' : 'Sign up with password'}
             </button>
           </div>
-
-          <SocialAuthButtons
-            mode="signup"
-            callbackURL={betaAcknowledgementUrl}
-            disabled={loading || !agreedToBetaAcknowledgement}
-            onError={setError}
-          />
 
           <div className="text-center">
             <a
