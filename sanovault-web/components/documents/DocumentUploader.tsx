@@ -153,7 +153,7 @@ export function DocumentUploader({
               onClick={() => setScanning(true)}
               className="min-h-16 rounded-xl border border-gray-300 bg-white px-4 py-4 text-base font-semibold text-gray-950 hover:border-[#0175C2] hover:bg-blue-50 disabled:opacity-50"
             >
-              Take photos
+              Scan pages
             </button>
             <button
               type="button"
@@ -165,7 +165,7 @@ export function DocumentUploader({
             </button>
           </div>
           <p className="text-center text-sm text-gray-600">
-            Use a photo of a paper report, or pick a file saved from WhatsApp.
+            Scan a paper report, or pick a file saved from WhatsApp.
           </p>
 
           <div
