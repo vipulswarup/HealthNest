@@ -11,6 +11,7 @@ export const RECORD_TYPE_LABELS: Record<string, string> = {
   DISCHARGE_SUMMARY: 'Discharge Summary',
   VACCINATION_RECORD: 'Vaccination Record',
   VITAL_SIGNS: 'Vital Signs',
+  ID_DOCUMENT: 'ID Document',
   OTHER: 'Other',
 };
 

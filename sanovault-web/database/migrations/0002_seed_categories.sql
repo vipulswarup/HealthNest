@@ -6,5 +6,6 @@ INSERT INTO health_record_categories (code, display_name, description) VALUES
   ('DISCHARGE_SUMMARY', 'Discharge Summary', 'Hospital discharge summary'),
   ('VACCINATION_RECORD', 'Vaccination Record', 'Immunization record'),
   ('VITAL_SIGNS', 'Vital Signs', 'Blood pressure, glucose, weight, or other observations'),
+  ('ID_DOCUMENT', 'ID Document', 'Identity documents such as Aadhaar, PAN, passport, driving licence, voter ID, SSN, green card, or UK NI / BRP'),
   ('OTHER', 'Other', 'Other health record')
 ON CONFLICT (code) DO NOTHING;

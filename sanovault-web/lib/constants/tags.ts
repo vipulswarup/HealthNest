@@ -7,6 +7,11 @@ export const DEFAULT_TAGS = [
   'medication',
   'symptom',
   'vital_signs',
+  'id_document',
+  'aadhaar',
+  'pan_card',
+  'passport',
+  'drivers_license',
 ] as const;
 
 export const RECORD_TYPES = [
