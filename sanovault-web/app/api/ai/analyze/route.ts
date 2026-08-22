@@ -4,6 +4,7 @@ import { getDocumentById, updateDocumentStatus } from '@/lib/services/document.s
 import { analyzeDocument } from '@/lib/services/ai.service';
 import { handleError, AppError } from '@/lib/middleware/error-handler';
 import { sql } from '@/lib/db/neon';
+import { formatDoctorDisplay, matchDoctorName } from '@/lib/doctors/normalize';
 import { enforceHourlyRateLimit } from '@/lib/security/rate-limit';
 
 function limitToFirstNWords(text: string, maxWords: number): string {
@@ -55,15 +56,24 @@ export async function POST(request: NextRequest) {
             const result = await analyzeDocument(limitedText);
 
             // Normalize doctor name if provided
-            let normalizedDoctorName = result.doctorName || null;
-            if (normalizedDoctorName) {
+            let normalizedDoctorName = result.doctorName ? formatDoctorDisplay(result.doctorName) : null;
+            if (result.doctorName) {
                 try {
-                    const [matchedDoctor] = await sql`SELECT preferred_name FROM doctors WHERE preferred_name ILIKE ${normalizedDoctorName} OR ${normalizedDoctorName} ILIKE ANY(aliases) LIMIT 1`;
-                    if (matchedDoctor) {
-                        normalizedDoctorName = matchedDoctor.preferred_name;
-                    }
+                    const catalog = await sql`
+                      SELECT preferred_name AS "preferredName", aliases
+                      FROM doctors
+                      WHERE is_active = TRUE
+                    `;
+                    const matched = matchDoctorName(
+                      result.doctorName,
+                      catalog.map((row) => ({
+                        preferredName: String(row.preferredName),
+                        aliases: Array.isArray(row.aliases) ? row.aliases.map(String) : [],
+                      })),
+                    );
+                    if (matched) normalizedDoctorName = matched;
                 } catch {
-                    // A failed normalization must not expose document-derived data in logs.
+                    // A failed catalog match still returns the formatted extracted name.
                 }
             }
 

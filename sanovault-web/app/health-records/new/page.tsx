@@ -162,7 +162,6 @@ function NewHealthRecordContent() {
         throw new Error('Failed to fetch doctors');
       }
       const data = await response.json();
-      console.log('Fetched doctors:', data.length);
       setDoctors(data);
     } catch (err) {
       console.error('Failed to fetch doctors:', err);
@@ -440,6 +439,8 @@ function NewHealthRecordContent() {
             matchedCategory = categories.find(cat => cat.code === 'DISCHARGE_SUMMARY');
           } else if (/(imaging|radiolog|xray|mri|ct_scan|ultrasound)/.test(tagBlob)) {
             matchedCategory = categories.find(cat => cat.code === 'IMAGING_REPORT');
+          } else if (/(aadhaar|aadhar|pan_card|passport|voter|driving_licen|drivers_licen|ssn|green_card|national_insurance|brp|id_document)/.test(tagBlob)) {
+            matchedCategory = categories.find(cat => cat.code === 'ID_DOCUMENT');
           } else if (/(prescription|medication)/.test(tagBlob)) {
             matchedCategory = categories.find(cat => cat.code === 'PRESCRIPTION');
           }
@@ -1002,16 +1003,14 @@ function NewHealthRecordContent() {
             )}
             {showDoctorDropdown && !doctorsLoading && filteredDoctors.length === 0 && doctorInput.trim() !== '' && (
               <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-4 text-sm text-gray-500">
-                No matching doctors found. Press Enter to create a new doctor.
+                No matching names in this family folder. Keep typing to use this name.
               </div>
             )}
           </div>
           <p className="mt-1 text-xs text-gray-500">
-            {doctorsLoading 
-              ? 'Loading doctors...' 
-              : doctors.length === 0 
-                ? 'No doctors available. Start typing to create a new doctor.' 
-                : 'Start typing to search existing doctors or enter a new one'}
+            {doctorsLoading
+              ? 'Loading doctors...'
+              : 'Suggestions come from doctors already used in this family folder.'}
           </p>
         </div>
 

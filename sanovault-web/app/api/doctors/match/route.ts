@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
 import { sql } from '@/lib/db/neon';
+import { formatDoctorDisplay, matchDoctorName } from '@/lib/doctors/normalize';
 import { handleError, AppError } from '@/lib/middleware/error-handler';
 
 export async function POST(request: NextRequest) {
@@ -13,29 +14,21 @@ export async function POST(request: NextRequest) {
     }
 
     const trimmed = String(name).trim();
-    const [existing] = await sql`
-      SELECT id, preferred_name AS "preferredName", aliases, is_active AS "isActive"
+    const catalog = await sql`
+      SELECT preferred_name AS "preferredName", aliases
       FROM doctors
       WHERE is_active = TRUE
-        AND (
-          preferred_name ILIKE ${trimmed}
-          OR ${trimmed} ILIKE ANY(aliases)
-          OR preferred_name ILIKE ${'%' + trimmed + '%'}
-          OR ${trimmed} ILIKE '%' || preferred_name || '%'
-        )
-      ORDER BY
-        CASE WHEN preferred_name ILIKE ${trimmed} THEN 0 ELSE 1 END,
-        preferred_name
-      LIMIT 1
     `;
+    const matched = matchDoctorName(trimmed, catalog.map((row) => ({
+      preferredName: String(row.preferredName),
+      aliases: Array.isArray(row.aliases) ? row.aliases.map(String) : [],
+    })));
 
-    if (existing) {
-      return NextResponse.json({ matched: existing.preferredName, doctor: existing });
+    if (matched) {
+      return NextResponse.json({ matched, doctor: { preferredName: matched } });
     }
 
-    // The catalog is shared across every account. An unmatched value remains
-    // private to the health record being created; only curated data is global.
-    return NextResponse.json({ matched: trimmed, doctor: null });
+    return NextResponse.json({ matched: formatDoctorDisplay(trimmed), doctor: null });
   } catch (error) {
     return handleError(error);
   }
