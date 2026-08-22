@@ -26,6 +26,9 @@ const CLASSIFICATION_ALIASES: Record<string, string> = {
   'diagnosis': 'Consultation Note',
   'consultation': 'Consultation Note',
   'consult': 'Consultation Note',
+  'discharge summary': 'Discharge Summary',
+  'discharge': 'Discharge Summary',
+  'normal discharge': 'Discharge Summary',
 };
 
 export async function getAllCategories(): Promise<HealthRecordCategory[]> {

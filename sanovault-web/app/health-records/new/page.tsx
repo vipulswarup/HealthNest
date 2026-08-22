@@ -53,6 +53,7 @@ function NewHealthRecordContent() {
   const [ocrStatus, setOcrStatus] = useState<'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'>('PENDING');
   const [ocrError, setOcrError] = useState('');
   const [aiStatus, setAiStatus] = useState<'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'>('PENDING');
+  const [aiError, setAiError] = useState('');
   const [ocrText, setOcrText] = useState('');
   const [labEditorOpen, setLabEditorOpen] = useState(false);
   const [labResults, setLabResults] = useState<LabResult[]>([]);
@@ -264,6 +265,7 @@ function NewHealthRecordContent() {
     setOcrStatus('PENDING');
     setOcrError('');
     setAiStatus('PENDING');
+    setAiError('');
     setAiResults(null);
     setOcrText('');
     setLabEditorOpen(false);
@@ -413,6 +415,7 @@ function NewHealthRecordContent() {
 
       // 2. Trigger AI Analysis
       setAiStatus('PROCESSING');
+      setAiError('');
       const analyzeRes = await fetch('/api/ai/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -433,6 +436,8 @@ function NewHealthRecordContent() {
           const tagBlob = (analyzeData.tags || []).join(' ').toLowerCase();
           if (/(lab|blood|cbc|haemat|hemat|diagnostic|patholog|urine)/.test(tagBlob)) {
             matchedCategory = categories.find(cat => cat.code === 'LAB_REPORT');
+          } else if (/(discharge)/.test(tagBlob)) {
+            matchedCategory = categories.find(cat => cat.code === 'DISCHARGE_SUMMARY');
           } else if (/(imaging|radiolog|xray|mri|ct_scan|ultrasound)/.test(tagBlob)) {
             matchedCategory = categories.find(cat => cat.code === 'IMAGING_REPORT');
           } else if (/(prescription|medication)/.test(tagBlob)) {
@@ -510,7 +515,9 @@ function NewHealthRecordContent() {
           tags: normalizedTags.length > 0 ? normalizedTags : prev.tags,
         }));
       } else {
+        const analyzePayload = await analyzeRes.json().catch(() => ({}));
         setAiStatus('FAILED');
+        setAiError(analyzePayload.error || analyzePayload.message || 'AI analysis failed');
       }
     } catch (error) {
       console.error('Processing failed:', error);
@@ -744,7 +751,7 @@ function NewHealthRecordContent() {
 
           <div className="space-y-3">
             <OCRProgress label="Text Extraction (OCR)" status={ocrStatus} error={ocrError} />
-            <OCRProgress label="AI Analysis" status={aiStatus} />
+            <OCRProgress label="AI Analysis" status={aiStatus} error={aiError} />
           </div>
 
           {ocrStatus === 'COMPLETED' && aiStatus === 'COMPLETED' && (
