@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
+import { ScanCropAdjust } from '@/components/documents/ScanCropAdjust';
 import { detectDocumentQuad, drawQuadOverlay } from '@/lib/scan/detect';
-import { rescanWithFilter, scanCanvas, scanPhoto, type ScanFilter } from '@/lib/scan/process';
+import { type Quad } from '@/lib/scan/geometry';
+import { prepareCrop, rescanWithFilter, scanPhoto, type CropDraft, type ScanFilter } from '@/lib/scan/process';
 
 type ScanPage = {
   id: string;
@@ -10,8 +12,6 @@ type ScanPage = {
   url: string;
   originalBlob: Blob;
   warpedBlob: Blob;
-  detected: boolean;
-  cropped: boolean;
 };
 
 const FILTERS: Array<{ id: ScanFilter; label: string }> = [
@@ -42,6 +42,8 @@ export function MultiPageScanner({
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
   const [cameraMode, setCameraMode] = useState<'pending' | 'live' | 'file'>('pending');
+  const [draft, setDraft] = useState<CropDraft | null>(null);
+  const [replacingId, setReplacingId] = useState<string | null>(null);
 
   pagesRef.current = pages;
   filterRef.current = filter;
@@ -94,15 +96,15 @@ export function MultiPageScanner({
   }, []);
 
   useEffect(() => {
-    if (cameraMode !== 'live') return;
+    if (cameraMode !== 'live' || draft) return;
     const tick = () => {
       const video = videoRef.current;
       const overlay = overlayRef.current;
       if (!video || !overlay || video.readyState < 2 || !video.videoWidth || overlay.clientWidth < 8) return;
       if (!scratchRef.current) scratchRef.current = document.createElement('canvas');
       const scratch = scratchRef.current;
-      const detectWidth = 320;
-      const detectHeight = Math.max(1, Math.round((320 * video.videoHeight) / video.videoWidth));
+      const detectWidth = 480;
+      const detectHeight = Math.max(1, Math.round((480 * video.videoHeight) / video.videoWidth));
       scratch.width = detectWidth;
       scratch.height = detectHeight;
       const scratchContext = scratch.getContext('2d', { willReadFrequently: true });
@@ -112,11 +114,11 @@ export function MultiPageScanner({
       const ratio = window.devicePixelRatio || 1;
       overlay.width = Math.max(1, Math.round(overlay.clientWidth * ratio));
       overlay.height = Math.max(1, Math.round(overlay.clientHeight * ratio));
-      drawQuadOverlay(overlay, quad, detectWidth, detectHeight);
+      drawQuadOverlay(overlay, quad, detectWidth, detectHeight, video.videoWidth, video.videoHeight);
     };
-    const timer = window.setInterval(tick, 180);
+    const timer = window.setInterval(tick, 200);
     return () => window.clearInterval(timer);
-  }, [cameraMode]);
+  }, [cameraMode, draft]);
 
   const addResult = (result: Awaited<ReturnType<typeof scanPhoto>>, id: string, originalBlob: Blob) => {
     setPages((current) => [
@@ -127,20 +129,19 @@ export function MultiPageScanner({
         url: result.previewUrl,
         originalBlob,
         warpedBlob: result.warpedBlob,
-        detected: result.detected,
-        cropped: result.detected,
       },
     ]);
   };
 
-  const processBlob = async (blob: Blob, name: string) => {
-    setBusy('Straightening the page…');
+  const openDraft = async (blob: Blob, name: string) => {
+    setBusy('Finding page edges…');
     setError('');
     try {
-      const result = await scanPhoto(blob, filterRef.current, name.replace(/\.[^.]+$/, '') + '.jpg');
-      addResult(result, `${name}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, blob);
+      const next = await prepareCrop(blob, name.replace(/\.[^.]+$/, '') + '.jpg');
+      setDraft(next);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not scan this photo');
+      setReplacingId(null);
+      setError(err instanceof Error ? err.message : 'Could not open this photo');
     } finally {
       setBusy('');
     }
@@ -149,7 +150,7 @@ export function MultiPageScanner({
   const captureLive = async () => {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
-    setBusy('Straightening the page…');
+    setBusy('Finding page edges…');
     setError('');
     try {
       const frame = document.createElement('canvas');
@@ -161,26 +162,62 @@ export function MultiPageScanner({
       const originalBlob = await new Promise<Blob>((resolve, reject) => {
         frame.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Could not capture this page'))), 'image/jpeg', 0.95);
       });
-      const result = await scanCanvas(frame, filterRef.current, `scan-${pagesRef.current.length + 1}.jpg`);
-      addResult(result, `live-${Date.now()}`, originalBlob);
+      await openDraft(originalBlob, `scan-${pagesRef.current.length + 1}.jpg`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not capture this page');
-    } finally {
       setBusy('');
     }
   };
 
   const addFiles = async (list: FileList | null) => {
     if (!list?.length) return;
-    for (const file of Array.from(list)) {
-      if (!file.type.startsWith('image/') && !/\.(jpe?g|png|webp|heic|heif|gif|bmp)$/i.test(file.name)) {
-        setError('Use the camera or a photo of the page.');
-        continue;
-      }
-      await processBlob(file, file.name);
+    const file = list[0];
+    if (!file.type.startsWith('image/') && !/\.(jpe?g|png|webp|heic|heif|gif|bmp)$/i.test(file.name)) {
+      setError('Use the camera or a photo of the page.');
+      return;
     }
+    await openDraft(file, file.name);
     if (cameraInputRef.current) cameraInputRef.current.value = '';
     if (libraryInputRef.current) libraryInputRef.current.value = '';
+  };
+
+  const confirmDraft = async () => {
+    if (!draft) return;
+    setBusy('Straightening the page…');
+    setError('');
+    try {
+      const result = await scanPhoto(draft.blob, filterRef.current, draft.fileName, { quad: draft.quad });
+      if (replacingId) {
+        setPages((current) =>
+          current.map((page) => {
+            if (page.id !== replacingId) return page;
+            URL.revokeObjectURL(page.url);
+            return {
+              ...page,
+              file: result.file,
+              url: result.previewUrl,
+              originalBlob: draft.blob,
+              warpedBlob: result.warpedBlob,
+            };
+          }),
+        );
+      } else {
+        addResult(result, `${draft.fileName}-${Date.now()}`, draft.blob);
+      }
+      URL.revokeObjectURL(draft.previewUrl);
+      setDraft(null);
+      setReplacingId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not straighten this page');
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const discardDraft = () => {
+    if (draft) URL.revokeObjectURL(draft.previewUrl);
+    setDraft(null);
+    setReplacingId(null);
   };
 
   const removePage = (id: string) => {
@@ -191,33 +228,9 @@ export function MultiPageScanner({
     });
   };
 
-  const recropPage = async (id: string, crop: boolean) => {
-    const page = pagesRef.current.find((item) => item.id === id);
-    if (!page) return;
-    setBusy(crop ? 'Straightening the page…' : 'Using the original photo…');
-    setError('');
-    try {
-      const result = await scanPhoto(page.originalBlob, filterRef.current, page.file.name, { crop });
-      URL.revokeObjectURL(page.url);
-      setPages((current) =>
-        current.map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                file: result.file,
-                url: result.previewUrl,
-                warpedBlob: result.warpedBlob,
-                detected: crop ? result.detected : false,
-                cropped: crop && result.detected,
-              }
-            : item,
-        ),
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not update this page');
-    } finally {
-      setBusy('');
-    }
+  const adjustPage = async (page: ScanPage) => {
+    setReplacingId(page.id);
+    await openDraft(page.originalBlob, page.file.name);
   };
 
   const changeFilter = async (next: ScanFilter) => {
@@ -249,12 +262,23 @@ export function MultiPageScanner({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900">Scan pages</h3>
-        <p className="mt-1 text-sm text-gray-600">
-          Line the page up in the frame. We crop the edges, straighten it, and sharpen the text.
-        </p>
-      </div>
+      {draft ? (
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Adjust the page edges</h3>
+          <p className="mt-1 text-sm text-gray-600">
+            {draft.detected
+              ? 'Drag the corners onto the page, then keep it.'
+              : 'We could not find the page. Drag the corners onto the edges, then keep it.'}
+          </p>
+        </div>
+      ) : (
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Scan pages</h3>
+          <p className="mt-1 text-sm text-gray-600">
+            Line the page up in the frame. After capture you can drag the corners before we straighten it.
+          </p>
+        </div>
+      )}
 
       <input
         id={cameraInputId}
@@ -275,7 +299,7 @@ export function MultiPageScanner({
       />
 
       {cameraMode !== 'file' ? (
-        <div className="relative overflow-hidden rounded-xl bg-black">
+        <div className={`relative overflow-hidden rounded-xl bg-black ${draft ? 'hidden' : ''}`}>
           <video
             ref={videoRef}
             className="h-auto w-full max-h-[55vh] object-contain"
@@ -291,7 +315,17 @@ export function MultiPageScanner({
         </div>
       ) : null}
 
-      {pages.length > 0 ? (
+      {draft ? (
+        <ScanCropAdjust
+          src={draft.previewUrl}
+          width={draft.width}
+          height={draft.height}
+          quad={draft.quad}
+          onChange={(quad: Quad) => setDraft((current) => (current ? { ...current, quad } : current))}
+        />
+      ) : null}
+
+      {!draft && pages.length > 0 ? (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {pages.map((page, index) => (
             <li key={page.id} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
@@ -300,15 +334,9 @@ export function MultiPageScanner({
               <div className="flex items-center justify-between gap-2 px-3 py-2">
                 <span className="text-xs font-medium text-gray-600">Page {index + 1}</span>
                 <div className="flex items-center gap-2">
-                  {page.cropped ? (
-                    <button type="button" onClick={() => void recropPage(page.id, false)} className="text-xs font-medium text-gray-700 hover:underline">
-                      Undo crop
-                    </button>
-                  ) : (
-                    <button type="button" onClick={() => void recropPage(page.id, true)} className="text-xs font-medium text-gray-700 hover:underline">
-                      Crop
-                    </button>
-                  )}
+                  <button type="button" onClick={() => void adjustPage(page)} className="text-xs font-medium text-gray-700 hover:underline">
+                    Adjust crop
+                  </button>
                   <button type="button" onClick={() => removePage(page.id)} className="text-xs font-medium text-red-700 hover:underline">
                     Remove
                   </button>
@@ -317,76 +345,99 @@ export function MultiPageScanner({
             </li>
           ))}
         </ul>
-      ) : cameraMode === 'file' ? (
+      ) : !draft && cameraMode === 'file' ? (
         <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-10 text-center text-sm text-gray-600">
           No pages yet.
         </div>
       ) : null}
 
-      <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-gray-700">Look</legend>
-        <div className="flex flex-wrap gap-2">
-          {FILTERS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              disabled={Boolean(busy)}
-              onClick={() => void changeFilter(item.id)}
-              className={`min-h-10 rounded-full border px-3 text-sm font-medium ${
-                filter === item.id
-                  ? 'border-[#0175C2] bg-blue-50 text-[#0175C2]'
-                  : 'border-gray-300 bg-white text-gray-800'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </fieldset>
+      {!draft ? (
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium text-gray-700">Look</legend>
+          <div className="flex flex-wrap gap-2">
+            {FILTERS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                disabled={Boolean(busy)}
+                onClick={() => void changeFilter(item.id)}
+                className={`min-h-10 rounded-full border px-3 text-sm font-medium ${
+                  filter === item.id
+                    ? 'border-[#0175C2] bg-blue-50 text-[#0175C2]'
+                    : 'border-gray-300 bg-white text-gray-800'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      ) : null}
 
       {busy ? <p className="text-sm text-gray-600" role="status">{busy}</p> : null}
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
 
-      <div className="flex flex-wrap gap-3">
-        {cameraMode === 'live' ? (
+      {draft ? (
+        <div className="flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={() => void captureLive()}
+            onClick={() => void confirmDraft()}
             disabled={Boolean(busy)}
             className="min-h-12 rounded-xl bg-[#0175C2] px-4 text-base font-medium text-white hover:bg-[#015a96] disabled:opacity-50"
           >
-            {pages.length === 0 ? 'Capture page' : 'Capture another page'}
+            Keep page
           </button>
-        ) : (
           <button
             type="button"
-            onClick={() => cameraInputRef.current?.click()}
-            disabled={Boolean(busy) || cameraMode === 'pending'}
-            className="min-h-12 rounded-xl bg-[#0175C2] px-4 text-base font-medium text-white hover:bg-[#015a96] disabled:opacity-50"
+            onClick={discardDraft}
+            disabled={Boolean(busy)}
+            className="min-h-12 rounded-xl border border-gray-300 bg-white px-4 text-base font-medium text-gray-900 hover:bg-gray-50 disabled:opacity-50"
           >
-            {pages.length === 0 ? 'Take photo' : 'Add another page'}
+            Retake
           </button>
-        )}
-        <button
-          type="button"
-          onClick={() => libraryInputRef.current?.click()}
-          disabled={Boolean(busy)}
-          className="min-h-12 rounded-xl border border-gray-300 bg-white px-4 text-base font-medium text-gray-900 hover:bg-gray-50 disabled:opacity-50"
-        >
-          Choose photo
-        </button>
-        <button
-          type="button"
-          onClick={finish}
-          disabled={pages.length === 0 || Boolean(busy)}
-          className="min-h-12 rounded-xl border border-gray-300 bg-white px-4 text-base font-medium text-gray-900 hover:bg-gray-50 disabled:opacity-50"
-        >
-          Done
-        </button>
-        <button type="button" onClick={onCancel} className="min-h-12 rounded-xl px-4 text-base font-medium text-gray-700 hover:underline">
-          Cancel
-        </button>
-      </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-3">
+          {cameraMode === 'live' ? (
+            <button
+              type="button"
+              onClick={() => void captureLive()}
+              disabled={Boolean(busy)}
+              className="min-h-12 rounded-xl bg-[#0175C2] px-4 text-base font-medium text-white hover:bg-[#015a96] disabled:opacity-50"
+            >
+              {pages.length === 0 ? 'Capture page' : 'Capture another page'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={Boolean(busy) || cameraMode === 'pending'}
+              className="min-h-12 rounded-xl bg-[#0175C2] px-4 text-base font-medium text-white hover:bg-[#015a96] disabled:opacity-50"
+            >
+              {pages.length === 0 ? 'Take photo' : 'Add another page'}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => libraryInputRef.current?.click()}
+            disabled={Boolean(busy)}
+            className="min-h-12 rounded-xl border border-gray-300 bg-white px-4 text-base font-medium text-gray-900 hover:bg-gray-50 disabled:opacity-50"
+          >
+            Choose photo
+          </button>
+          <button
+            type="button"
+            onClick={finish}
+            disabled={pages.length === 0 || Boolean(busy)}
+            className="min-h-12 rounded-xl border border-gray-300 bg-white px-4 text-base font-medium text-gray-900 hover:bg-gray-50 disabled:opacity-50"
+          >
+            Done
+          </button>
+          <button type="button" onClick={onCancel} className="min-h-12 rounded-xl px-4 text-base font-medium text-gray-700 hover:underline">
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   );
 }
