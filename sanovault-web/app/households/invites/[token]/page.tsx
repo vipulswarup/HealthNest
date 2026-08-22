@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import AppNav from '@/components/layout/AppNav';
+import { useHouseholdContext } from '@/components/households/useHouseholdContext';
 
 type InvitePreview = {
   invite: {
@@ -20,6 +21,7 @@ type InvitePreview = {
 export default function AcceptInvitePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { refresh } = useHouseholdContext();
   const params = useParams();
   const token = String(params.token || '');
 
@@ -66,6 +68,7 @@ export default function AcceptInvitePage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to accept');
+      await refresh();
       router.push(`/households/${data.householdId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to accept');

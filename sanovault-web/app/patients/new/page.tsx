@@ -10,7 +10,8 @@ import { useHouseholdContext } from '@/components/households/useHouseholdContext
 export default function NewPatientPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { householdId: activeHouseholdId, households, loading: householdsLoading } = useHouseholdContext();
+  const { householdId: activeHouseholdId, households, loading: householdsLoading, refresh } = useHouseholdContext();
+  const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [scopeHouseholdId, setScopeHouseholdId] = useState<string>('');
@@ -29,17 +30,19 @@ export default function NewPatientPage() {
     if (status === 'loading') return;
     if (!session) {
       router.push('/auth/signin');
+      return;
     }
-  }, [session, status, router]);
+    void refresh().finally(() => setReady(true));
+  }, [session, status, router, refresh]);
 
   useEffect(() => {
-    if (householdsLoading) return;
+    if (!ready || householdsLoading) return;
     if (households.length === 0) {
       router.push('/households');
       return;
     }
     setScopeHouseholdId(activeHouseholdId || households[0].id);
-  }, [activeHouseholdId, households, householdsLoading, router]);
+  }, [activeHouseholdId, households, householdsLoading, ready, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

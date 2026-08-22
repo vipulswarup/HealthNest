@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import AppNav from '@/components/layout/AppNav';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { useHouseholdContext } from '@/components/households/useHouseholdContext';
 import { familyInviteMessage, whatsappShareHref } from '@/lib/share/whatsapp';
 
 type Member = {
@@ -53,6 +54,7 @@ function formatOrphanError(data: unknown): string {
 export default function HouseholdDetailPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { refresh } = useHouseholdContext();
   const params = useParams();
   const id = String(params.id || '');
 
@@ -255,6 +257,7 @@ export default function HouseholdDetailPage() {
       const res = await fetch(`/api/households/${id}/leave`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(formatOrphanError(data));
+      await refresh();
       router.push('/households');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to leave');
@@ -269,6 +272,7 @@ export default function HouseholdDetailPage() {
       const res = await fetch(`/api/households/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(formatOrphanError(data));
+      await refresh();
       router.push('/households');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to dissolve');

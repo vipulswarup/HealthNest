@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import AppNav from '@/components/layout/AppNav';
+import { useHouseholdContext } from '@/components/households/useHouseholdContext';
 
 type Household = { id: string; name: string; createdBy: string; createdAt: string };
 type PendingInvite = {
@@ -20,6 +21,7 @@ type PendingInvite = {
 export default function HouseholdsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { refresh } = useHouseholdContext();
   const [households, setHouseholds] = useState<Household[]>([]);
   const [pending, setPending] = useState<PendingInvite[]>([]);
   const [name, setName] = useState('');
@@ -67,6 +69,7 @@ export default function HouseholdsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create household');
       setName('');
+      await refresh();
       router.push(`/households/${data.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create');

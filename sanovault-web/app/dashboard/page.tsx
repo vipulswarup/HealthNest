@@ -33,13 +33,17 @@ function personName(person: Patient) {
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { householdId, households, loading: householdsLoading } = useHouseholdContext();
+  const { householdId, households, loading: householdsLoading, refresh } = useHouseholdContext();
   const [pending, setPending] = useState<PendingInvite[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [records, setRecords] = useState<HealthRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lastPatientId, setLastPatientIdState] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (status === 'authenticated') void refresh();
+  }, [refresh, status]);
 
   useEffect(() => {
     if (status === 'loading' || householdsLoading) return;
