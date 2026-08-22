@@ -9,7 +9,7 @@ import { HealthRecordCategory } from '@/lib/types/health-record-category.types';
 import AppNav from '@/components/layout/AppNav';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/ToastProvider';
-import { idTypeLabel } from '@/lib/constants/id-documents';
+import { idTypeLabel, ID_DOCUMENT_TYPES } from '@/lib/constants/id-documents';
 
 interface HealthRecord {
   id: string;
@@ -34,6 +34,34 @@ interface Patient {
   lastName?: string;
 }
 
+type Draft = {
+  recordType: string;
+  source: string;
+  doctorName: string;
+  documentDate: string;
+  idType: string;
+  expiryDate: string;
+  tags: string;
+};
+
+function toDateInput(value?: string) {
+  if (!value) return '';
+  return String(value).slice(0, 10);
+}
+
+function draftFromRecord(record: HealthRecord): Draft {
+  const data = record.data || {};
+  return {
+    recordType: record.recordType,
+    source: record.source || '',
+    doctorName: record.doctorName || '',
+    documentDate: toDateInput(record.documentDate),
+    idType: String(data.idType || ''),
+    expiryDate: toDateInput(typeof data.expiryDate === 'string' ? data.expiryDate : ''),
+    tags: (record.tags || []).join(', '),
+  };
+}
+
 export default function HealthRecordDetailPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -47,6 +75,9 @@ export default function HealthRecordDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [draft, setDraft] = useState<Draft | null>(null);
 
   const getRecordTypeLabel = (code: string): string => {
     const category = categories.find(cat => cat.code === code);
@@ -115,6 +146,59 @@ export default function HealthRecordDetailPage() {
     }
   };
 
+  const startEdit = () => {
+    if (!record) return;
+    setDraft(draftFromRecord(record));
+    setEditing(true);
+    setError('');
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+    setDraft(null);
+  };
+
+  const handleSave = async () => {
+    if (!record || !draft) return;
+    setSaving(true);
+    setError('');
+    try {
+      const tags = draft.tags.split(',').map((tag) => tag.trim().toLowerCase().replace(/\s+/g, '_')).filter(Boolean);
+      const isId = draft.recordType === 'ID_DOCUMENT';
+      const payload: Record<string, unknown> = {
+        recordType: draft.recordType,
+        source: draft.source.trim() || (isId ? 'Issuing authority not specified' : 'Not specified'),
+        documentDate: draft.documentDate || undefined,
+        tags,
+      };
+      if (isId) {
+        payload.doctorName = '';
+        payload.data = {
+          ...(record.data || {}),
+          idType: draft.idType || undefined,
+          expiryDate: draft.expiryDate || undefined,
+        };
+      } else {
+        payload.doctorName = draft.doctorName.trim();
+      }
+
+      const response = await fetch(`/api/health-records/${recordId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const body = await response.json() as HealthRecord & { error?: string };
+      if (!response.ok) throw new Error(body.error || 'Could not save changes');
+      setRecord(body);
+      setEditing(false);
+      setDraft(null);
+      notify('Saved.', 'success');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save changes');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     try {
@@ -205,109 +289,211 @@ export default function HealthRecordDetailPage() {
                   </Link>
                 )}
               </div>
-              <button
+              <div className="flex flex-wrap gap-2">
+                {editing ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => void handleSave()}
+                      disabled={saving}
+                      className="rounded-lg bg-[#0175C2] px-4 py-2 text-sm font-medium text-white hover:bg-[#015a96] disabled:opacity-50"
+                    >
+                      {saving ? 'Saving…' : 'Save'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEdit}
+                      disabled={saving}
+                      className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-200"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={startEdit}
+                    className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50"
+                  >
+                    Edit
+                  </button>
+                )}
+                <button
                 onClick={() => setDeleteDialogOpen(true)}
                 className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg font-medium transition-colors text-sm"
               >
                 Delete
               </button>
+              </div>
             </div>
+
+            {error && editing && (
+              <div role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
+            )}
 
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {record.recordType === 'ID_DOCUMENT' ? (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Record type</h3>
+                  {editing && draft ? (
+                    <select
+                      value={draft.recordType}
+                      onChange={(e) => setDraft({ ...draft, recordType: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
+                    >
+                      {categories.map((category) => (
+                        <option key={category.code} value={category.code}>{category.displayName}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-gray-900">{getRecordTypeLabel(record.recordType)}</p>
+                  )}
+                </div>
+
+                {(editing ? draft?.recordType === 'ID_DOCUMENT' : record.recordType === 'ID_DOCUMENT') ? (
                   <>
                     <div>
                       <h3 className="text-sm font-medium text-gray-500 mb-2">ID type</h3>
-                      <p className="text-gray-900">{idTypeLabel(String(record.data?.idType || '')) || 'Not specified'}</p>
+                      {editing && draft ? (
+                        <select
+                          value={draft.idType}
+                          onChange={(e) => setDraft({ ...draft, idType: e.target.value })}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
+                        >
+                          <option value="">Choose one</option>
+                          {ID_DOCUMENT_TYPES.map((item) => (
+                            <option key={item.value} value={item.value}>{item.label}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p className="text-gray-900">{idTypeLabel(String(record.data?.idType || '')) || 'Not specified'}</p>
+                      )}
                     </div>
                     <div>
                       <h3 className="text-sm font-medium text-gray-500 mb-2">Issuing authority</h3>
-                      <p className="text-gray-900">{record.source}</p>
+                      {editing && draft ? (
+                        <input
+                          value={draft.source}
+                          onChange={(e) => setDraft({ ...draft, source: e.target.value })}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
+                        />
+                      ) : (
+                        <p className="text-gray-900">{record.source}</p>
+                      )}
                     </div>
-                    {record.documentDate && (
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500 mb-2">Issued date</h3>
-                        <p className="text-gray-900">{formatDateOnly(record.documentDate)}</p>
-                      </div>
-                    )}
-                    {typeof record.data?.expiryDate === 'string' && record.data.expiryDate && (
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500 mb-2">Expiry date</h3>
-                        <p className="text-gray-900">{formatDateOnly(String(record.data.expiryDate))}</p>
-                      </div>
-                    )}
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-2">Issued date</h3>
+                      {editing && draft ? (
+                        <input
+                          type="date"
+                          value={draft.documentDate}
+                          onChange={(e) => setDraft({ ...draft, documentDate: e.target.value })}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
+                        />
+                      ) : (
+                        <p className="text-gray-900">{record.documentDate ? formatDateOnly(record.documentDate) : 'Not specified'}</p>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-2">Expiry date</h3>
+                      {editing && draft ? (
+                        <input
+                          type="date"
+                          value={draft.expiryDate}
+                          onChange={(e) => setDraft({ ...draft, expiryDate: e.target.value })}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
+                        />
+                      ) : (
+                        <p className="text-gray-900">{typeof record.data?.expiryDate === 'string' && record.data.expiryDate ? formatDateOnly(String(record.data.expiryDate)) : 'Not specified'}</p>
+                      )}
+                    </div>
                   </>
                 ) : (
                   <>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Source</h3>
-                  <p className="text-gray-900">{record.source}</p>
-                </div>
-
-                {record.doctorName && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Doctor</h3>
-                    <p className="text-gray-900">{record.doctorName}</p>
-                  </div>
-                )}
-
-                {record.documentDate && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Document Date</h3>
-                    <p className="text-gray-900">{formatDateOnly(record.documentDate)}</p>
-                  </div>
-                )}
-
-                {record.hospitalSystemName && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Hospital System</h3>
-                    <p className="text-gray-900">{record.hospitalSystemName}</p>
-                  </div>
-                )}
-
-                {record.hospitalIdentifierValue && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Hospital Identifier</h3>
-                    <p className="text-gray-900">
-                      {record.hospitalIdentifierType}: {record.hospitalIdentifierValue}
-                    </p>
-                  </div>
-                )}
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-2">Hospital or clinic</h3>
+                      {editing && draft ? (
+                        <input
+                          value={draft.source}
+                          onChange={(e) => setDraft({ ...draft, source: e.target.value })}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
+                        />
+                      ) : (
+                        <p className="text-gray-900">{record.source}</p>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-2">Doctor</h3>
+                      {editing && draft ? (
+                        <input
+                          value={draft.doctorName}
+                          onChange={(e) => setDraft({ ...draft, doctorName: e.target.value })}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
+                        />
+                      ) : (
+                        <p className="text-gray-900">{record.doctorName || 'Not specified'}</p>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-2">Document date</h3>
+                      {editing && draft ? (
+                        <input
+                          type="date"
+                          value={draft.documentDate}
+                          onChange={(e) => setDraft({ ...draft, documentDate: e.target.value })}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
+                        />
+                      ) : (
+                        <p className="text-gray-900">{record.documentDate ? formatDateOnly(record.documentDate) : 'Not specified'}</p>
+                      )}
+                    </div>
+                    {record.hospitalSystemName && !editing && (
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 mb-2">Hospital System</h3>
+                        <p className="text-gray-900">{record.hospitalSystemName}</p>
+                      </div>
+                    )}
+                    {record.hospitalIdentifierValue && !editing && (
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 mb-2">Hospital Identifier</h3>
+                        <p className="text-gray-900">
+                          {record.hospitalIdentifierType}: {record.hospitalIdentifierValue}
+                        </p>
+                      </div>
+                    )}
                   </>
                 )}
 
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Record Type</h3>
-                  <p className="text-gray-900">{getRecordTypeLabel(record.recordType)}</p>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Created At</h3>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Created at</h3>
                   <p className="text-gray-900">{formatDate(record.createdAt)}</p>
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Last Updated</h3>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Last updated</h3>
                   <p className="text-gray-900">{formatDate(record.updatedAt)}</p>
                 </div>
               </div>
 
-              {record.tags.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Tags</h3>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">Tags</h3>
+                {editing && draft ? (
+                  <input
+                    value={draft.tags}
+                    onChange={(e) => setDraft({ ...draft, tags: e.target.value })}
+                    placeholder="xray, skull, pediatric"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
+                  />
+                ) : record.tags.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {record.tags.map((tag, idx) => (
-                      <span
-                        key={idx}
-                        className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
-                      >
-                        {tag}
-                      </span>
+                    {record.tags.map((tag) => (
+                      <span key={tag} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">{tag}</span>
                     ))}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <p className="text-gray-900">None</p>
+                )}
+              </div>
 
               {record.documentId && (
                 <div>
