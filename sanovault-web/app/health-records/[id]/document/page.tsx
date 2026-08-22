@@ -7,6 +7,12 @@ import Link from 'next/link';
 import { HealthRecordCategory } from '@/lib/types/health-record-category.types';
 import AppNav from '@/components/layout/AppNav';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
+
+const ShareCopy = dynamic(
+  () => import('@/components/documents/ShareCopy').then((mod) => mod.ShareCopy),
+  { ssr: false },
+);
 
 interface HealthRecord {
   id: string;
@@ -178,7 +184,14 @@ export default function DocumentPreviewPage() {
                   </p>
                 )}
               </div>
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap gap-2">
+                {record.documentId ? (
+                  <ShareCopy
+                    documents={[{ id: record.documentId, label: getRecordTypeLabel(record.recordType) }]}
+                    defaultWatermark={`Confidential — ${patient ? `${patient.firstName} ${patient.lastName || ''}`.trim() : 'SanoVault'}`}
+                    defaultFileName={`${getRecordTypeLabel(record.recordType)}.pdf`}
+                  />
+                ) : null}
                 <a
                   href={downloadUrl || signedUrl}
                   target="_blank"

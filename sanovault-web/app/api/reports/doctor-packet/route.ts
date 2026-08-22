@@ -74,6 +74,7 @@ export async function GET(request: NextRequest) {
           : '';
         return {
           id: String(record.id),
+          documentId: record.document_id ? String(record.document_id) : null,
           label: `${humanizeLabel(String(record.record_type || 'Report'))}${when ? ` · ${when}` : ''}`,
           href: `/health-records/${record.id}/document`,
         };

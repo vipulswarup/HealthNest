@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
-import { getDocumentById, updateDocumentStatus } from '@/lib/services/document.service';
-import { extractTextFromImage, OcrMode } from '@/lib/services/ocr.service';
+import { getDocumentById, updateDocumentStatus, updateDocumentStorage } from '@/lib/services/document.service';
+import { extractTextFromImage, OcrMode, pdfLacksTextLayer } from '@/lib/services/ocr.service';
+import { getR2Object, uploadToR2 } from '@/lib/r2';
 import { handleError, AppError } from '@/lib/middleware/error-handler';
 import { enforceHourlyRateLimit } from '@/lib/security/rate-limit';
 
@@ -39,6 +40,23 @@ export async function POST(request: NextRequest) {
         try {
             if (!document.r2Key) throw new AppError('Document storage key is missing', 409);
             const text = await extractTextFromImage(document.r2Key, true, { mode });
+
+            if (document.fileType === 'application/pdf' && text) {
+                try {
+                    const stored = await getR2Object(document.r2Key);
+                    if (stored) {
+                        const original = Buffer.from(await stored.transformToByteArray());
+                        if (await pdfLacksTextLayer(original)) {
+                            const { stampInvisibleText } = await import('@/lib/pdf/ops');
+                            const stamped = await stampInvisibleText(new Uint8Array(original), text);
+                            await uploadToR2(document.r2Key, Buffer.from(stamped), 'application/pdf');
+                            await updateDocumentStorage(documentId, stamped.byteLength, 'application/pdf');
+                        }
+                    }
+                } catch {
+                    // Keep the original file if the searchable overlay cannot be written.
+                }
+            }
 
             await updateDocumentStatus(documentId, {
                 ocrStatus: 'COMPLETED',

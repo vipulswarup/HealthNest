@@ -93,6 +93,20 @@ export async function updateDocumentStatus(
   `;
 }
 
+export async function updateDocumentStorage(
+  id: string,
+  fileSize: number,
+  fileType?: string,
+): Promise<void> {
+  await sql`
+    UPDATE documents SET
+      file_size = ${fileSize},
+      file_type = COALESCE(${fileType ?? null}, file_type),
+      updated_at = NOW()
+    WHERE id = ${id}::uuid
+  `;
+}
+
 export async function deleteDocument(id: string): Promise<void> {
   await sql`DELETE FROM documents WHERE id = ${id}::uuid`;
 }

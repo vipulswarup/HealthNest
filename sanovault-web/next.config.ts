@@ -1,4 +1,14 @@
 import type { NextConfig } from "next";
+import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
+
+const pdfWorkerSrc = join(__dirname, "node_modules/pdfjs-dist/build/pdf.worker.min.mjs");
+const pdfWorkerDestDir = join(__dirname, "public");
+const pdfWorkerDest = join(pdfWorkerDestDir, "pdf.worker.min.mjs");
+if (existsSync(pdfWorkerSrc)) {
+  mkdirSync(pdfWorkerDestDir, { recursive: true });
+  copyFileSync(pdfWorkerSrc, pdfWorkerDest);
+}
 
 const securityHeaders = [
   {
@@ -14,6 +24,7 @@ const securityHeaders = [
       "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com",
       "font-src 'self' data:",
       "connect-src 'self'",
+      "worker-src 'self' blob:",
       "frame-src 'self' blob: https://*.r2.cloudflarestorage.com",
     ].join("; "),
   },
@@ -34,6 +45,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  transpilePackages: ['pdfjs-dist', '@cantoo/pdf-lib'],
   // Keep libheif's WebAssembly loader intact in server functions. Bundling it
   // triggers a dynamic-require warning and is unnecessary for this Node-only path.
   serverExternalPackages: ['heic-convert'],

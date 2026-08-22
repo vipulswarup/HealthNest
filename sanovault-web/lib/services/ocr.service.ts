@@ -378,3 +378,12 @@ export async function extractTextFromImage(
     throw new AppError('Failed to process document with OCR', 502);
   }
 }
+
+export async function pdfLacksTextLayer(buffer: Buffer): Promise<boolean> {
+  try {
+    const text = await extractPdfText(buffer);
+    return text.length < MIN_USEFUL_TEXT_CHARS;
+  } catch {
+    return true;
+  }
+}

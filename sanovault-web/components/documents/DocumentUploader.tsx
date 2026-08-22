@@ -2,6 +2,7 @@
 
 import { useId, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { MultiPageScanner } from '@/components/documents/MultiPageScanner';
 
 const ACCEPTED = '.pdf,.jpg,.jpeg,.png,.webp,.tif,.tiff,.heic,.heif,.avif,.gif,.bmp';
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
@@ -22,11 +23,10 @@ export function DocumentUploader({
 }: DocumentUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputId = useId();
-  const cameraInputId = useId();
   const router = useRouter();
 
   const validateFiles = (files: File[]) => {
@@ -57,9 +57,9 @@ export function DocumentUploader({
     }
   };
 
-  const takeFiles = (list: FileList | null) => {
-    if (!list?.length) return;
-    const files = Array.from(list);
+  const takeFiles = (list: FileList | File[] | null) => {
+    if (!list || ('length' in list && list.length === 0)) return;
+    const files = Array.isArray(list) ? list : Array.from(list);
     setError(null);
     try {
       validateFiles(files);
@@ -105,31 +105,28 @@ export function DocumentUploader({
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
-      if (cameraInputRef.current) cameraInputRef.current.value = '';
     }
   };
 
   const blocked = disabled || isUploading;
+
+  if (scanning) {
+    return (
+      <MultiPageScanner
+        onCancel={() => setScanning(false)}
+        onComplete={(files) => {
+          setScanning(false);
+          takeFiles(files);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="w-full">
       <label htmlFor={fileInputId} className="sr-only">
         Choose health record files
       </label>
-      <label htmlFor={cameraInputId} className="sr-only">
-        Take a photo of a health record
-      </label>
-      <input
-        id={cameraInputId}
-        name="healthRecordCamera"
-        type="file"
-        ref={cameraInputRef}
-        className="sr-only"
-        accept="image/*"
-        capture="environment"
-        onChange={(e) => takeFiles(e.target.files)}
-        disabled={blocked}
-      />
       <input
         id={fileInputId}
         name="healthRecordDocuments"
@@ -153,10 +150,10 @@ export function DocumentUploader({
             <button
               type="button"
               disabled={blocked}
-              onClick={() => cameraInputRef.current?.click()}
+              onClick={() => setScanning(true)}
               className="min-h-16 rounded-xl border border-gray-300 bg-white px-4 py-4 text-base font-semibold text-gray-950 hover:border-[#0175C2] hover:bg-blue-50 disabled:opacity-50"
             >
-              Take a photo
+              Take photos
             </button>
             <button
               type="button"

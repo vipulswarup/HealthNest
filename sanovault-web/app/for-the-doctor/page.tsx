@@ -10,6 +10,12 @@ import { useSession } from '@/lib/auth/client';
 import { getLastPatientId, setLastPatientId } from '@/lib/patients/last-used';
 import { doctorPacketWhatsAppText } from '@/lib/reports/doctor-packet';
 import { whatsappShareHref } from '@/lib/share/whatsapp';
+import dynamic from 'next/dynamic';
+
+const ShareCopy = dynamic(
+  () => import('@/components/documents/ShareCopy').then((mod) => mod.ShareCopy),
+  { ssr: false },
+);
 
 type Patient = { id: string; firstName: string; lastName?: string };
 
@@ -28,7 +34,7 @@ type Packet = {
   labHighlights: string[];
   bloodPressure: { available: boolean };
   pleaseAsk: string;
-  documents: Array<{ id: string; label: string; href: string }>;
+  documents: Array<{ id: string; documentId: string | null; label: string; href: string }>;
 };
 
 function personName(person: { firstName: string; lastName?: string }) {
@@ -227,6 +233,23 @@ function ForTheDoctorContent() {
                   >
                     Send on WhatsApp
                   </a>
+                  <ShareCopy
+                    documents={packet.documents
+                      .filter((document) => document.documentId)
+                      .map((document) => ({ id: document.documentId as string, label: document.label }))}
+                    cover={{
+                      title: name,
+                      identityLine,
+                      sections: [
+                        { heading: 'Conditions', lines: packet.conditions },
+                        { heading: 'Current medicines', lines: packet.medicines.map((medication) => medication.line) },
+                        { heading: 'Lab highlights', lines: packet.labHighlights },
+                        { heading: 'Please ask', lines: pleaseAsk.trim() ? pleaseAsk.trim().split('\n').filter(Boolean) : [] },
+                      ],
+                    }}
+                    defaultWatermark={`Confidential — For the treating doctor — ${name}`}
+                    defaultFileName={`${name.replace(/\s+/g, '-')}-doctor-packet.pdf`}
+                  />
                 </div>
 
                 <article className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm print:border-0 print:p-0 print:shadow-none">

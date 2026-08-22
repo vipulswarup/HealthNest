@@ -4,6 +4,7 @@ import { useSession } from '@/lib/auth/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import AppNav from '@/components/layout/AppNav';
 import { DEFAULT_TAGS } from '@/lib/constants/tags';
 import { ID_DOCUMENT_TAGS, ID_DOCUMENT_TYPES, resolveIdType } from '@/lib/constants/id-documents';
@@ -17,6 +18,13 @@ import { Doctor } from '@/lib/types/doctor.types';
 import { LabResult, parseBloodResults } from '@/lib/reports/blood-summary';
 import { getLastPatientId, setLastPatientId } from '@/lib/patients/last-used';
 
+const DocumentPrepare = dynamic(
+  () => import('@/components/documents/DocumentPrepare').then((mod) => mod.DocumentPrepare),
+  { ssr: false },
+);
+
+type FamilyPerson = { id: string; firstName: string; lastName?: string; dateOfBirth?: string | Date | null };
+
 function NewHealthRecordContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -26,7 +34,7 @@ function NewHealthRecordContent() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [patients, setPatients] = useState<Array<{ id: string; firstName: string; lastName?: string }>>([]);
+  const [patients, setPatients] = useState<FamilyPerson[]>([]);
   const [categories, setCategories] = useState<HealthRecordCategory[]>([]);
   const [sources, setSources] = useState<HealthcareSource[]>([]);
   const [sourcesLoading, setSourcesLoading] = useState(true);
@@ -46,6 +54,7 @@ function NewHealthRecordContent() {
     error?: string;
   }>>([]);
   const [currentQueueIndex, setCurrentQueueIndex] = useState(0);
+  const [pendingFiles, setPendingFiles] = useState<File[] | null>(null);
   const [documentPreviewUrl, setDocumentPreviewUrl] = useState<string | null>(null);
   const [documentDownloadUrl, setDocumentDownloadUrl] = useState<string | null>(null);
   const [savedCount, setSavedCount] = useState(0);
@@ -360,12 +369,17 @@ function NewHealthRecordContent() {
   };
 
   const handleFilesSelected = (files: File[]) => {
+    setPendingFiles(files);
+  };
+
+  const startPreparedQueue = (files: File[]) => {
     const items = files.map((file) => ({
       localId: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
       file,
       fileName: file.name,
       status: 'queued' as const,
     }));
+    setPendingFiles(null);
     setFileQueue(items);
     setSavedCount(0);
     void processQueueItem(0, items);
@@ -744,7 +758,14 @@ function NewHealthRecordContent() {
 
       {renderQueuePanel()}
 
-      {!uploadedDocument && fileQueue.length === 0 ? (
+      {pendingFiles ? (
+        <DocumentPrepare
+          files={pendingFiles}
+          dateOfBirth={selectedPerson?.dateOfBirth}
+          onCancel={() => setPendingFiles(null)}
+          onReady={startPreparedQueue}
+        />
+      ) : !uploadedDocument && fileQueue.length === 0 ? (
         <DocumentUploader multiple onFilesSelected={handleFilesSelected} />
       ) : (
         <div className="space-y-4">
