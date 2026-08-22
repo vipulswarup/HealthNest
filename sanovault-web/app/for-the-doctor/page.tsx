@@ -32,7 +32,7 @@ type Packet = {
   conditions: string[];
   medicines: Array<{ id: string; line: string }>;
   labHighlights: string[];
-  bloodPressure: { available: boolean };
+  bloodPressure: { available: boolean; lines: string[] };
   pleaseAsk: string;
   documents: Array<{ id: string; documentId: string | null; label: string; href: string }>;
 };
@@ -174,6 +174,7 @@ function ForTheDoctorContent() {
       conditions: packet.conditions,
       medicines: packet.medicines.map((medication) => medication.line),
       labHighlights: packet.labHighlights,
+      bloodPressure: packet.bloodPressure.lines,
       pleaseAsk,
       documents: packet.documents.map((document) => ({
         label: document.label,
@@ -243,8 +244,9 @@ function ForTheDoctorContent() {
                       sections: [
                         { heading: 'Conditions', lines: packet.conditions },
                         { heading: 'Current medicines', lines: packet.medicines.map((medication) => medication.line) },
-                        { heading: 'Lab highlights', lines: packet.labHighlights },
-                        { heading: 'Please ask', lines: pleaseAsk.trim() ? pleaseAsk.trim().split('\n').filter(Boolean) : [] },
+                          { heading: 'Lab highlights', lines: packet.labHighlights },
+                          { heading: 'Blood pressure', lines: packet.bloodPressure.lines },
+                          { heading: 'Please ask', lines: pleaseAsk.trim() ? pleaseAsk.trim().split('\n').filter(Boolean) : [] },
                       ],
                     }}
                     defaultWatermark={`Confidential — For the treating doctor — ${name}`}
@@ -292,7 +294,13 @@ function ForTheDoctorContent() {
 
                   <section className="mt-6">
                     <h3 className="text-lg font-semibold text-gray-950">Blood pressure</h3>
-                    <p className="mt-2 text-gray-600">Not logged in SanoVault yet.</p>
+                    {packet.bloodPressure.lines.length === 0 ? (
+                      <p className="mt-2 text-gray-600">Not logged in SanoVault yet.</p>
+                    ) : (
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-gray-800">
+                        {packet.bloodPressure.lines.map((line) => <li key={line}>{line}</li>)}
+                      </ul>
+                    )}
                   </section>
 
                   <section className="mt-6">

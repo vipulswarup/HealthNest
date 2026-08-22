@@ -77,6 +77,7 @@ export function doctorPacketWhatsAppText(packet: {
   conditions: string[];
   medicines: string[];
   labHighlights: string[];
+  bloodPressure: string[];
   pleaseAsk: string;
   documents: Array<{ label: string; href: string }>;
 }) {
@@ -95,7 +96,7 @@ export function doctorPacketWhatsAppText(packet: {
     ...(packet.labHighlights.length ? packet.labHighlights.map((line) => `- ${line}`) : ['- No recent lab highlights']),
     '',
     'Blood pressure',
-    '- Not logged in SanoVault yet',
+    ...(packet.bloodPressure.length ? packet.bloodPressure.map((line) => `- ${line}`) : ['- Not logged in SanoVault yet']),
   ];
   if (packet.pleaseAsk.trim()) {
     lines.push('', 'Please ask', ...packet.pleaseAsk.trim().split('\n').filter(Boolean).map((line) => `- ${line}`));

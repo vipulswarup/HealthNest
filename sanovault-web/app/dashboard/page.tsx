@@ -199,6 +199,13 @@ export default function Dashboard() {
                       Add a report
                     </button>
                     <Link
+                      href={`/bp?patientId=${person.id}`}
+                      onClick={() => setLastPatientId(person.id)}
+                      className="flex min-h-14 items-center justify-center rounded-xl border border-gray-300 px-4 text-base font-medium text-gray-800 hover:bg-gray-50"
+                    >
+                      Log BP
+                    </Link>
+                    <Link
                       href={`/for-the-doctor?patientId=${person.id}`}
                       onClick={() => setLastPatientId(person.id)}
                       className="flex min-h-14 items-center justify-center rounded-xl border border-gray-300 px-4 text-base font-medium text-gray-800 hover:bg-gray-50"

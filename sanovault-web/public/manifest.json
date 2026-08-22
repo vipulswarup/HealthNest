@@ -8,6 +8,14 @@
     "description": "Family health records, reports, and medications",
     "orientation": "any",
     "prefer_related_applications": false,
+    "shortcuts": [
+        {
+            "name": "Log BP",
+            "short_name": "Log BP",
+            "description": "Log blood pressure for the last-used person",
+            "url": "/bp"
+        }
+    ],
     "icons": [
         {
             "src": "/android-chrome-192x192.png",
