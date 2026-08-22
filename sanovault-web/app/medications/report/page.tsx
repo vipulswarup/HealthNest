@@ -37,7 +37,7 @@ export default function MedicationReportPage() {
 function MedicationReportContent() {
   const searchParams = useSearchParams();
   const patientId = searchParams.get('patientId') || '';
-  const [country, setCountry] = useState<Country>('US');
+  const [country, setCountry] = useState<Country>('IN');
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
