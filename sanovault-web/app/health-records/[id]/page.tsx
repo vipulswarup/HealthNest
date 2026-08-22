@@ -9,6 +9,7 @@ import { HealthRecordCategory } from '@/lib/types/health-record-category.types';
 import AppNav from '@/components/layout/AppNav';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/ToastProvider';
+import { idTypeLabel } from '@/lib/constants/id-documents';
 
 interface HealthRecord {
   id: string;
@@ -214,6 +215,31 @@ export default function HealthRecordDetailPage() {
 
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {record.recordType === 'ID_DOCUMENT' ? (
+                  <>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-2">ID type</h3>
+                      <p className="text-gray-900">{idTypeLabel(String(record.data?.idType || '')) || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-2">Issuing authority</h3>
+                      <p className="text-gray-900">{record.source}</p>
+                    </div>
+                    {record.documentDate && (
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 mb-2">Issued date</h3>
+                        <p className="text-gray-900">{formatDateOnly(record.documentDate)}</p>
+                      </div>
+                    )}
+                    {typeof record.data?.expiryDate === 'string' && record.data.expiryDate && (
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 mb-2">Expiry date</h3>
+                        <p className="text-gray-900">{formatDateOnly(String(record.data.expiryDate))}</p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-2">Source</h3>
                   <p className="text-gray-900">{record.source}</p>
@@ -233,21 +259,6 @@ export default function HealthRecordDetailPage() {
                   </div>
                 )}
 
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Record Type</h3>
-                  <p className="text-gray-900">{getRecordTypeLabel(record.recordType)}</p>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Created At</h3>
-                  <p className="text-gray-900">{formatDate(record.createdAt)}</p>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Last Updated</h3>
-                  <p className="text-gray-900">{formatDate(record.updatedAt)}</p>
-                </div>
-
                 {record.hospitalSystemName && (
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 mb-2">Hospital System</h3>
@@ -263,6 +274,23 @@ export default function HealthRecordDetailPage() {
                     </p>
                   </div>
                 )}
+                  </>
+                )}
+
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Record Type</h3>
+                  <p className="text-gray-900">{getRecordTypeLabel(record.recordType)}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Created At</h3>
+                  <p className="text-gray-900">{formatDate(record.createdAt)}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Last Updated</h3>
+                  <p className="text-gray-900">{formatDate(record.updatedAt)}</p>
+                </div>
               </div>
 
               {record.tags.length > 0 && (

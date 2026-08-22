@@ -8,6 +8,7 @@ interface RecordDataDisplayProps {
 }
 
 const LAB_METADATA_KEYS = new Set(['labResults', 'labResultsManual', 'labResultsEditedAt']);
+const ID_METADATA_KEYS = new Set(['idType', 'expiryDate']);
 
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) return '—';
@@ -139,7 +140,7 @@ function LabResultsTable({ results, manuallyConfirmed, editedAt }: {
 export default function RecordDataDisplay({ data }: RecordDataDisplayProps) {
   const results = sanitizeLabResults(data.labResults);
   const genericEntries = Object.entries(data).filter(
-    ([key, value]) => !LAB_METADATA_KEYS.has(key) && !isEmptyValue(value),
+    ([key, value]) => !LAB_METADATA_KEYS.has(key) && !ID_METADATA_KEYS.has(key) && !isEmptyValue(value),
   );
 
   if (results.length === 0 && genericEntries.length === 0) {

@@ -56,7 +56,10 @@ export async function POST(request: NextRequest) {
             const result = await analyzeDocument(limitedText);
 
             // Normalize doctor name if provided
-            let normalizedDoctorName = result.doctorName ? formatDoctorDisplay(result.doctorName) : null;
+            let normalizedDoctorName =
+              result.doctorName && result.classification?.toLowerCase() !== 'id document'
+                ? formatDoctorDisplay(result.doctorName)
+                : null;
             if (result.doctorName) {
                 try {
                     const catalog = await sql`
@@ -87,7 +90,9 @@ export async function POST(request: NextRequest) {
                     ...(document.extractedData || {}), 
                     source: result.source,
                     doctorName: normalizedDoctorName,
-                    documentDate: result.documentDate
+                    documentDate: result.documentDate,
+                    idType: result.idType || null,
+                    expiryDate: result.expiryDate || null,
                 }
             });
 

@@ -6,6 +6,7 @@ import { useCallback, useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import AppNav from '@/components/layout/AppNav';
 import { DEFAULT_TAGS } from '@/lib/constants/tags';
+import { ID_DOCUMENT_TAGS, ID_DOCUMENT_TYPES, resolveIdType } from '@/lib/constants/id-documents';
 import { DocumentUploader } from '@/components/documents/DocumentUploader';
 import { OCRProgress } from '@/components/documents/OCRProgress';
 import PersonPicker from '@/components/patients/PersonPicker';
@@ -66,6 +67,8 @@ function NewHealthRecordContent() {
     source?: string;
     doctorName?: string;
     documentDate?: string;
+    idType?: string;
+    expiryDate?: string;
     tags?: string[];
   } | null>(null);
 
@@ -75,6 +78,8 @@ function NewHealthRecordContent() {
     source: '',
     doctorName: '',
     documentDate: '',
+    idType: '',
+    expiryDate: '',
     tags: [] as string[],
     data: {} as Record<string, unknown>,
   });
@@ -278,6 +283,8 @@ function NewHealthRecordContent() {
       source: '',
       doctorName: '',
       documentDate: '',
+      idType: '',
+      expiryDate: '',
       tags: [],
       data: {},
     }));
@@ -484,7 +491,7 @@ function NewHealthRecordContent() {
         
         // Match doctor name if provided
         let matchedDoctorName = analyzeData.doctorName || '';
-        if (analyzeData.doctorName) {
+        if (analyzeData.doctorName && matchedCategory?.code !== 'ID_DOCUMENT') {
           try {
             const matchRes = await fetch('/api/doctors/match', {
               method: 'POST',
@@ -506,15 +513,25 @@ function NewHealthRecordContent() {
           }
         }
         
-        setFormData(prev => ({
-          ...prev,
-          recordType: matchedCategory?.code || prev.recordType,
-          source: matchedSource,
-          doctorName: matchedDoctorName,
-          documentDate: analyzeData.documentDate || prev.documentDate,
-          // Use all AI-suggested tags
-          tags: normalizedTags.length > 0 ? normalizedTags : prev.tags,
-        }));
+        const extractedType = matchedCategory?.code;
+        const expiry = typeof analyzeData.expiryDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(analyzeData.expiryDate)
+          ? analyzeData.expiryDate
+          : '';
+
+        setFormData(prev => {
+          const nextType = extractedType || prev.recordType;
+          const isId = nextType === 'ID_DOCUMENT';
+          return {
+            ...prev,
+            recordType: nextType,
+            source: matchedSource,
+            doctorName: isId ? '' : matchedDoctorName,
+            documentDate: analyzeData.documentDate || prev.documentDate,
+            idType: isId ? resolveIdType(analyzeData.idType, normalizedTags) : '',
+            expiryDate: isId ? expiry : '',
+            tags: normalizedTags.length > 0 ? normalizedTags : prev.tags,
+          };
+        });
       } else {
         const analyzePayload = await analyzeRes.json().catch(() => ({}));
         setAiStatus('FAILED');
@@ -546,7 +563,11 @@ function NewHealthRecordContent() {
 
     try {
       const recordData = { ...(formData.data || {}) };
-      if (labResultsTouched) {
+      if (formData.recordType === 'ID_DOCUMENT') {
+        if (formData.idType) recordData.idType = formData.idType;
+        if (formData.expiryDate) recordData.expiryDate = formData.expiryDate;
+      }
+      if (labResultsTouched && formData.recordType !== 'ID_DOCUMENT') {
         recordData.labResultsManual = true;
         recordData.labResults = labResults;
         recordData.labResultsEditedAt = new Date().toISOString();
@@ -559,7 +580,8 @@ function NewHealthRecordContent() {
         },
         body: JSON.stringify({
           ...formData,
-          source: formData.source.trim() || 'Not specified',
+          doctorName: formData.recordType === 'ID_DOCUMENT' ? undefined : formData.doctorName,
+          source: formData.source.trim() || (formData.recordType === 'ID_DOCUMENT' ? 'Issuing authority not specified' : 'Not specified'),
           data: recordData,
           documentId: uploadedDocument?.id,
           ocrText: ocrText || undefined,
@@ -820,12 +842,19 @@ function NewHealthRecordContent() {
     </div>
   );
 
-  const renderStep2 = () => (
+  const renderStep2 = () => {
+    const isIdDocument = formData.recordType === 'ID_DOCUMENT';
+    const quickTags = isIdDocument ? ID_DOCUMENT_TAGS : DEFAULT_TAGS;
+    return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Step 2: Confirm or edit</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          {isIdDocument ? 'Step 2: Confirm this ID' : 'Step 2: Confirm or edit'}
+        </h3>
         <p className="text-sm text-gray-600 mb-6">
-          Check the auto-extracted fields against the document preview, edit anything that looks wrong, then confirm.
+          {isIdDocument
+            ? 'Check ID type, issued date, and expiry against the preview. We do not store the ID number.'
+            : 'Check the auto-extracted fields against the document preview, edit anything that looks wrong, then confirm.'}
         </p>
       </div>
 
@@ -862,7 +891,7 @@ function NewHealthRecordContent() {
 
         <div>
           <label htmlFor="recordType" className="block text-sm font-medium text-gray-700 mb-2">
-            What kind of report
+            {isIdDocument ? 'What kind of document' : 'What kind of report'}
           </label>
           <select
             id="recordType"
@@ -885,6 +914,72 @@ function NewHealthRecordContent() {
           )}
         </div>
 
+        {isIdDocument ? (
+        <>
+        <div>
+          <label htmlFor="idType" className="block text-sm font-medium text-gray-700 mb-2">
+            ID type
+          </label>
+          <select
+            id="idType"
+            name="idType"
+            value={formData.idType}
+            onChange={(e) => setFormData({ ...formData, idType: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+          >
+            <option value="">Choose one</option>
+            {ID_DOCUMENT_TYPES.map((item) => (
+              <option key={item.value} value={item.value}>{item.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="source" className="block text-sm font-medium text-gray-700 mb-2">
+            Issuing authority
+          </label>
+          <input
+            type="text"
+            id="source"
+            name="source"
+            value={sourceInput || formData.source}
+            onChange={(e) => handleSourceChange(e.target.value)}
+            placeholder="UIDAI, Passport Seva, DVLA…"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="documentDate" className="block text-sm font-medium text-gray-700 mb-2">
+            Issued date
+          </label>
+          <input
+            type="date"
+            id="documentDate"
+            name="documentDate"
+            value={formData.documentDate}
+            onChange={(e) => setFormData({ ...formData, documentDate: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="expiryDate" className="block text-sm font-medium text-gray-700 mb-2">
+            Expiry date
+          </label>
+          <input
+            type="date"
+            id="expiryDate"
+            name="expiryDate"
+            value={formData.expiryDate}
+            onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+          />
+          <p className="mt-1 text-xs text-gray-500">Leave blank if the document has no expiry (for example Aadhaar).</p>
+        </div>
+        </>
+        ) : (
+        <>
         <div>
           <label htmlFor="source" className="block text-sm font-medium text-gray-700 mb-2">
             Hospital or clinic
@@ -1013,6 +1108,8 @@ function NewHealthRecordContent() {
               : 'Suggestions come from doctors already used in this family folder.'}
           </p>
         </div>
+        </>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1041,7 +1138,7 @@ function NewHealthRecordContent() {
           )}
           <div className="flex flex-wrap gap-2">
             <p className="text-xs text-gray-500 w-full mb-2">Quick add common tags:</p>
-            {DEFAULT_TAGS.map((tag) => (
+            {quickTags.map((tag) => (
               <button
                 key={tag}
                 type="button"
@@ -1057,7 +1154,7 @@ function NewHealthRecordContent() {
           </div>
         </div>
 
-        {(ocrText || labResults.length > 0 || labEditorOpen) && (
+        {!isIdDocument && (ocrText || labResults.length > 0 || labEditorOpen) && (
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -1162,7 +1259,8 @@ function NewHealthRecordContent() {
       </form>
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">

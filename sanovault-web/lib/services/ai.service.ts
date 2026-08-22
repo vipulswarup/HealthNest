@@ -15,6 +15,8 @@ export interface AnalysisResult {
     source: string | null;
     doctorName: string | null;
     documentDate: string | null;
+    idType: string | null;
+    expiryDate: string | null;
     tags: string[];
 }
 
@@ -89,11 +91,15 @@ export async function analyzeDocument(text: string): Promise<AnalysisResult> {
             .map(tag => normalizeTag(String(tag)))
             .filter((tag: string, index: number, arr: string[]) => tag && arr.indexOf(tag) === index);
 
+        const isIdDocument = classification.toLowerCase() === 'id document';
         return {
-            ...result,
             classification,
-            doctorName: result.doctorName || null,
+            confidence: typeof result.confidence === 'number' ? result.confidence : 0,
+            source: result.source || null,
+            doctorName: isIdDocument ? null : (result.doctorName || null),
             documentDate: result.documentDate || null,
+            idType: isIdDocument ? (result.idType || null) : null,
+            expiryDate: isIdDocument ? (result.expiryDate || null) : null,
             tags: normalizedTags
         };
     } catch {
@@ -103,6 +109,8 @@ export async function analyzeDocument(text: string): Promise<AnalysisResult> {
             source: null,
             doctorName: null,
             documentDate: null,
+            idType: null,
+            expiryDate: null,
             tags: []
         };
     }
