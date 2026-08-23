@@ -71,7 +71,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       eventType: 'updated',
       entityType: 'document',
       entityId: id,
-      metadata: { action: 'share_created', shareId: share.id, expiresAt: share.expiresAt },
+      metadata: { fields: ['share_link'] },
     });
 
     const origin = process.env.NEXT_PUBLIC_APP_URL || appBaseUrl();
@@ -94,7 +94,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
         eventType: 'updated',
         entityType: 'document',
         entityId: id,
-        metadata: { action: 'share_revoked' },
+        metadata: { fields: ['share_revoked'] },
       });
     }
     return NextResponse.json({ revoked });

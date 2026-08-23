@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS document_shares (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
   token TEXT NOT NULL UNIQUE,
-  created_by UUID NOT NULL REFERENCES profiles(user_id) ON DELETE CASCADE,
+  created_by TEXT NOT NULL REFERENCES profiles(user_id) ON DELETE CASCADE,
   label TEXT,
   expires_at TIMESTAMPTZ NOT NULL,
   revoked_at TIMESTAMPTZ,
