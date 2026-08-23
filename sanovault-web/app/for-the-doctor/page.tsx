@@ -33,7 +33,7 @@ type Packet = {
   medicines: Array<{ id: string; line: string }>;
   labHighlights: string[];
   bloodPressure: { available: boolean; lines: string[] };
-  pleaseAsk: string;
+  visitNotes: { nextAppointment: string | null; lines: string[] };
   documents: Array<{ id: string; documentId: string | null; label: string; href: string }>;
 };
 
@@ -51,8 +51,6 @@ function ForTheDoctorContent() {
   const [lastPatientId, setLastPatientIdState] = useState<string | null>(null);
   const [packet, setPacket] = useState<Packet | null>(null);
   const [packetLoading, setPacketLoading] = useState(false);
-  const [pleaseAsk, setPleaseAsk] = useState('');
-  const [savingAsk, setSavingAsk] = useState(false);
   const [error, setError] = useState('');
   const [origin, setOrigin] = useState('https://sanovault.com');
 
@@ -104,7 +102,6 @@ function ForTheDoctorContent() {
       if (!response.ok) throw new Error((data as { error?: string }).error || 'Could not prepare the packet');
       const loaded = data as Packet;
       setPacket(loaded);
-      setPleaseAsk(loaded.pleaseAsk || '');
     } finally {
       setPacketLoading(false);
     }
@@ -126,31 +123,6 @@ function ForTheDoctorContent() {
     setLastPatientId(id);
     setSelectedId(id);
     router.replace(`/for-the-doctor?patientId=${id}`, { scroll: false });
-  };
-
-  const savePleaseAsk = async () => {
-    if (!selectedId || !packet) return;
-    setSavingAsk(true);
-    setError('');
-    try {
-      const current = await fetch(`/api/patients/${selectedId}`);
-      const currentBody = await current.json() as { preferences?: Record<string, unknown>; error?: string };
-      if (!current.ok) throw new Error(currentBody.error || 'Could not save notes');
-      const response = await fetch(`/api/patients/${selectedId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          preferences: { ...(currentBody.preferences || {}), pleaseAsk },
-        }),
-      });
-      const body = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(body.error || 'Could not save notes');
-      setPacket({ ...packet, pleaseAsk });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save notes');
-    } finally {
-      setSavingAsk(false);
-    }
   };
 
   const selected = patients.find((patient) => patient.id === selectedId);
@@ -175,13 +147,13 @@ function ForTheDoctorContent() {
       medicines: packet.medicines.map((medication) => medication.line),
       labHighlights: packet.labHighlights,
       bloodPressure: packet.bloodPressure.lines,
-      pleaseAsk,
+      visitNotes: packet.visitNotes.lines,
       documents: packet.documents.map((document) => ({
         label: document.label,
         href: `${origin.replace(/\/$/, '')}${document.href}`,
       })),
     }));
-  }, [identityLine, name, origin, packet, pleaseAsk, selectedId]);
+  }, [identityLine, name, origin, packet, selectedId]);
 
   if (status === 'loading' || householdsLoading) {
     return <div className="min-h-screen grid place-items-center bg-slate-50 text-gray-600" role="status">Loading…</div>;
@@ -234,6 +206,12 @@ function ForTheDoctorContent() {
                   >
                     Send on WhatsApp
                   </a>
+                  <Link
+                    href={`/visit-notes?patientId=${selectedId}`}
+                    className="inline-flex min-h-12 items-center justify-center rounded-xl border border-gray-300 bg-white px-4 text-base font-medium text-gray-900 hover:bg-gray-50"
+                  >
+                    Visit notes
+                  </Link>
                   <ShareCopy
                     documents={packet.documents
                       .filter((document) => document.documentId)
@@ -244,9 +222,9 @@ function ForTheDoctorContent() {
                       sections: [
                         { heading: 'Conditions', lines: packet.conditions },
                         { heading: 'Current medicines', lines: packet.medicines.map((medication) => medication.line) },
-                          { heading: 'Lab highlights', lines: packet.labHighlights },
-                          { heading: 'Blood pressure', lines: packet.bloodPressure.lines },
-                          { heading: 'Please ask', lines: pleaseAsk.trim() ? pleaseAsk.trim().split('\n').filter(Boolean) : [] },
+                        { heading: 'Lab highlights', lines: packet.labHighlights },
+                        { heading: 'Blood pressure', lines: packet.bloodPressure.lines },
+                        { heading: 'Visit notes', lines: packet.visitNotes.lines },
                       ],
                     }}
                     defaultWatermark={`Confidential — For the treating doctor — ${name}`}
@@ -304,27 +282,20 @@ function ForTheDoctorContent() {
                   </section>
 
                   <section className="mt-6">
-                    <h3 className="text-lg font-semibold text-gray-950">Please ask</h3>
-                    <textarea
-                      value={pleaseAsk}
-                      onChange={(event) => setPleaseAsk(event.target.value)}
-                      rows={3}
-                      placeholder="Questions for this visit"
-                      className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-base text-gray-900 print:hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void savePleaseAsk()}
-                      disabled={savingAsk}
-                      className="mt-2 min-h-11 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50 disabled:opacity-50 print:hidden"
+                    <h3 className="text-lg font-semibold text-gray-950">Visit notes</h3>
+                    {packet.visitNotes.lines.length === 0 ? (
+                      <p className="mt-2 text-gray-600">None yet.</p>
+                    ) : (
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-gray-800">
+                        {packet.visitNotes.lines.map((line) => <li key={line}>{line}</li>)}
+                      </ul>
+                    )}
+                    <Link
+                      href={`/visit-notes?patientId=${selectedId}`}
+                      className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-[#0175C2] hover:underline print:hidden"
                     >
-                      {savingAsk ? 'Saving…' : 'Save notes'}
-                    </button>
-                    <div className="hidden print:block">
-                      {pleaseAsk.trim()
-                        ? pleaseAsk.trim().split('\n').filter(Boolean).map((line) => <p key={line} className="mt-1 text-gray-800">{line}</p>)
-                        : <p className="mt-2 text-gray-600">None.</p>}
-                    </div>
+                      Add or edit visit notes
+                    </Link>
                   </section>
 
                   <section className="mt-6">

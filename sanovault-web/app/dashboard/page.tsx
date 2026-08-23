@@ -212,6 +212,13 @@ export default function Dashboard() {
                     >
                       For the doctor
                     </Link>
+                    <Link
+                      href={`/visit-notes?patientId=${person.id}`}
+                      onClick={() => setLastPatientId(person.id)}
+                      className="flex min-h-14 items-center justify-center rounded-xl border border-gray-300 px-4 text-base font-medium text-gray-800 hover:bg-gray-50"
+                    >
+                      Visit notes
+                    </Link>
                   </div>
                   <div className="mt-5">
                     <p className="text-sm font-medium text-gray-500">Recent files</p>

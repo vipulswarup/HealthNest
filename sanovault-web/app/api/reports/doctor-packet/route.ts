@@ -15,6 +15,7 @@ import {
 } from '@/lib/reports/doctor-packet';
 import { listAccessibleMedications, toMedication } from '@/lib/services/medication.service';
 import { listBloodPressureWeek } from '@/lib/services/blood-pressure.service';
+import { listVisitNotes } from '@/lib/services/visit-notes.service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,10 +31,11 @@ export async function GET(request: NextRequest) {
     if (!row) throw new AppError('Patient not found', 404);
     const patient = toPatient(row);
 
-    const [medicationRows, summary, bpWeek, documentRows] = await Promise.all([
+    const [medicationRows, summary, bpWeek, visitNotes, documentRows] = await Promise.all([
       listAccessibleMedications(user.id, patientId, true),
       loadBloodSummaryForPatient(patientId),
       listBloodPressureWeek(user.id, patientId),
+      listVisitNotes(user.id, patientId),
       sql`
         SELECT id, record_type, source, document_id, document_date, created_at
         FROM health_records
@@ -46,10 +48,6 @@ export async function GET(request: NextRequest) {
 
     const medications = medicationRows.map(toMedication);
     const highlights = pickLabHighlights(summary.keyFindings);
-    const preferences = (patient.preferences && typeof patient.preferences === 'object')
-      ? patient.preferences as Record<string, unknown>
-      : {};
-    const pleaseAsk = typeof preferences.pleaseAsk === 'string' ? preferences.pleaseAsk : '';
 
     return NextResponse.json({
       patient: {
@@ -71,7 +69,10 @@ export async function GET(request: NextRequest) {
         available: Boolean(bpWeek && bpWeek.lines.length > 0),
         lines: bpWeek?.lines || [],
       },
-      pleaseAsk,
+      visitNotes: {
+        nextAppointment: visitNotes?.nextAppointment || null,
+        lines: visitNotes?.packetLines || [],
+      },
       documents: documentRows.map((record) => {
         const date = record.document_date || record.created_at;
         const when = date
