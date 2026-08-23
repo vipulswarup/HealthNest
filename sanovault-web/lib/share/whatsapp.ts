@@ -1,3 +1,7 @@
+export function documentShareMessage(senderName: string, documentLabel: string, shareUrl: string) {
+  return `${senderName} shared a health record with you on SanoVault: ${documentLabel}. View it here (link expires in 7 days): ${shareUrl}`;
+}
+
 export function whatsappShareHref(text: string) {
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }

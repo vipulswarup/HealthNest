@@ -170,3 +170,66 @@ export function householdInviteEmailContent(input: {
 
   return { subject, html, text };
 }
+
+export function documentShareEmailContent(input: {
+  senderName: string;
+  documentLabel: string;
+  shareUrl: string;
+  expiresAt: string;
+  recipientName?: string;
+}): { subject: string; html: string; text: string } {
+  const documentLabel = escapeHtml(input.documentLabel);
+  const senderName = escapeHtml(input.senderName);
+  const greeting = input.recipientName ? `Hi ${escapeHtml(input.recipientName)},` : 'Hello,';
+  const expiry = new Date(input.expiresAt).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const subject = `${input.senderName} shared a health record with you`;
+
+  const bodyHtml = `
+    <p style="margin:0 0 14px;">${greeting}</p>
+    <p style="margin:0 0 14px;">
+      <strong style="color:${BRAND.ink};">${senderName}</strong> shared a health record with you on SanoVault.
+    </p>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:18px 0 6px;background:${BRAND.soft};border:1px solid ${BRAND.border};border-radius:12px;">
+      <tr>
+        <td style="padding:16px 18px;">
+          <p style="margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:${BRAND.primary};">
+            Shared record
+          </p>
+          <p style="margin:0;font-size:16px;font-weight:600;color:${BRAND.ink};">
+            ${documentLabel}
+          </p>
+          <p style="margin:8px 0 0;font-size:13px;color:${BRAND.muted};">
+            Link expires ${escapeHtml(expiry)}
+          </p>
+        </td>
+      </tr>
+    </table>
+    <p style="margin:18px 0 0;font-size:13px;color:${BRAND.footer};">
+      Button not working? Paste this link into your browser:<br />
+      <a href="${escapeHtml(input.shareUrl)}" style="color:${BRAND.primary};word-break:break-all;">${escapeHtml(input.shareUrl)}</a>
+    </p>
+  `;
+
+  const html = renderSystemEmail({
+    preheader: `${input.senderName} shared ${input.documentLabel} with you.`,
+    title: 'View shared health record',
+    bodyHtml,
+    cta: { label: 'Open record', url: input.shareUrl },
+    footerNote: 'This link is private. Do not forward unless the sender intended you to share it.',
+  });
+
+  const text = [
+    greeting,
+    '',
+    `${input.senderName} shared a health record with you on SanoVault: ${input.documentLabel}.`,
+    `Link expires ${expiry}.`,
+    '',
+    `Open record: ${input.shareUrl}`,
+  ].join('\n');
+
+  return { subject, html, text };
+}

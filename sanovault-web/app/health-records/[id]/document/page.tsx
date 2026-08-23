@@ -9,8 +9,8 @@ import AppNav from '@/components/layout/AppNav';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 
-const ShareCopy = dynamic(
-  () => import('@/components/documents/ShareCopy').then((mod) => mod.ShareCopy),
+const DocumentSharePanel = dynamic(
+  () => import('@/components/documents/DocumentSharePanel').then((mod) => mod.DocumentSharePanel),
   { ssr: false },
 );
 
@@ -186,10 +186,10 @@ export default function DocumentPreviewPage() {
               </div>
               <div className="flex flex-wrap gap-2">
                 {record.documentId ? (
-                  <ShareCopy
-                    documents={[{ id: record.documentId, label: getRecordTypeLabel(record.recordType) }]}
-                    defaultWatermark={`Confidential — ${patient ? `${patient.firstName} ${patient.lastName || ''}`.trim() : 'SanoVault'}`}
-                    defaultFileName={`${getRecordTypeLabel(record.recordType)}.pdf`}
+                  <DocumentSharePanel
+                    documentId={record.documentId}
+                    documentLabel={getRecordTypeLabel(record.recordType)}
+                    senderName={session.user?.name || session.user?.email || 'A family member'}
                   />
                 ) : null}
                 <a
