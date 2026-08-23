@@ -6,30 +6,21 @@ import { canAccessPatient } from '@/lib/households/access';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
 import { recordAuditEvent } from '@/lib/services/audit.service';
 import {
+  medicationCompositionSchema,
+  medicationCountrySchema,
+  resolveMedicationComposition,
+} from '@/lib/medications/schemas';
+import {
   listAccessibleMedications,
   replaceMedicationComposition,
   toMedication,
-  type MedicationCompositionInput,
 } from '@/lib/services/medication.service';
 import { queueMedicationCatalogueSubmission } from '@/lib/services/medication-catalogue.service';
 
-const countrySchema = z.enum(['IN', 'US', 'GB']);
-const ingredientSchema = z.object({
-  canonicalInn: z.string().min(1).max(160),
-  localAlias: z.string().max(160).optional().nullable(),
-  strength: z.string().min(1).max(80),
-  strengthUnit: z.string().min(1).max(32),
-});
-const compositionSchema = z.object({
-  status: z.enum(['CONFIRMED', 'UNCONFIRMED']).default('UNCONFIRMED'),
-  formulation: z.string().max(160).optional().nullable(),
-  catalogProductId: z.string().uuid().optional().nullable(),
-  ingredients: z.array(ingredientSchema).max(12).default([]),
-});
 const medicationSchema = z.object({
   patientId: z.string().uuid('Patient ID is required'),
   name: z.string().min(1, 'Medication brand name is required').max(160),
-  purchaseCountry: countrySchema.optional().nullable(),
+  purchaseCountry: medicationCountrySchema.optional().nullable(),
   dosage: z.string().min(1, 'Dosage is required').max(300),
   frequency: z.string().min(1, 'Frequency is required').max(160),
   route: z.string().min(1, 'Route is required').max(80),
@@ -42,65 +33,13 @@ const medicationSchema = z.object({
   stoppedReason: z.string().max(500).optional(),
   isActive: z.boolean().optional(),
   tags: z.array(z.string().max(80)).max(30).optional(),
-  composition: compositionSchema.optional(),
+  composition: medicationCompositionSchema.optional(),
 });
 
 async function currentUser() {
   const user = await getCurrentUser();
   if (!user) throw new AppError('Unauthorized', 401);
   return user;
-}
-
-async function resolvedComposition(
-  composition: z.infer<typeof compositionSchema> | undefined,
-  purchaseCountry: 'IN' | 'US' | 'GB' | null | undefined,
-): Promise<MedicationCompositionInput> {
-  if (!composition || composition.status === 'UNCONFIRMED') {
-    return {
-      status: 'UNCONFIRMED',
-      formulation: composition?.formulation || null,
-      ingredients: composition?.ingredients || [],
-    };
-  }
-
-  if (!composition.catalogProductId) {
-    throw new AppError('Choose a verified catalogue product before confirming a composition', 400, 'CATALOGUE_SELECTION_REQUIRED');
-  }
-
-  const [product] = await sql`
-    SELECT id, country, formulation, source_name, source_version
-    FROM medication_catalog_products
-    WHERE id = ${composition.catalogProductId}::uuid
-      AND review_status = 'VERIFIED'
-      AND discontinued = FALSE
-  `;
-  if (!product || (purchaseCountry && product.country !== purchaseCountry)) {
-    throw new AppError('This catalogue product is not available for confirmation', 409, 'CATALOGUE_PRODUCT_UNAVAILABLE');
-  }
-
-  const ingredients = await sql`
-    SELECT canonical_inn, local_alias, strength, strength_unit
-    FROM medication_catalog_product_ingredients
-    WHERE product_id = ${product.id}::uuid
-    ORDER BY ingredient_order ASC
-  `;
-  if (ingredients.length === 0) {
-    throw new AppError('The selected catalogue product has no verified composition', 409, 'CATALOGUE_COMPOSITION_MISSING');
-  }
-
-  return {
-    status: 'CONFIRMED',
-    catalogProductId: String(product.id),
-    formulation: String(product.formulation),
-    sourceName: String(product.source_name),
-    sourceVersion: String(product.source_version),
-    ingredients: ingredients.map((ingredient) => ({
-      canonicalInn: String(ingredient.canonical_inn),
-      localAlias: ingredient.local_alias ? String(ingredient.local_alias) : null,
-      strength: String(ingredient.strength),
-      strengthUnit: String(ingredient.strength_unit),
-    })),
-  };
 }
 
 export async function GET(request: NextRequest) {
@@ -135,7 +74,7 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) throw new AppError(parsed.error.issues[0].message, 400, 'VALIDATION_ERROR');
     const data = parsed.data;
     if (!(await canAccessPatient(user.id, data.patientId))) throw new AppError('Patient not found', 404);
-    const composition = await resolvedComposition(data.composition, data.purchaseCountry);
+    const composition = await resolveMedicationComposition(data.composition, data.purchaseCountry);
 
     const [medication] = await sql`
       INSERT INTO medications (
