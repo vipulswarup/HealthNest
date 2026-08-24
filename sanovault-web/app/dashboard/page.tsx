@@ -226,6 +226,20 @@ export default function Dashboard() {
                     >
                       Medicines
                     </Link>
+                    <Link
+                      href={`/growth?patientId=${person.id}`}
+                      onClick={() => setLastPatientId(person.id)}
+                      className="flex min-h-14 items-center justify-center rounded-xl border border-gray-300 px-4 text-base font-medium text-gray-800 hover:bg-gray-50"
+                    >
+                      Height & weight
+                    </Link>
+                    <Link
+                      href={`/vaccinations?patientId=${person.id}`}
+                      onClick={() => setLastPatientId(person.id)}
+                      className="flex min-h-14 items-center justify-center rounded-xl border border-gray-300 px-4 text-base font-medium text-gray-800 hover:bg-gray-50"
+                    >
+                      Vaccinations
+                    </Link>
                   </div>
                   <div className="mt-5">
                     <p className="text-sm font-medium text-gray-500">Recent files</p>

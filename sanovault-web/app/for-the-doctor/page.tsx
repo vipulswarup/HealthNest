@@ -33,6 +33,8 @@ type Packet = {
   medicines: Array<{ id: string; line: string }>;
   labHighlights: string[];
   bloodPressure: { available: boolean; lines: string[] };
+  growth: { available: boolean; lines: string[]; latest: { heightCm: number | null; weightKg: number | null; measuredAt: string | null } };
+  vaccinations: { available: boolean; upcoming: Array<{ id: string; vaccineName: string; doseLabel: string; nextDueDate: string }>; lines: string[] };
   visitNotes: { nextAppointment: string | null; lines: string[] };
   documents: Array<{ id: string; documentId: string | null; label: string; href: string }>;
 };
@@ -147,6 +149,8 @@ function ForTheDoctorContent() {
       medicines: packet.medicines.map((medication) => medication.line),
       labHighlights: packet.labHighlights,
       bloodPressure: packet.bloodPressure.lines,
+      growth: packet.growth.lines,
+      vaccinations: packet.vaccinations.lines,
       visitNotes: packet.visitNotes.lines,
       documents: packet.documents.map((document) => ({
         label: document.label,
@@ -224,6 +228,8 @@ function ForTheDoctorContent() {
                         { heading: 'Current medicines', lines: packet.medicines.map((medication) => medication.line) },
                         { heading: 'Lab highlights', lines: packet.labHighlights },
                         { heading: 'Blood pressure', lines: packet.bloodPressure.lines },
+                        { heading: 'Height & weight', lines: packet.growth.lines },
+                        { heading: 'Vaccinations', lines: packet.vaccinations.lines },
                         { heading: 'Visit notes', lines: packet.visitNotes.lines },
                       ],
                     }}
@@ -279,6 +285,40 @@ function ForTheDoctorContent() {
                         {packet.bloodPressure.lines.map((line) => <li key={line}>{line}</li>)}
                       </ul>
                     )}
+                  </section>
+
+                  <section className="mt-6">
+                    <h3 className="text-lg font-semibold text-gray-950">Height & weight</h3>
+                    {packet.growth.lines.length === 0 ? (
+                      <p className="mt-2 text-gray-600">Not logged yet.</p>
+                    ) : (
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-gray-800">
+                        {packet.growth.lines.map((line) => <li key={line}>{line}</li>)}
+                      </ul>
+                    )}
+                    <Link
+                      href={`/growth?patientId=${selectedId}`}
+                      className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-[#0175C2] hover:underline print:hidden"
+                    >
+                      Log height & weight
+                    </Link>
+                  </section>
+
+                  <section className="mt-6">
+                    <h3 className="text-lg font-semibold text-gray-950">Vaccinations</h3>
+                    {packet.vaccinations.lines.length === 0 ? (
+                      <p className="mt-2 text-gray-600">None recorded.</p>
+                    ) : (
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-gray-800">
+                        {packet.vaccinations.lines.map((line) => <li key={line}>{line}</li>)}
+                      </ul>
+                    )}
+                    <Link
+                      href={`/vaccinations?patientId=${selectedId}`}
+                      className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-[#0175C2] hover:underline print:hidden"
+                    >
+                      Add vaccinations
+                    </Link>
                   </section>
 
                   <section className="mt-6">

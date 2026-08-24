@@ -15,7 +15,9 @@ import {
 } from '@/lib/reports/doctor-packet';
 import { listAccessibleMedications, toMedication } from '@/lib/services/medication.service';
 import { listBloodPressureWeek } from '@/lib/services/blood-pressure.service';
+import { listGrowthHistory } from '@/lib/services/growth.service';
 import { listVisitNotes } from '@/lib/services/visit-notes.service';
+import { listVaccinations } from '@/lib/services/vaccinations.service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,10 +33,12 @@ export async function GET(request: NextRequest) {
     if (!row) throw new AppError('Patient not found', 404);
     const patient = toPatient(row);
 
-    const [medicationRows, summary, bpWeek, visitNotes, documentRows] = await Promise.all([
+    const [medicationRows, summary, bpWeek, growthHistory, vaccinations, visitNotes, documentRows] = await Promise.all([
       listAccessibleMedications(user.id, patientId, true),
       loadBloodSummaryForPatient(patientId),
       listBloodPressureWeek(user.id, patientId),
+      listGrowthHistory(user.id, patientId),
+      listVaccinations(user.id, patientId),
       listVisitNotes(user.id, patientId),
       sql`
         SELECT id, record_type, source, document_id, document_date, created_at
@@ -68,6 +72,16 @@ export async function GET(request: NextRequest) {
       bloodPressure: {
         available: Boolean(bpWeek && bpWeek.lines.length > 0),
         lines: bpWeek?.lines || [],
+      },
+      growth: {
+        available: Boolean(growthHistory && growthHistory.lines.length > 0),
+        lines: growthHistory?.lines || [],
+        latest: growthHistory?.latest || { heightCm: null, weightKg: null, measuredAt: null },
+      },
+      vaccinations: {
+        available: Boolean(vaccinations && vaccinations.packetLines.length > 0),
+        upcoming: vaccinations?.upcoming || [],
+        lines: vaccinations?.packetLines || [],
       },
       visitNotes: {
         nextAppointment: visitNotes?.nextAppointment || null,
