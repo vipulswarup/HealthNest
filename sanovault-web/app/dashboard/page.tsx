@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AppNav from '@/components/layout/AppNav';
+import { PersonCardActions } from '@/components/dashboard/PersonCardActions';
 import { useHouseholdContext } from '@/components/households/useHouseholdContext';
 import { useSession } from '@/lib/auth/client';
 import { humanizeLabel } from '@/lib/constants/labels';
@@ -16,7 +17,7 @@ type PendingInvite = {
   invitedByName?: string;
 };
 
-type Patient = { id: string; firstName: string; lastName?: string };
+type Patient = { id: string; firstName: string; lastName?: string; dateOfBirth?: string | Date | null };
 type HealthRecord = {
   id: string;
   patientId: string;
@@ -190,57 +191,12 @@ export default function Dashboard() {
                 <article key={person.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                   <h2 className="text-2xl font-bold text-gray-950">{name}</h2>
                   {person.id === lastPatientId && <p className="mt-1 text-sm font-medium text-[#0175C2]">Last used</p>}
-                  <div className="mt-4 grid gap-3">
-                    <button
-                      type="button"
-                      onClick={() => openAdd(person.id)}
-                      className="flex min-h-14 items-center justify-center rounded-xl bg-[#0175C2] px-4 text-base font-medium text-white hover:bg-[#015a96]"
-                    >
-                      Add a report
-                    </button>
-                    <Link
-                      href={`/bp?patientId=${person.id}`}
-                      onClick={() => setLastPatientId(person.id)}
-                      className="flex min-h-14 items-center justify-center rounded-xl border border-gray-300 px-4 text-base font-medium text-gray-800 hover:bg-gray-50"
-                    >
-                      Log BP
-                    </Link>
-                    <Link
-                      href={`/for-the-doctor?patientId=${person.id}`}
-                      onClick={() => setLastPatientId(person.id)}
-                      className="flex min-h-14 items-center justify-center rounded-xl border border-gray-300 px-4 text-base font-medium text-gray-800 hover:bg-gray-50"
-                    >
-                      For the doctor
-                    </Link>
-                    <Link
-                      href={`/visit-notes?patientId=${person.id}`}
-                      onClick={() => setLastPatientId(person.id)}
-                      className="flex min-h-14 items-center justify-center rounded-xl border border-gray-300 px-4 text-base font-medium text-gray-800 hover:bg-gray-50"
-                    >
-                      Visit notes
-                    </Link>
-                    <Link
-                      href={`/medications?patientId=${person.id}`}
-                      onClick={() => setLastPatientId(person.id)}
-                      className="flex min-h-14 items-center justify-center rounded-xl border border-gray-300 px-4 text-base font-medium text-gray-800 hover:bg-gray-50"
-                    >
-                      Medicines
-                    </Link>
-                    <Link
-                      href={`/growth?patientId=${person.id}`}
-                      onClick={() => setLastPatientId(person.id)}
-                      className="flex min-h-14 items-center justify-center rounded-xl border border-gray-300 px-4 text-base font-medium text-gray-800 hover:bg-gray-50"
-                    >
-                      Height & weight
-                    </Link>
-                    <Link
-                      href={`/vaccinations?patientId=${person.id}`}
-                      onClick={() => setLastPatientId(person.id)}
-                      className="flex min-h-14 items-center justify-center rounded-xl border border-gray-300 px-4 text-base font-medium text-gray-800 hover:bg-gray-50"
-                    >
-                      Vaccinations
-                    </Link>
-                  </div>
+                  <PersonCardActions
+                    patientId={person.id}
+                    dateOfBirth={person.dateOfBirth}
+                    onAddReport={() => openAdd(person.id)}
+                    onNavigate={() => setLastPatientId(person.id)}
+                  />
                   <div className="mt-5">
                     <p className="text-sm font-medium text-gray-500">Recent files</p>
                     {recent.length === 0 ? (

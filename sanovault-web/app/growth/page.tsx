@@ -5,6 +5,7 @@ import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import PersonPicker from '@/components/patients/PersonPicker';
 import { GrowthHistory } from '@/components/vitals/GrowthHistory';
+import { GrowthTrendChart } from '@/components/vitals/GrowthTrendChart';
 import { useHouseholdContext } from '@/components/households/useHouseholdContext';
 import { useSession } from '@/lib/auth/client';
 import { getLastPatientId, setLastPatientId } from '@/lib/patients/last-used';
@@ -269,6 +270,17 @@ function GrowthContent() {
                 </button>
               </form>
             ) : null}
+
+            <div className="mt-10">
+              <h2 className="text-lg font-semibold text-gray-950">Trend</h2>
+              <div className="mt-3">
+                {loading ? (
+                  <p className="text-gray-600" role="status">Loading trend…</p>
+                ) : (
+                  <GrowthTrendChart measurements={measurements} />
+                )}
+              </div>
+            </div>
 
             <div className="mt-10">
               <h2 className="text-lg font-semibold text-gray-950">History</h2>
