@@ -63,6 +63,9 @@ export function MedicationFormFields({
             className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
             placeholder="As written on the medicine"
           />
+          <span className="mt-1 block text-xs font-normal text-gray-500">
+            If you only know the brand, SanoVault will try to fill the composition from the verified catalogue.
+          </span>
         </label>
         <label className="text-sm font-medium text-gray-700">
           Country obtained

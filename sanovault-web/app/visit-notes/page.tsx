@@ -40,6 +40,12 @@ function VisitNotesContent() {
   const [savingAppointment, setSavingAppointment] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteDate, setEditingNoteDate] = useState('');
+  const [editingObserved, setEditingObserved] = useState('');
+  const [editingAskDoctor, setEditingAskDoctor] = useState('');
+  const [editingPinned, setEditingPinned] = useState(false);
+  const [updatingNote, setUpdatingNote] = useState(false);
 
   useEffect(() => {
     if (status === 'loading' || householdsLoading) return;
@@ -194,6 +200,55 @@ function VisitNotesContent() {
     }
   };
 
+  const startEdit = (note: VisitNote) => {
+    setEditingNoteId(note.id);
+    setEditingNoteDate(note.noteDate);
+    setEditingObserved(note.observed);
+    setEditingAskDoctor(note.askDoctor);
+    setEditingPinned(note.pinned);
+    setSaved(false);
+    setError('');
+  };
+
+  const cancelEdit = () => {
+    setEditingNoteId(null);
+    setEditingNoteDate('');
+    setEditingObserved('');
+    setEditingAskDoctor('');
+    setEditingPinned(false);
+  };
+
+  const saveEditedNote = async () => {
+    if (!editingNoteId) return;
+    if (!editingObserved.trim() && !editingAskDoctor.trim()) {
+      setError('Write what you noticed or what to ask the doctor');
+      return;
+    }
+    setUpdatingNote(true);
+    setError('');
+    try {
+      const response = await fetch(`/api/visit-notes/${editingNoteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          noteDate: editingNoteDate,
+          observed: editingObserved.trim(),
+          askDoctor: editingAskDoctor.trim(),
+          pinned: editingPinned,
+        }),
+      });
+      const data = await response.json() as { notes?: VisitNote[]; error?: string };
+      if (!response.ok) throw new Error(data.error || 'Could not update note');
+      setNotes(data.notes || []);
+      cancelEdit();
+      setSaved(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update note');
+    } finally {
+      setUpdatingNote(false);
+    }
+  };
+
   if (status === 'loading' || householdsLoading) {
     return <div className="min-h-screen grid place-items-center bg-slate-50 text-gray-600" role="status">Loading…</div>;
   }
@@ -310,18 +365,77 @@ function VisitNotesContent() {
                     <ul className="mt-3 space-y-3">
                       {notes.map((note) => (
                         <li key={note.id} className="rounded-2xl border border-gray-200 bg-white p-4">
-                          <p className="text-sm font-medium text-gray-500">{formatNoteDate(note.noteDate)}{note.pinned ? ' · Pinned' : ''}</p>
-                          {note.observed.trim() ? <p className="mt-2 text-base text-gray-900"><span className="font-medium">Noticed:</span> {note.observed}</p> : null}
-                          {note.askDoctor.trim() ? <p className="mt-2 text-base text-gray-900"><span className="font-medium">Ask:</span> {note.askDoctor}</p> : null}
-                          <p className="mt-2 text-sm text-gray-600">{visitNoteLine(note)}</p>
-                          <div className="mt-3 flex flex-wrap gap-3">
-                            <button type="button" onClick={() => void togglePin(note)} className="text-sm font-medium text-[#0175C2] hover:underline">
-                              {note.pinned ? 'Unpin' : 'Pin for visit'}
-                            </button>
-                            <button type="button" onClick={() => void removeNote(note)} className="text-sm font-medium text-red-700 hover:underline">
-                              Delete
-                            </button>
-                          </div>
+                          {editingNoteId === note.id ? (
+                            <div className="space-y-3">
+                              <label className="block text-sm font-medium text-gray-800">
+                                Date
+                                <input
+                                  type="date"
+                                  value={editingNoteDate}
+                                  onChange={(event) => setEditingNoteDate(event.target.value)}
+                                  className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-3 text-base text-gray-950"
+                                />
+                              </label>
+                              <label className="block text-sm font-medium text-gray-800">
+                                What we noticed
+                                <textarea
+                                  value={editingObserved}
+                                  onChange={(event) => setEditingObserved(event.target.value)}
+                                  rows={3}
+                                  className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-3 text-base text-gray-950"
+                                />
+                              </label>
+                              <label className="block text-sm font-medium text-gray-800">
+                                What to ask the doctor
+                                <textarea
+                                  value={editingAskDoctor}
+                                  onChange={(event) => setEditingAskDoctor(event.target.value)}
+                                  rows={3}
+                                  className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-3 text-base text-gray-950"
+                                />
+                              </label>
+                              <label className="flex items-center gap-2 text-sm text-gray-800">
+                                <input type="checkbox" checked={editingPinned} onChange={(event) => setEditingPinned(event.target.checked)} />
+                                Pin for the next doctor visit
+                              </label>
+                              <div className="flex flex-wrap gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => void saveEditedNote()}
+                                  disabled={updatingNote}
+                                  className="rounded-lg bg-[#0175C2] px-4 py-2 text-sm font-medium text-white hover:bg-[#015a96] disabled:opacity-60"
+                                >
+                                  {updatingNote ? 'Saving…' : 'Save changes'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={cancelEdit}
+                                  disabled={updatingNote}
+                                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <p className="text-sm font-medium text-gray-500">{formatNoteDate(note.noteDate)}{note.pinned ? ' · Pinned' : ''}</p>
+                              {note.observed.trim() ? <p className="mt-2 text-base text-gray-900"><span className="font-medium">Noticed:</span> {note.observed}</p> : null}
+                              {note.askDoctor.trim() ? <p className="mt-2 text-base text-gray-900"><span className="font-medium">Ask:</span> {note.askDoctor}</p> : null}
+                              <p className="mt-2 text-sm text-gray-600">{visitNoteLine(note)}</p>
+                              <div className="mt-3 flex flex-wrap gap-3">
+                                <button type="button" onClick={() => startEdit(note)} className="text-sm font-medium text-[#0175C2] hover:underline">
+                                  Edit
+                                </button>
+                                <button type="button" onClick={() => void togglePin(note)} className="text-sm font-medium text-[#0175C2] hover:underline">
+                                  {note.pinned ? 'Unpin' : 'Pin for visit'}
+                                </button>
+                                <button type="button" onClick={() => void removeNote(note)} className="text-sm font-medium text-red-700 hover:underline">
+                                  Delete
+                                </button>
+                              </div>
+                            </>
+                          )}
                         </li>
                       ))}
                     </ul>

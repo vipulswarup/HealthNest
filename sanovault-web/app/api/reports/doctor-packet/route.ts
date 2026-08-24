@@ -10,7 +10,8 @@ import { loadBloodSummaryForPatient } from '@/lib/reports/load-blood-summary';
 import {
   ageFromDateOfBirth,
   conditionLines,
-  medicationLine,
+  medicationDetailLine,
+  medicationSummaryLine,
   pickLabHighlights,
 } from '@/lib/reports/doctor-packet';
 import { listAccessibleMedications, toMedication } from '@/lib/services/medication.service';
@@ -66,7 +67,9 @@ export async function GET(request: NextRequest) {
       conditions: conditionLines(medications),
       medicines: medications.map((medication) => ({
         id: medication.id,
-        line: medicationLine(medication),
+        line: medicationSummaryLine(medication),
+        detailLine: medicationDetailLine(medication),
+        warning: medication.composition.requiresWarning,
       })),
       labHighlights: highlights.map((finding) => finding.text),
       bloodPressure: {

@@ -30,7 +30,7 @@ type Packet = {
     bloodGroup: string;
   };
   conditions: string[];
-  medicines: Array<{ id: string; line: string }>;
+  medicines: Array<{ id: string; line: string; detailLine: string; warning: boolean }>;
   labHighlights: string[];
   bloodPressure: { available: boolean; lines: string[] };
   growth: { available: boolean; lines: string[]; latest: { heightCm: number | null; weightKg: number | null; measuredAt: string | null } };
@@ -259,8 +259,24 @@ function ForTheDoctorContent() {
                     {packet.medicines.length === 0 ? (
                       <p className="mt-2 text-gray-600">None recorded.</p>
                     ) : (
-                      <ul className="mt-2 list-disc space-y-1 pl-5 text-gray-800">
-                        {packet.medicines.map((medication) => <li key={medication.id}>{medication.line}</li>)}
+                      <ul className="mt-2 space-y-2 text-gray-800">
+                        {packet.medicines.map((medication) => (
+                          <li key={medication.id} className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                            <details>
+                              <summary className="cursor-pointer list-none font-medium text-gray-950 marker:content-none [&::-webkit-details-marker]:hidden">
+                                <span className="text-[#0175C2]">{medication.line}</span>
+                              </summary>
+                              <div className="mt-2 space-y-2 text-sm text-gray-700">
+                                <p>{medication.detailLine}</p>
+                                {medication.warning ? (
+                                  <p className="font-medium text-amber-900">
+                                    Composition needs confirmation before clinical use.
+                                  </p>
+                                ) : null}
+                              </div>
+                            </details>
+                          </li>
+                        ))}
                       </ul>
                     )}
                   </section>

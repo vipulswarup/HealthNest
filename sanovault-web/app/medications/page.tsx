@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AppNav from '@/components/layout/AppNav';
 import { MedicationFormFields } from '@/components/medications/MedicationFormFields';
@@ -19,6 +19,24 @@ import {
   type Patient,
 } from '@/lib/medications/ui-types';
 import { useToast } from '@/components/ui/ToastProvider';
+
+function normalizedBrand(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function isBrandOnlyEntry(values: MedicationFormValues) {
+  return !values.selectedProduct
+    && !values.formulation.trim()
+    && values.ingredients.every((ingredient) => (
+      !ingredient.canonicalInn.trim() && !ingredient.strength.trim()
+    ));
+}
+
+function autoResolvableCandidate(brandName: string, candidates: CatalogueProduct[]) {
+  if (candidates.length === 1) return candidates[0];
+  const normalized = normalizedBrand(brandName);
+  return candidates.find((candidate) => normalizedBrand(candidate.brandName) === normalized) || null;
+}
 
 function MedicationsContent() {
   const { data: session, status } = useSession();
@@ -38,9 +56,14 @@ function MedicationsContent() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [extractionHint, setExtractionHint] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
+  const formValuesRef = useRef(formValues);
 
   const activeCount = useMemo(() => medications.filter((medication) => medication.isActive).length, [medications]);
   const editingMedication = medications.find((medication) => medication.id === editingId) || null;
+
+  useEffect(() => {
+    formValuesRef.current = formValues;
+  }, [formValues]);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -89,10 +112,25 @@ function MedicationsContent() {
     }
     const timer = window.setTimeout(async () => {
       try {
+        const currentValues = formValuesRef.current;
         const response = await fetch(
-          `/api/medication-catalog/search?country=${formValues.country}&q=${encodeURIComponent(formValues.brandName.trim())}`,
+          `/api/medication-catalog/search?country=${currentValues.country}&q=${encodeURIComponent(currentValues.brandName.trim())}`,
         );
-        setCandidates(response.ok ? await response.json() : []);
+        const nextCandidates = response.ok ? await response.json() as CatalogueProduct[] : [];
+        setCandidates(nextCandidates);
+        if (!editingId && isBrandOnlyEntry(currentValues)) {
+          const match = autoResolvableCandidate(currentValues.brandName.trim(), nextCandidates);
+          if (match) {
+            setFormValues({
+              ...currentValues,
+              brandName: match.brandName,
+              formulation: match.formulation,
+              ingredients: match.ingredients,
+              selectedProduct: match,
+            });
+            setExtractionHint(`Composition filled from the verified catalogue for ${match.brandName}. Check dose and frequency before saving.`);
+          }
+        }
       } catch {
         setCandidates([]);
       }

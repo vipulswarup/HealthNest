@@ -24,6 +24,14 @@ export function medicationLine(medication: MedicationLike) {
   return `${name}${form} — ${medication.dosage}, ${medication.frequency}, ${medication.route}`;
 }
 
+export function medicationSummaryLine(medication: MedicationLike) {
+  return `${medication.originalBrandName} — ${medication.frequency}`;
+}
+
+export function medicationDetailLine(medication: MedicationLike) {
+  return medicationLine(medication);
+}
+
 export function conditionLines(medications: MedicationLike[]) {
   const seen = new Set<string>();
   const lines: string[] = [];
