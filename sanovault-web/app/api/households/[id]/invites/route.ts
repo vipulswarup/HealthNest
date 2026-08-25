@@ -96,6 +96,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       acceptUrl,
     });
 
+    const { notifyHousehold } = await import('@/lib/services/device-push.service');
+    await notifyHousehold(parsedId.data, {
+      title: 'Family invite sent',
+      body: `${email} was invited to the family folder.`,
+      data: { householdId: parsedId.data },
+    }, user.id);
+
     return NextResponse.json(
       {
         ...toHouseholdInvite({ ...invite, household_name: household.name }),

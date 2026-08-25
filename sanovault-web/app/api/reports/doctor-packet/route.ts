@@ -107,3 +107,26 @@ export async function GET(request: NextRequest) {
     return handleError(error);
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) throw new AppError('Unauthorized', 401);
+    const body = await request.json().catch(() => ({}));
+    const patientId = typeof body.patientId === 'string' ? body.patientId : '';
+    if (!z.string().uuid().safeParse(patientId).success) {
+      throw new AppError('A valid patient ID is required', 400);
+    }
+    const patient = await getAccessiblePatient(user.id, patientId);
+    if (!patient) throw new AppError('Patient not found', 404);
+    const { notifyPatientHousehold } = await import('@/lib/services/device-push.service');
+    await notifyPatientHousehold(patientId, {
+      title: 'Doctor packet shared',
+      body: 'A one-page clinic summary was sent from SanoVault.',
+      data: { patientId },
+    }, user.id);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return handleError(error);
+  }
+}

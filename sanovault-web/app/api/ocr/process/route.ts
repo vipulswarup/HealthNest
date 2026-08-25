@@ -67,6 +67,13 @@ export async function POST(request: NextRequest) {
                 },
             });
 
+            const { notifyUsers } = await import('@/lib/services/device-push.service');
+            await notifyUsers([user.id], {
+              title: 'Report text is ready',
+              body: 'SanoVault finished reading the file. Open the app to confirm it.',
+              data: { documentId: String(documentId) },
+            }).catch(() => undefined);
+
             return NextResponse.json({ text, mode });
         } catch (error) {
             await updateDocumentStatus(documentId, { ocrStatus: 'FAILED' });

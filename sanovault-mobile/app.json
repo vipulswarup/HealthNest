@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "SanoVault",
+    "slug": "sanovault-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "sanovault",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sanovault.app",
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "SanoVault reads blood pressure from Apple Health so you do not enter the same numbers twice.",
+        "NSHealthUpdateUsageDescription": "SanoVault writes blood pressure you log in the app into Apple Health.",
+        "NSCameraUsageDescription": "SanoVault uses the camera to photograph reports and prescriptions.",
+        "NSPhotoLibraryUsageDescription": "SanoVault needs photos of reports you already saved on this iPhone."
+      },
+      "entitlements": {
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.applesignin": ["Default"]
+      }
+    },
+    "android": {
+      "package": "com.sanovault.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.health.READ_BLOOD_PRESSURE",
+        "android.permission.health.WRITE_BLOOD_PRESSURE"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-web-browser",
+      "expo-apple-authentication",
+      [
+        "expo-notifications",
+        { "color": "#0175C2" }
+      ],
+      [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsFileWithMaxCount": 5,
+            "NSExtensionActivationSupportsImageWithMaxCount": 5
+          },
+          "androidIntentFilters": ["image/*", "application/pdf"]
+        }
+      ],
+      "react-native-health-connect"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

@@ -88,6 +88,12 @@ export async function POST(request: NextRequest) {
       entityType: 'health_record',
       entityId: record.id,
     });
+    const { notifyPatientHousehold } = await import('@/lib/services/device-push.service');
+    await notifyPatientHousehold(data.patientId, {
+      title: 'New report in SanoVault',
+      body: 'A family member filed a report. Open the app to check it.',
+      data: { patientId: data.patientId, recordId: String(record.id) },
+    }, user.id).catch(() => undefined);
     return NextResponse.json(toHealthRecord(record), { status: 201 });
   } catch (error) { return handleError(error); }
 }

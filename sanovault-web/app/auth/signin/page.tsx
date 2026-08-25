@@ -41,7 +41,8 @@ const FEATURES = [
 function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const isNative = searchParams.get('native') === '1';
+  const callbackUrl = isNative ? '/auth/native-bridge' : (searchParams.get('callbackUrl') || '/dashboard');
   const emailFromInvite = searchParams.get('email')?.trim().toLowerCase() || '';
   const betaAcknowledgementUrl = `/beta-acknowledgement?${new URLSearchParams({ callbackUrl })}`;
 

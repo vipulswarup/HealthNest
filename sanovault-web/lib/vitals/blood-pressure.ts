@@ -12,6 +12,9 @@ export type BloodPressureReading = {
   diastolic: number;
   pulse: number | null;
   calendarDate: string;
+  source: 'sanovault' | 'healthkit' | 'health_connect';
+  externalId: string | null;
+  vaultOwned: boolean;
 };
 
 export type BpDaySlot = {
@@ -123,5 +126,8 @@ export function toBloodPressureReading(row: Record<string, unknown>): BloodPress
     diastolic: Number(row.diastolic),
     pulse: row.pulse === null || row.pulse === undefined ? null : Number(row.pulse),
     calendarDate: calendarDateInIndia(recordedAt),
+    source: (row.source as BloodPressureReading['source']) || 'sanovault',
+    externalId: row.external_id ? String(row.external_id) : null,
+    vaultOwned: row.vault_owned !== false,
   };
 }

@@ -1,4 +1,6 @@
+import { headers } from 'next/headers';
 import { auth } from '@/lib/auth/server';
+import { getUserFromMobileToken, parseBearerToken } from '@/lib/auth/mobile-session';
 import { sql } from '@/lib/db/neon';
 import { BETA_ACKNOWLEDGEMENT_VERSION } from '@/lib/legal/beta-acknowledgement';
 
@@ -15,6 +17,12 @@ function splitName(name: string) {
  * there so beta acknowledgement remains mandatory before data access.
  */
 export async function getAuthenticatedUser(): Promise<CurrentUser | null> {
+  const headerList = await headers();
+  const bearer = parseBearerToken(headerList.get('authorization'));
+  if (bearer) {
+    return getUserFromMobileToken(bearer);
+  }
+
   const { data: session } = await auth.getSession();
   const user = session?.user;
   if (!user) return null;
