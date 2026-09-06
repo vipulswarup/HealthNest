@@ -19,7 +19,9 @@
       },
       "entitlements": {
         "com.apple.developer.healthkit": true,
-        "com.apple.developer.applesignin": ["Default"]
+        "com.apple.developer.applesignin": [
+          "Default"
+        ]
       }
     },
     "android": {
@@ -43,7 +45,9 @@
       "expo-apple-authentication",
       [
         "expo-notifications",
-        { "color": "#0175C2" }
+        {
+          "color": "#0175C2"
+        }
       ],
       [
         "expo-share-intent",
@@ -52,10 +56,14 @@
             "NSExtensionActivationSupportsFileWithMaxCount": 5,
             "NSExtensionActivationSupportsImageWithMaxCount": 5
           },
-          "androidIntentFilters": ["image/*", "application/pdf"]
+          "androidIntentFilters": [
+            "image/*",
+            "application/pdf"
+          ]
         }
       ],
-      "react-native-health-connect"
+      "react-native-health-connect",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true

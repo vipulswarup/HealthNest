@@ -3,17 +3,19 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { api } from './api';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 export async function registerPushAndReminders() {
-  if (!Device.isDevice) return;
+  if (Platform.OS === 'web' || !Device.isDevice) return;
   const existing = await Notifications.getPermissionsAsync();
   let status = existing.status;
   if (status !== 'granted') {
