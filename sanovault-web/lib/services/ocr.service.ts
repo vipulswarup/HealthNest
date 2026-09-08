@@ -349,23 +349,21 @@ export async function extractTextFromImage(
     const processingFileName = isImage ? `${path.parse(fileName).name}.jpg` : fileName;
 
     const externalText = await extractViaExternalService(buffer, processingFileName, processingMime);
-    if (externalText && externalText.length >= MIN_USEFUL_TEXT_CHARS) {
+    if (mode !== 'full' && externalText && externalText.length >= MIN_USEFUL_TEXT_CHARS) {
       return externalText;
     }
 
     if (mime === 'application/pdf' || extension.toLowerCase() === '.pdf') {
-      // Digital PDFs: full text layer is cheap and useful later for lab-value parsing.
-      // Intake AI still only consumes the first ~1000 words.
       const pdfText = await extractPdfText(buffer, {
         firstPageOnly: false,
       });
-      if (pdfText.length >= MIN_USEFUL_TEXT_CHARS) {
-        return pdfText;
-      }
-
       if (mode === 'full') {
         const visionText = await extractFullVisionText(buffer);
-        return visionText;
+        const candidates = [externalText || '', pdfText, visionText].sort((a, b) => b.length - a.length);
+        return candidates[0] || pdfText || visionText;
+      }
+      if (pdfText.length >= MIN_USEFUL_TEXT_CHARS) {
+        return pdfText;
       }
 
       const visionText = await extractIntakeVisionText(buffer);
