@@ -11,6 +11,20 @@ import type { LatestLabCandidate } from '@/lib/reports/doctor-packet';
 
 export const BLOOD_SUMMARY_LOOKBACK_DAYS = 90;
 
+const LAB_RECORD_TYPES = new Set([
+  'LAB_REPORT',
+  'PATHOLOGY_TEST',
+  'HEMATOLOGY_REPORT',
+  'BIOCHEMISTRY_REPORT',
+]);
+
+function isLabLikeRecord(recordType: string, tags: string[]) {
+  if (LAB_RECORD_TYPES.has(recordType)) return true;
+  return tags.some((tag) =>
+    /(blood|lab|pathology|haemat|hemat|cbc|lipid|thyroid|kidney|liver|iron|urine|diabetes|glucose)/i.test(tag),
+  );
+}
+
 export async function loadBloodSummaryForPatient(patientId: string) {
   const periodEnd = new Date();
   const periodStart = new Date(periodEnd);
@@ -78,10 +92,13 @@ export async function loadBloodSummaryForPatient(patientId: string) {
     const useManualResults = hasManualLabOverride(data);
     const source = String(record.source || 'Unknown source');
     const ocrText = record.ocr_text ? String(record.ocr_text) : '';
+    const tags = Array.isArray(record.tags) ? record.tags.map((tag) => String(tag)) : [];
     return {
       id: String(record.id),
       date: new Date(record.effective_date || record.document_date || record.created_at),
       source,
+      recordType: String(record.record_type || ''),
+      tags,
       documentPath: record.document_id
         ? `/health-records/${record.id}/document`
         : `/health-records/${record.id}`,
@@ -93,15 +110,15 @@ export async function loadBloodSummaryForPatient(patientId: string) {
   });
 
   const summary = buildBloodReportSummary(mapped);
-  const latest = mapped[0];
-  const latestCandidate: LatestLabCandidate | null = latest
+  const latestLab = mapped.find((record) => isLabLikeRecord(record.recordType, record.tags)) || mapped[0];
+  const latestCandidate: LatestLabCandidate | null = latestLab
     ? {
-        id: latest.id,
-        date: latest.date,
-        source: latest.source,
-        resultCount: (latest.useManualResults ? latest.manualResults : parseBloodResults(latest.ocrText || '', latest.aliasMappings))?.length || 0,
-        ocrChars: (latest.ocrText || '').length,
-        documentPath: latest.documentPath,
+        id: latestLab.id,
+        date: latestLab.date,
+        source: latestLab.source,
+        resultCount: (latestLab.useManualResults ? latestLab.manualResults : parseBloodResults(latestLab.ocrText || '', latestLab.aliasMappings))?.length || 0,
+        ocrChars: (latestLab.ocrText || '').length,
+        documentPath: latestLab.documentPath,
       }
     : null;
 
