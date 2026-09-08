@@ -148,7 +148,7 @@ export function DocumentSharePanel({ documentId, documentLabel, senderName }: Pr
                   type="button"
                   disabled={loading}
                   onClick={() => void createShare()}
-                  className="rounded-lg bg-[#0175C2] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#015a96] disabled:opacity-60"
+                  className="rounded-lg bg-coral px-4 py-2.5 text-sm font-medium text-white hover:bg-coral-strong disabled:opacity-60"
                 >
                   {loading ? 'Creating link…' : 'Create share link'}
                 </button>
@@ -192,7 +192,7 @@ export function DocumentSharePanel({ documentId, documentLabel, senderName }: Pr
                       type="button"
                       disabled={loading}
                       onClick={() => void sendEmail()}
-                      className="rounded-lg bg-[#0175C2] px-4 py-2 text-sm font-medium text-white hover:bg-[#015a96] disabled:opacity-60"
+                      className="rounded-lg bg-coral px-4 py-2 text-sm font-medium text-white hover:bg-coral-strong disabled:opacity-60"
                     >
                       Send email
                     </button>

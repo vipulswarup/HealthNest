@@ -258,9 +258,9 @@ function VisitNotesContent() {
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-gray-200 bg-white px-4 py-4">
         <div className="mx-auto flex max-w-lg items-center justify-between">
-          <Link href="/dashboard" className="min-h-11 text-base font-medium text-[#0175C2]">Family</Link>
-          <p className="text-base font-semibold text-gray-950">Visit notes</p>
-          <Link href={selectedId ? `/for-the-doctor?patientId=${selectedId}` : '/for-the-doctor'} className="min-h-11 text-sm font-medium text-[#0175C2]">
+          <Link href="/dashboard" className="min-h-11 text-base font-medium text-coral">Family</Link>
+          <p className="text-base font-semibold text-gray-950">Visit Notes</p>
+          <Link href={selectedId ? `/for-the-doctor?patientId=${selectedId}` : '/for-the-doctor'} className="min-h-11 text-sm font-medium text-coral">
             For doctor
           </Link>
         </div>
@@ -310,7 +310,7 @@ function VisitNotesContent() {
                     void saveNote();
                   }}
                 >
-                  <h2 className="text-lg font-semibold text-gray-950">Add a note</h2>
+                  <h2 className="text-lg font-semibold text-gray-950">Add a Note</h2>
                   <label className="block text-base font-medium text-gray-800">
                     Date
                     <input
@@ -349,7 +349,7 @@ function VisitNotesContent() {
                   <button
                     type="submit"
                     disabled={saving || (!observed.trim() && !askDoctor.trim())}
-                    className="flex min-h-14 w-full items-center justify-center rounded-xl bg-[#0175C2] text-lg font-medium text-white hover:bg-[#015a96] disabled:opacity-50"
+                    className="flex min-h-14 w-full items-center justify-center rounded-xl bg-coral text-lg font-medium text-white hover:bg-coral-strong disabled:opacity-50"
                   >
                     {saving ? 'Saving…' : 'Save note'}
                   </button>
@@ -403,7 +403,7 @@ function VisitNotesContent() {
                                   type="button"
                                   onClick={() => void saveEditedNote()}
                                   disabled={updatingNote}
-                                  className="rounded-lg bg-[#0175C2] px-4 py-2 text-sm font-medium text-white hover:bg-[#015a96] disabled:opacity-60"
+                                  className="rounded-lg bg-coral px-4 py-2 text-sm font-medium text-white hover:bg-coral-strong disabled:opacity-60"
                                 >
                                   {updatingNote ? 'Saving…' : 'Save changes'}
                                 </button>
@@ -424,10 +424,10 @@ function VisitNotesContent() {
                               {note.askDoctor.trim() ? <p className="mt-2 text-base text-gray-900"><span className="font-medium">Ask:</span> {note.askDoctor}</p> : null}
                               <p className="mt-2 text-sm text-gray-600">{visitNoteLine(note)}</p>
                               <div className="mt-3 flex flex-wrap gap-3">
-                                <button type="button" onClick={() => startEdit(note)} className="text-sm font-medium text-[#0175C2] hover:underline">
+                                <button type="button" onClick={() => startEdit(note)} className="text-sm font-medium text-coral hover:underline">
                                   Edit
                                 </button>
-                                <button type="button" onClick={() => void togglePin(note)} className="text-sm font-medium text-[#0175C2] hover:underline">
+                                <button type="button" onClick={() => void togglePin(note)} className="text-sm font-medium text-coral hover:underline">
                                   {note.pinned ? 'Unpin' : 'Pin for visit'}
                                 </button>
                                 <button type="button" onClick={() => void removeNote(note)} className="text-sm font-medium text-red-700 hover:underline">

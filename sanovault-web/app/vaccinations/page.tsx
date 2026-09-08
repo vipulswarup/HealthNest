@@ -206,7 +206,7 @@ function VaccinationsContent() {
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-gray-200 bg-white px-4 py-4">
         <div className="mx-auto flex max-w-lg items-center justify-between">
-          <Link href="/dashboard" className="min-h-11 text-base font-medium text-[#0175C2]">Family</Link>
+          <Link href="/dashboard" className="min-h-11 text-base font-medium text-coral">Family</Link>
           <p className="text-base font-semibold text-gray-950">Vaccinations</p>
           <span className="w-14" />
         </div>
@@ -323,7 +323,7 @@ function VaccinationsContent() {
                     <button
                       type="submit"
                       disabled={saving}
-                      className="rounded-xl bg-[#0175C2] px-5 py-3 text-base font-medium text-white hover:bg-[#015a96] disabled:opacity-50"
+                      className="rounded-xl bg-coral px-5 py-3 text-base font-medium text-white hover:bg-coral-strong disabled:opacity-50"
                     >
                       {saving ? 'Saving…' : editingId ? 'Save changes' : 'Add vaccination'}
                     </button>
@@ -355,7 +355,7 @@ function VaccinationsContent() {
                           ) : null}
                           {vaccination.notes ? <p className="mt-1 text-sm text-gray-600">{vaccination.notes}</p> : null}
                           <div className="mt-2 flex gap-3">
-                            <button type="button" onClick={() => startEdit(vaccination)} className="text-sm text-[#0175C2] hover:underline">Edit</button>
+                            <button type="button" onClick={() => startEdit(vaccination)} className="text-sm text-coral hover:underline">Edit</button>
                             <button type="button" onClick={() => void remove(vaccination.id)} className="text-sm text-red-700 hover:underline">Delete</button>
                           </div>
                         </li>

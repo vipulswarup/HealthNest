@@ -172,8 +172,8 @@ function GrowthContent() {
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-gray-200 bg-white px-4 py-4">
         <div className="mx-auto flex max-w-lg items-center justify-between">
-          <Link href="/dashboard" className="min-h-11 text-base font-medium text-[#0175C2]">Family</Link>
-          <p className="text-base font-semibold text-gray-950">Height & weight</p>
+          <Link href="/dashboard" className="min-h-11 text-base font-medium text-coral">Family</Link>
+          <p className="text-base font-semibold text-gray-950">Height & Weight</p>
           <span className="w-14" />
         </div>
       </header>
@@ -264,7 +264,7 @@ function GrowthContent() {
                 <button
                   type="submit"
                   disabled={saving || (!heightCm && !weightKg && !headCircumCm)}
-                  className="flex min-h-14 w-full items-center justify-center rounded-xl bg-[#0175C2] text-lg font-medium text-white hover:bg-[#015a96] disabled:opacity-50"
+                  className="flex min-h-14 w-full items-center justify-center rounded-xl bg-coral text-lg font-medium text-white hover:bg-coral-strong disabled:opacity-50"
                 >
                   {saving ? 'Saving…' : 'Save measurement'}
                 </button>

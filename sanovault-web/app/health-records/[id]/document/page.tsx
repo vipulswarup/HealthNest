@@ -121,7 +121,7 @@ export default function DocumentPreviewPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0175C2] mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-coral mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading document...</p>
         </div>
       </div>
@@ -143,13 +143,13 @@ export default function DocumentPreviewPage() {
               <div className="mt-4 space-x-4">
                 <Link
                   href={`/health-records/${recordId}`}
-                  className="inline-block text-[#0175C2] hover:text-[#015a96]"
+                  className="inline-block text-coral hover:text-coral-strong"
                 >
                   Back to this report
                 </Link>
                 <Link
                   href="/health-records"
-                  className="inline-block text-[#0175C2] hover:text-[#015a96]"
+                  className="inline-block text-coral hover:text-coral-strong"
                 >
                   Back to reports
                 </Link>
@@ -171,7 +171,7 @@ export default function DocumentPreviewPage() {
         <div className="px-4 sm:px-0">
           <Link
             href={`/health-records/${recordId}`}
-            className="mb-4 inline-block text-sm font-medium text-[#0175C2] hover:underline"
+            className="mb-4 inline-block text-sm font-medium text-coral hover:underline"
           >
             ← Back to record
           </Link>
@@ -269,7 +269,7 @@ export default function DocumentPreviewPage() {
                   href={downloadUrl || signedUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-block px-6 py-2 bg-[#0175C2] text-white rounded-lg hover:bg-[#015a96] transition-colors"
+                  className="inline-block px-6 py-2 bg-coral text-white rounded-lg hover:bg-coral-strong transition-colors"
                 >
                   Download Document
                 </a>

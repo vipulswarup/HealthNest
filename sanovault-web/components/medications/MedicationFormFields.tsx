@@ -105,7 +105,7 @@ export function MedicationFormFields({
           <button
             type="button"
             onClick={() => onChange({ ...values, selectedProduct: null })}
-            className="ml-3 font-medium text-[#0175C2] hover:underline"
+            className="ml-3 font-medium text-coral hover:underline"
           >
             Use unconfirmed entry instead
           </button>
@@ -164,7 +164,7 @@ export function MedicationFormFields({
           <button
             type="button"
             onClick={() => onChange({ ...values, ingredients: [...values.ingredients, emptyIngredient()] })}
-            className="mt-3 text-sm font-medium text-[#0175C2] hover:underline"
+            className="mt-3 text-sm font-medium text-coral hover:underline"
           >
             + Add ingredient
           </button>
@@ -233,7 +233,7 @@ export function MedicationFormFields({
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <button disabled={saving} className="rounded-lg bg-[#0175C2] px-5 py-2.5 font-medium text-white hover:bg-[#015a96] disabled:opacity-60">
+        <button disabled={saving} className="rounded-lg bg-coral px-5 py-2.5 font-medium text-white hover:bg-coral-strong disabled:opacity-60">
           {saving ? 'Saving…' : submitLabel}
         </button>
         {onCancel && (

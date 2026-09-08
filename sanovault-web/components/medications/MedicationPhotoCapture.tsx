@@ -51,7 +51,7 @@ export function MedicationPhotoCapture({ country, disabled, onExtracted, onError
   }
 
   return (
-    <div className="rounded-xl border border-dashed border-[#0175C2]/40 bg-blue-50/60 p-4">
+    <div className="rounded-xl border border-dashed border-coral/40 bg-blue-50/60 p-4">
       <input
         ref={inputRef}
         type="file"
@@ -72,7 +72,7 @@ export function MedicationPhotoCapture({ country, disabled, onExtracted, onError
           type="button"
           disabled={disabled || scanning}
           onClick={() => inputRef.current?.click()}
-          className="rounded-lg bg-[#0175C2] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#015a96] disabled:opacity-60"
+          className="rounded-lg bg-coral px-4 py-2.5 text-sm font-medium text-white hover:bg-coral-strong disabled:opacity-60"
         >
           {scanning ? 'Reading photo…' : 'Take photo'}
         </button>

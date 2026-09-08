@@ -204,7 +204,7 @@ export async function createCoverPdf(
   const { width, height } = page.getSize();
   let y = height - 56;
 
-  page.drawText(sanitizePdfText(title).slice(0, 60) || 'For the doctor', {
+  page.drawText(sanitizePdfText(title).slice(0, 60) || 'For the Doctor', {
     x: 48,
     y,
     size: 22,

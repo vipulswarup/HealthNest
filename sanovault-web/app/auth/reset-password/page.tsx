@@ -53,16 +53,16 @@ function ResetPasswordContent() {
           <div>
             <label htmlFor="new-password" className="block text-sm font-medium text-gray-700">New password</label>
             <div className="relative">
-              <input id="new-password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1.5 w-full rounded-lg border border-gray-300 px-3.5 py-2.5 pr-16 focus:border-[#0175C2] focus:outline-none focus:ring-2 focus:ring-[#0175C2]/30" />
+              <input id="new-password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1.5 w-full rounded-lg border border-gray-300 px-3.5 py-2.5 pr-16 focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30" />
               <button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute inset-y-0 right-0 mt-1.5 px-3 text-sm font-medium text-gray-600" aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? 'Hide' : 'Show'}</button>
             </div>
           </div>
           <div>
             <label htmlFor="confirm-new-password" className="block text-sm font-medium text-gray-700">Confirm new password</label>
-            <input id="confirm-new-password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={8} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} className="mt-1.5 w-full rounded-lg border border-gray-300 px-3.5 py-2.5 focus:border-[#0175C2] focus:outline-none focus:ring-2 focus:ring-[#0175C2]/30" />
+            <input id="confirm-new-password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={8} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} className="mt-1.5 w-full rounded-lg border border-gray-300 px-3.5 py-2.5 focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30" />
           </div>
-          <button type="submit" disabled={loading || !token} className="w-full rounded-lg bg-[#0175C2] px-4 py-3 text-sm font-medium text-white hover:bg-[#015a96] disabled:opacity-50">{loading ? 'Updating password…' : 'Update password'}</button>
-          {!token && <Link href={`/auth/forgot-password?${new URLSearchParams({ callbackUrl })}`} className="block text-center text-sm font-medium text-[#0175C2] hover:underline">Request a new reset link</Link>}
+          <button type="submit" disabled={loading || !token} className="w-full rounded-lg bg-coral px-4 py-3 text-sm font-medium text-white hover:bg-coral-strong disabled:opacity-50">{loading ? 'Updating password…' : 'Update password'}</button>
+          {!token && <Link href={`/auth/forgot-password?${new URLSearchParams({ callbackUrl })}`} className="block text-center text-sm font-medium text-coral hover:underline">Request a new reset link</Link>}
         </form>
       </section>
     </main>

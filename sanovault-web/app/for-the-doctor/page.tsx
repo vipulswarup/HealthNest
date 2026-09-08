@@ -9,6 +9,8 @@ import { useHouseholdContext } from '@/components/households/useHouseholdContext
 import { useSession } from '@/lib/auth/client';
 import { getLastPatientId, setLastPatientId } from '@/lib/patients/last-used';
 import { doctorPacketWhatsAppText } from '@/lib/reports/doctor-packet';
+import { Sparkline } from '@/components/lab/Sparkline';
+import { svBtnOutline, svBtnPrimary } from '@/lib/ui/buttons';
 import { whatsappShareHref } from '@/lib/share/whatsapp';
 import dynamic from 'next/dynamic';
 
@@ -32,6 +34,7 @@ type Packet = {
   conditions: string[];
   medicines: Array<{ id: string; line: string; detailLine: string; warning: boolean }>;
   labHighlights: string[];
+  labTrends?: Array<{ metric: string; label: string; line: string; values: number[]; direction: string }>;
   bloodPressure: { available: boolean; lines: string[] };
   growth: { available: boolean; lines: string[]; latest: { heightCm: number | null; weightKg: number | null; measuredAt: string | null } };
   vaccinations: { available: boolean; upcoming: Array<{ id: string; vaccineName: string; doseLabel: string; nextDueDate: string }>; lines: string[] };
@@ -148,6 +151,7 @@ function ForTheDoctorContent() {
       conditions: packet.conditions,
       medicines: packet.medicines.map((medication) => medication.line),
       labHighlights: packet.labHighlights,
+      labTrends: (packet.labTrends || []).map((trend) => trend.line),
       bloodPressure: packet.bloodPressure.lines,
       growth: packet.growth.lines,
       vaccinations: packet.vaccinations.lines,
@@ -169,8 +173,8 @@ function ForTheDoctorContent() {
       <AppNav />
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
         <div className="print:hidden">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-950">For the doctor</h1>
-          <p className="mt-2 text-base text-gray-600">One page for a clinic visit. Print it, or send it on WhatsApp.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-ink">For the Doctor</h1>
+          <p className="mt-2 text-base text-blue-slate">One Page for a Clinic Visit. Print it, or send it on WhatsApp.</p>
         </div>
 
         {error && <div role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 print:hidden">{error}</div>}
@@ -178,7 +182,7 @@ function ForTheDoctorContent() {
         {households.length === 0 ? (
           <p className="mt-8 text-gray-600 print:hidden">Ask a family member to add you to the family folder first.</p>
         ) : patients.length === 0 ? (
-          <p className="mt-8 text-gray-600 print:hidden">Add a person first, then you can show a doctor their file.</p>
+          <p className="mt-8 text-gray-600 print:hidden">Add a Person First, then you can show a doctor their file.</p>
         ) : (
           <div className="mt-8 space-y-6">
             <div className="print:hidden">
@@ -200,21 +204,21 @@ function ForTheDoctorContent() {
                   <button
                     type="button"
                     onClick={() => window.print()}
-                    className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#0175C2] px-4 text-base font-medium text-white hover:bg-[#015a96]"
+                    className={svBtnPrimary}
                   >
                     Print
                   </button>
                   <a
                     href={whatsappHref}
-                    className="inline-flex min-h-12 items-center justify-center rounded-xl border border-gray-300 bg-white px-4 text-base font-medium text-gray-900 hover:bg-gray-50"
+                    className={`${svBtnOutline} border-silver`}
                   >
                     Send on WhatsApp
                   </a>
                   <Link
                     href={`/visit-notes?patientId=${selectedId}`}
-                    className="inline-flex min-h-12 items-center justify-center rounded-xl border border-gray-300 bg-white px-4 text-base font-medium text-gray-900 hover:bg-gray-50"
+                    className={svBtnOutline}
                   >
-                    Visit notes
+                    Visit Notes
                   </Link>
                   <ShareCopy
                     documents={packet.documents
@@ -225,22 +229,23 @@ function ForTheDoctorContent() {
                       identityLine,
                       sections: [
                         { heading: 'Conditions', lines: packet.conditions },
-                        { heading: 'Current medicines', lines: packet.medicines.map((medication) => medication.line) },
-                        { heading: 'Lab highlights', lines: packet.labHighlights },
-                        { heading: 'Blood pressure', lines: packet.bloodPressure.lines },
-                        { heading: 'Height & weight', lines: packet.growth.lines },
+                        { heading: 'Current Medicines', lines: packet.medicines.map((medication) => medication.line) },
+                        { heading: 'Lab Highlights', lines: packet.labHighlights },
+                        { heading: 'Lab Trends', lines: (packet.labTrends || []).map((trend) => trend.line) },
+                        { heading: 'Blood Pressure', lines: packet.bloodPressure.lines },
+                        { heading: 'Height & Weight', lines: packet.growth.lines },
                         { heading: 'Vaccinations', lines: packet.vaccinations.lines },
-                        { heading: 'Visit notes', lines: packet.visitNotes.lines },
+                        { heading: 'Visit Notes', lines: packet.visitNotes.lines },
                       ],
                     }}
-                    defaultWatermark={`Confidential — For the treating doctor — ${name}`}
+                    defaultWatermark={`Confidential — For the Treating Doctor — ${name}`}
                     defaultFileName={`${name.replace(/\s+/g, '-')}-doctor-packet.pdf`}
                   />
                 </div>
 
                 <article className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm print:border-0 print:p-0 print:shadow-none">
-                  <p className="text-sm font-medium uppercase tracking-wide text-[#0175C2]">For the doctor</p>
-                  <h2 className="mt-1 text-4xl font-bold tracking-tight text-gray-950">{name}</h2>
+                  <p className="text-sm font-medium uppercase tracking-wide text-coral">For the Doctor</p>
+                  <h2 className="mt-1 text-4xl font-bold tracking-tight text-ink">{name}</h2>
                   {identityLine && <p className="mt-2 text-lg text-gray-700">{identityLine}</p>}
 
                   <section className="mt-8">
@@ -255,7 +260,7 @@ function ForTheDoctorContent() {
                   </section>
 
                   <section className="mt-6">
-                    <h3 className="text-lg font-semibold text-gray-950">Current medicines</h3>
+                    <h3 className="text-lg font-semibold text-gray-950">Current Medicines</h3>
                     {packet.medicines.length === 0 ? (
                       <p className="mt-2 text-gray-600">None recorded.</p>
                     ) : (
@@ -264,7 +269,7 @@ function ForTheDoctorContent() {
                           <li key={medication.id} className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
                             <details>
                               <summary className="cursor-pointer list-none font-medium text-gray-950 marker:content-none [&::-webkit-details-marker]:hidden">
-                                <span className="text-[#0175C2]">{medication.line}</span>
+                                <span className="text-coral">{medication.line}</span>
                               </summary>
                               <div className="mt-2 space-y-2 text-sm text-gray-700">
                                 <p>{medication.detailLine}</p>
@@ -282,7 +287,7 @@ function ForTheDoctorContent() {
                   </section>
 
                   <section className="mt-6">
-                    <h3 className="text-lg font-semibold text-gray-950">Lab highlights</h3>
+                    <h3 className="text-lg font-semibold text-gray-950">Lab Highlights</h3>
                     {packet.labHighlights.length === 0 ? (
                       <p className="mt-2 text-gray-600">No recent lab highlights.</p>
                     ) : (
@@ -293,7 +298,29 @@ function ForTheDoctorContent() {
                   </section>
 
                   <section className="mt-6">
-                    <h3 className="text-lg font-semibold text-gray-950">Blood pressure</h3>
+                    <h3 className="text-lg font-semibold text-ink">Lab Trends</h3>
+                    {(packet.labTrends || []).length === 0 ? (
+                      <p className="mt-2 text-gray-600">Need two lab dates for a trend. Open Blood Work after more reports are read.</p>
+                    ) : (
+                      <ul className="mt-3 space-y-3">
+                        {(packet.labTrends || []).map((trend) => (
+                          <li key={trend.metric} className="flex flex-col gap-2 rounded-xl border border-silver px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-gray-800">{trend.line}</p>
+                            <Sparkline values={trend.values} />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <Link
+                      href={`/reports/blood-summary?patientId=${selectedId}`}
+                      className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-coral hover:underline print:hidden"
+                    >
+                      Open Blood Work
+                    </Link>
+                  </section>
+
+                  <section className="mt-6">
+                    <h3 className="text-lg font-semibold text-gray-950">Blood Pressure</h3>
                     {packet.bloodPressure.lines.length === 0 ? (
                       <p className="mt-2 text-gray-600">Not logged in SanoVault yet.</p>
                     ) : (
@@ -304,7 +331,7 @@ function ForTheDoctorContent() {
                   </section>
 
                   <section className="mt-6">
-                    <h3 className="text-lg font-semibold text-gray-950">Height & weight</h3>
+                    <h3 className="text-lg font-semibold text-gray-950">Height & Weight</h3>
                     {packet.growth.lines.length === 0 ? (
                       <p className="mt-2 text-gray-600">Not logged yet.</p>
                     ) : (
@@ -314,9 +341,9 @@ function ForTheDoctorContent() {
                     )}
                     <Link
                       href={`/growth?patientId=${selectedId}`}
-                      className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-[#0175C2] hover:underline print:hidden"
+                      className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-coral hover:underline print:hidden"
                     >
-                      Log height & weight
+                      Log Height & Weight
                     </Link>
                   </section>
 
@@ -331,14 +358,14 @@ function ForTheDoctorContent() {
                     )}
                     <Link
                       href={`/vaccinations?patientId=${selectedId}`}
-                      className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-[#0175C2] hover:underline print:hidden"
+                      className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-coral hover:underline print:hidden"
                     >
-                      Add vaccinations
+                      Add Vaccinations
                     </Link>
                   </section>
 
                   <section className="mt-6">
-                    <h3 className="text-lg font-semibold text-gray-950">Visit notes</h3>
+                    <h3 className="text-lg font-semibold text-gray-950">Visit Notes</h3>
                     {packet.visitNotes.lines.length === 0 ? (
                       <p className="mt-2 text-gray-600">None yet.</p>
                     ) : (
@@ -348,9 +375,9 @@ function ForTheDoctorContent() {
                     )}
                     <Link
                       href={`/visit-notes?patientId=${selectedId}`}
-                      className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-[#0175C2] hover:underline print:hidden"
+                      className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-coral hover:underline print:hidden"
                     >
-                      Add or edit visit notes
+                      Add or Edit Visit Notes
                     </Link>
                   </section>
 
@@ -362,7 +389,7 @@ function ForTheDoctorContent() {
                       <ul className="mt-2 space-y-1">
                         {packet.documents.map((document) => (
                           <li key={document.id}>
-                            <Link href={document.href} className="text-[#0175C2] hover:underline">
+                            <Link href={document.href} className="text-coral hover:underline">
                               {document.label}
                             </Link>
                           </li>

@@ -1,12 +1,12 @@
 const BRAND = {
-  primary: '#0175C2',
-  primaryDark: '#015a96',
-  ink: '#111827',
-  muted: '#4b5563',
-  soft: '#eff6ff',
-  border: '#dbeafe',
+  primary: '#EF8354',
+  primaryDark: '#D96C3D',
+  ink: '#2D3142',
+  muted: '#4F5D75',
+  soft: '#F4F4F5',
+  border: '#BFC0C0',
   white: '#ffffff',
-  footer: '#6b7280',
+  footer: '#4F5D75',
 };
 
 export function appBaseUrl(): string {

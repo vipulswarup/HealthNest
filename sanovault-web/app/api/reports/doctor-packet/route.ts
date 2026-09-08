@@ -11,6 +11,7 @@ import {
   ageFromDateOfBirth,
   conditionLines,
   labPacketLines,
+  labTrendLines,
   medicationDetailLine,
   medicationSummaryLine,
 } from '@/lib/reports/doctor-packet';
@@ -56,6 +57,7 @@ export async function GET(request: NextRequest) {
       findings: summary.keyFindings,
       latestCandidate: summary.latestCandidate,
     });
+    const labTrends = labTrendLines(summary.comparisons);
 
     return NextResponse.json({
       patient: {
@@ -75,6 +77,7 @@ export async function GET(request: NextRequest) {
         warning: medication.composition.requiresWarning,
       })),
       labHighlights: highlights,
+      labTrends,
       bloodPressure: {
         available: Boolean(bpWeek && bpWeek.lines.length > 0),
         lines: bpWeek?.lines || [],

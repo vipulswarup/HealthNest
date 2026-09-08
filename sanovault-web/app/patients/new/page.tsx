@@ -91,7 +91,7 @@ export default function NewPatientPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0175C2] mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-coral mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -106,7 +106,7 @@ export default function NewPatientPage() {
       <main className="max-w-3xl mx-auto py-8 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
-            <h1 className="text-2xl font-bold text-gray-900 mb-6">Add a person</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-6">Add a Person</h1>
 
             {error && (
               <div className="mb-6 rounded-md bg-red-50 p-4" role="alert">
@@ -124,7 +124,7 @@ export default function NewPatientPage() {
                   required
                   value={scopeHouseholdId}
                   onChange={(e) => setScopeHouseholdId(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-coral focus:border-transparent"
                 >
                   {households.map((h) => (
                     <option key={h.id} value={h.id}>
@@ -146,7 +146,7 @@ export default function NewPatientPage() {
                     required
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-coral focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -156,7 +156,7 @@ export default function NewPatientPage() {
                     id="lastName"
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-coral focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -167,7 +167,7 @@ export default function NewPatientPage() {
                     required
                     value={formData.dateOfBirth}
                     onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-coral focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -177,7 +177,7 @@ export default function NewPatientPage() {
                     required
                     value={formData.gender}
                     onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-coral focus:border-transparent"
                   >
                     <option value="">Select gender</option>
                     <option value="Male">Male</option>
@@ -193,7 +193,7 @@ export default function NewPatientPage() {
                     id="abhaNumber"
                     value={formData.abhaNumber}
                     onChange={(e) => setFormData({ ...formData, abhaNumber: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-coral focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -202,7 +202,7 @@ export default function NewPatientPage() {
                     id="bloodGroup"
                     value={formData.bloodGroup}
                     onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-coral focus:border-transparent"
                   >
                     <option value="">Select blood group</option>
                     {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((g) => (
@@ -219,7 +219,7 @@ export default function NewPatientPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="bg-[#0175C2] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-[#015a96] disabled:opacity-50"
+                  className="bg-coral text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-coral-strong disabled:opacity-50"
                 >
                   {loading ? 'Saving…' : 'Save'}
                 </button>

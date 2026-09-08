@@ -48,17 +48,17 @@ function ForgotPasswordContent() {
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-950">
               If an account exists for that email, a reset link is on its way. Check your inbox and spam folder.
             </div>
-            <Link href={`/auth/signin?${new URLSearchParams({ callbackUrl, email: email.trim().toLowerCase() })}`} className="mt-6 inline-flex text-sm font-medium text-[#0175C2] hover:underline">← Back to sign in</Link>
+            <Link href={`/auth/signin?${new URLSearchParams({ callbackUrl, email: email.trim().toLowerCase() })}`} className="mt-6 inline-flex text-sm font-medium text-coral hover:underline">← Back to sign in</Link>
           </div>
         ) : (
           <form onSubmit={submit} className="mt-6 space-y-5">
             {error && <div role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>}
             <div>
               <label htmlFor="reset-email" className="block text-sm font-medium text-gray-700">Email address</label>
-              <input id="reset-email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-lg border border-gray-300 px-3.5 py-2.5 focus:border-[#0175C2] focus:outline-none focus:ring-2 focus:ring-[#0175C2]/30" />
+              <input id="reset-email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-lg border border-gray-300 px-3.5 py-2.5 focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30" />
             </div>
-            <button type="submit" disabled={loading} className="w-full rounded-lg bg-[#0175C2] px-4 py-3 text-sm font-medium text-white hover:bg-[#015a96] disabled:opacity-50">{loading ? 'Sending link…' : 'Send reset link'}</button>
-            <Link href={`/auth/signin?${new URLSearchParams({ callbackUrl, email: email.trim().toLowerCase() })}`} className="block text-center text-sm font-medium text-[#0175C2] hover:underline">Back to sign in</Link>
+            <button type="submit" disabled={loading} className="w-full rounded-lg bg-coral px-4 py-3 text-sm font-medium text-white hover:bg-coral-strong disabled:opacity-50">{loading ? 'Sending link…' : 'Send reset link'}</button>
+            <Link href={`/auth/signin?${new URLSearchParams({ callbackUrl, email: email.trim().toLowerCase() })}`} className="block text-center text-sm font-medium text-coral hover:underline">Back to sign in</Link>
           </form>
         )}
       </section>

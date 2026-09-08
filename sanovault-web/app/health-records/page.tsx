@@ -12,6 +12,7 @@ import { HealthRecordCategory } from '@/lib/types/health-record-category.types';
 import { HealthcareSource } from '@/lib/types/healthcare-source.types';
 import { humanizeLabel } from '@/lib/constants/labels';
 import { getLastPatientId, setLastPatientId } from '@/lib/patients/last-used';
+import { svBtnOutline, svBtnPrimary } from '@/lib/ui/buttons';
 
 interface HealthRecord {
   id: string;
@@ -233,7 +234,7 @@ function HealthRecordsContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0175C2] mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-coral mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -262,95 +263,100 @@ function HealthRecordsContent() {
 
       <main className="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <div className="flex justify-between items-center mb-6 gap-3 flex-wrap">
-            <h1 className="text-3xl font-bold text-gray-900">Reports</h1>
-            <Link
-              href={selectedPatientId ? `/reports/blood-summary?patientId=${selectedPatientId}` : '/reports/blood-summary'}
-              className="min-h-11 text-base text-[#0175C2] hover:underline"
-            >
-              Blood work
-            </Link>
-            {selectedPatientId && (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-3xl font-bold text-ink">Reports</h1>
+            <div className="flex flex-wrap items-center gap-3">
               <Link
-                href={`/health-records/new?patientId=${selectedPatientId}`}
-                className="min-h-12 bg-[#0175C2] hover:bg-[#015a96] text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                href={selectedPatientId ? `/reports/blood-summary?patientId=${selectedPatientId}` : '/reports/blood-summary'}
+                className="inline-flex min-h-12 items-center text-base font-medium text-coral hover:underline"
               >
-                Add a report
+                Blood Work
               </Link>
-            )}
+              {selectedPatientId && (
+                <Link
+                  href={`/health-records/new?patientId=${selectedPatientId}`}
+                  className={svBtnPrimary}
+                >
+                  Add a Report
+                </Link>
+              )}
+            </div>
           </div>
 
           {Object.keys(patients).length === 0 ? (
             <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Add a person first
+                Add a Person First
               </h3>
               <p className="text-gray-600 mb-6">
                 Reports need a name, such as Dad or your daughter.
               </p>
               <Link
                 href="/patients/new"
-                className="inline-block min-h-12 bg-[#0175C2] hover:bg-[#015a96] text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                className={svBtnPrimary}
               >
-                Add a person
+                Add a Person
               </Link>
             </div>
           ) : (
             <>
-              <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-                <div className="mb-4">
-                  <label htmlFor="patient" className="block text-sm font-medium text-gray-700 mb-2">
-                    Person
-                  </label>
-                  <select
-                    id="patient"
-                    value={selectedPatientId}
-                    onChange={(e) => {
-                      setSelectedPatientId(e.target.value);
-                      if (e.target.value) setLastPatientId(e.target.value);
-                      updateQuery({ patientId: e.target.value });
-                    }}
-                    className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
-                  >
-                    <option value="">Everyone</option>
-                    {Object.values(patients).map((patient) => (
-                      <option key={patient.id} value={patient.id}>
-                        {patient.firstName} {patient.lastName || ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 relative">
+              <div className="mb-6 rounded-xl border border-silver bg-white p-6 shadow-sm">
+                <div className="grid gap-4 md:grid-cols-[16rem_minmax(0,1fr)_auto] md:items-end">
+                  <div>
+                    <label htmlFor="patient" className="mb-2 block text-sm font-medium text-blue-slate">
+                      Person
+                    </label>
+                    <select
+                      id="patient"
+                      value={selectedPatientId}
+                      onChange={(e) => {
+                        setSelectedPatientId(e.target.value);
+                        if (e.target.value) setLastPatientId(e.target.value);
+                        updateQuery({ patientId: e.target.value });
+                      }}
+                      className="w-full rounded-lg border border-silver px-4 py-2.5 text-ink focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
+                    >
+                      <option value="">Everyone</option>
+                      {Object.values(patients).map((patient) => (
+                        <option key={patient.id} value={patient.id}>
+                          {patient.firstName} {patient.lastName || ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="report-search" className="mb-2 block text-sm font-medium text-blue-slate">
+                      Search
+                    </label>
+                    <div className="relative">
                       <input
+                        id="report-search"
                         type="text"
-                        placeholder="Search records..."
+                        placeholder="Search Records..."
                         value={keyword}
                         onChange={(e) => setKeyword(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+                        className="w-full rounded-lg border border-silver px-4 py-2.5 text-ink focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
                       />
                       {recordsLoading && (
-                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#0175C2]"></div>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-coral"></div>
                         </div>
                       )}
                     </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
                     <button
+                      type="button"
                       onClick={() => setShowFilters(!showFilters)}
-                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                        showFilters || hasActiveFilters
-                          ? 'bg-[#0175C2] text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
+                      className={showFilters || hasActiveFilters ? svBtnPrimary : svBtnOutline}
                     >
-                      Find a report {hasActiveFilters && `(${[keyword, filterSource, filterRecordType, filterTag, startDate, endDate].filter(Boolean).length})`}
+                      Find a Report {hasActiveFilters && `(${[keyword, filterSource, filterRecordType, filterTag, startDate, endDate].filter(Boolean).length})`}
                     </button>
                     {hasActiveFilters && (
                       <button
+                        type="button"
                         onClick={clearFilters}
-                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+                        className={svBtnOutline}
                       >
                         Clear
                       </button>
@@ -371,7 +377,7 @@ function HealthRecordsContent() {
                           setFilterSource(e.target.value);
                           updateQuery({ source: e.target.value });
                         }}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral focus:border-transparent"
                       >
                         <option value="">All Sources</option>
                         {sources.map((source) => (
@@ -393,7 +399,7 @@ function HealthRecordsContent() {
                           setFilterRecordType(e.target.value);
                           updateQuery({ recordType: e.target.value });
                         }}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral focus:border-transparent"
                       >
                         <option value="">All Types</option>
                         {categories.map((category) => (
@@ -415,7 +421,7 @@ function HealthRecordsContent() {
                           setFilterTag(e.target.value);
                           updateQuery({ tag: e.target.value });
                         }}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral focus:border-transparent"
                       >
                         <option value="">All Tags</option>
                         {allTags.map((tag) => (
@@ -438,7 +444,7 @@ function HealthRecordsContent() {
                           setStartDate(e.target.value);
                           updateQuery({ startDate: e.target.value });
                         }}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral focus:border-transparent"
                       />
                     </div>
 
@@ -454,7 +460,7 @@ function HealthRecordsContent() {
                           setEndDate(e.target.value);
                           updateQuery({ endDate: e.target.value });
                         }}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral focus:border-transparent"
                       />
                     </div>
                   </div>
@@ -577,9 +583,9 @@ function HealthRecordsContent() {
                   {selectedPatientId && !hasActiveFilters && (
                     <Link
                       href={`/health-records/new?patientId=${selectedPatientId}`}
-                      className="inline-block bg-[#0175C2] hover:bg-[#015a96] text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                      className={svBtnPrimary}
                     >
-                      Add a report
+                      Add a Report
                     </Link>
                   )}
                   {hasActiveFilters && (
@@ -603,7 +609,7 @@ function HealthRecordsContent() {
                           <p className="truncate font-medium text-gray-950">
                             {getRecordTypeLabel(record.recordType)}
                             {record.documentId ? (
-                              <span className="ml-2 text-xs font-normal text-[#0175C2]">File</span>
+                              <span className="ml-2 text-xs font-normal text-coral">File</span>
                             ) : null}
                           </p>
                           <p className="mt-0.5 truncate text-sm text-gray-600">
@@ -636,7 +642,7 @@ function HealthRecordsContent() {
                         <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
                           <Link
                             href={`/health-records/${record.id}`}
-                            className="inline-flex min-h-10 items-center justify-center rounded-lg bg-blue-50 px-3 text-sm font-medium text-[#0175C2] hover:bg-blue-100"
+                            className="inline-flex min-h-10 items-center justify-center rounded-lg bg-blue-50 px-3 text-sm font-medium text-coral hover:bg-blue-100"
                           >
                             View
                           </Link>

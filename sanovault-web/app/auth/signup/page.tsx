@@ -88,7 +88,7 @@ function SignUpContent() {
             />
           </div>
           <h2 className="text-3xl font-extrabold text-gray-900">
-            Create your account
+            Create Your Account
           </h2>
           <p className="mt-2 text-sm text-gray-600">
             {emailFromInvite
@@ -131,7 +131,7 @@ function SignUpContent() {
                 name="firstName"
                 type="text"
                 required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-[#0175C2] focus:border-[#0175C2] sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-coral focus:border-coral sm:text-sm"
                 placeholder="First name"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
@@ -145,7 +145,7 @@ function SignUpContent() {
                 id="lastName"
                 name="lastName"
                 type="text"
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-[#0175C2] focus:border-[#0175C2] sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-coral focus:border-coral sm:text-sm"
                 placeholder="Last name (optional)"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
@@ -161,7 +161,7 @@ function SignUpContent() {
                 type="email"
                 autoComplete="email"
                 required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-[#0175C2] focus:border-[#0175C2] sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-coral focus:border-coral sm:text-sm"
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -179,7 +179,7 @@ function SignUpContent() {
                   autoComplete="new-password"
                   required
                   minLength={8}
-                  className="mt-1 appearance-none relative block w-full px-3 py-2 pr-16 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-[#0175C2] focus:border-[#0175C2] sm:text-sm"
+                  className="mt-1 appearance-none relative block w-full px-3 py-2 pr-16 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-coral focus:border-coral sm:text-sm"
                   placeholder="Password (min 8 characters)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -199,7 +199,7 @@ function SignUpContent() {
                   autoComplete="new-password"
                   required
                   minLength={8}
-                  className="mt-1 appearance-none relative block w-full px-3 py-2 pr-16 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-[#0175C2] focus:border-[#0175C2] sm:text-sm"
+                  className="mt-1 appearance-none relative block w-full px-3 py-2 pr-16 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-coral focus:border-coral sm:text-sm"
                   placeholder="Confirm password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -213,7 +213,7 @@ function SignUpContent() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-[#0175C2] hover:bg-[#015a96] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0175C2] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-coral hover:bg-coral-strong focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-coral disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
             >
               {loading ? 'Creating account...' : 'Sign up with password'}
             </button>
@@ -225,14 +225,14 @@ function SignUpContent() {
             onClick={() => setShowPasswordForm(true)}
             className="w-full text-center text-sm font-medium text-gray-600 hover:text-gray-950"
           >
-            Use a password instead
+            Use a Password Instead
           </button>
         )}
 
         <div className="text-center">
           <a
             href={signInHref}
-            className="font-medium text-[#0175C2] hover:text-[#015a96] transition-colors"
+            className="font-medium text-coral hover:text-coral-strong transition-colors"
           >
             Already have an account? Sign in
           </a>

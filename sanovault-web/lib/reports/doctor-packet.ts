@@ -1,7 +1,37 @@
-import type { KeyFinding } from '@/lib/reports/blood-summary';
+import type { KeyFinding, MetricComparison } from '@/lib/reports/blood-summary';
 import { isoDateFromUnknown } from '@/lib/vitals/growth';
 
 export const DOCTOR_PACKET_HIGHLIGHT_LIMIT = 5;
+export const DOCTOR_PACKET_TREND_LIMIT = 8;
+
+const PACKET_TREND_PRIORITY = [
+  'hemoglobin',
+  'hba1c',
+  'fasting_glucose',
+  'creatinine',
+  'egfr',
+  'alt',
+  'ast',
+  'alp',
+  'bilirubin_total',
+  'ldl',
+  'hdl',
+  'triglycerides',
+  'total_cholesterol',
+  'tsh',
+  'vitamin_d',
+  'ferritin',
+  'platelets',
+  'total_wbc',
+];
+
+export type LabTrend = {
+  metric: string;
+  label: string;
+  line: string;
+  values: number[];
+  direction: MetricComparison['direction'];
+};
 
 type MedicationLike = {
   originalBrandName: string;
@@ -97,6 +127,51 @@ export function labPacketLines(options: {
   return highlights;
 }
 
+export function labTrendLines(
+  comparisons: MetricComparison[],
+  limit = DOCTOR_PACKET_TREND_LIMIT,
+): LabTrend[] {
+  const rows: Array<LabTrend & { rank: number; absPercent: number }> = [];
+  for (const comparison of comparisons) {
+    const numeric = comparison.results.filter(
+      (result): result is typeof result & { value: number } => result.value !== null,
+    );
+    if (numeric.length < 2) continue;
+    const oldest = numeric[0];
+    const newest = numeric[numeric.length - 1];
+    const unit = newest.unit || comparison.unit;
+    const unitBit = unit ? ` ${unit}` : '';
+    const pct = comparison.changePercent;
+    const changeBit =
+      comparison.direction === 'increased' || comparison.direction === 'decreased'
+        ? `, ${comparison.direction === 'increased' ? 'up' : 'down'}${pct !== null ? ` ${Math.round(Math.abs(pct))}%` : ''}`
+        : '';
+    const line = `${comparison.label} ${oldest.value}${unitBit} → ${newest.value}${unitBit} (${formatPacketDate(oldest.date)} → ${formatPacketDate(newest.date)}${changeBit})`;
+    const priorityIndex = PACKET_TREND_PRIORITY.indexOf(comparison.metric);
+    const globulinBoost = /globulin/i.test(comparison.label) || /globulin/i.test(comparison.metric);
+    const rank = priorityIndex >= 0 ? priorityIndex : globulinBoost ? 8.5 : 100;
+    const absPercent = pct === null ? 0 : Math.abs(pct);
+    if (rank >= 100 && absPercent < 5) continue;
+    rows.push({
+      metric: comparison.metric,
+      label: comparison.label,
+      line,
+      values: numeric.map((item) => item.value),
+      direction: comparison.direction,
+      rank,
+      absPercent,
+    });
+  }
+  rows.sort((a, b) => a.rank - b.rank || b.absPercent - a.absPercent);
+  return rows.slice(0, limit).map((row) => ({
+    metric: row.metric,
+    label: row.label,
+    line: row.line,
+    values: row.values,
+    direction: row.direction,
+  }));
+}
+
 export function ageFromDateOfBirth(value: string | Date | null | undefined) {
   const birthIso = isoDateFromUnknown(value);
   const todayIso = isoDateFromUnknown(new Date());
@@ -116,6 +191,7 @@ export function doctorPacketWhatsAppText(packet: {
   conditions: string[];
   medicines: string[];
   labHighlights: string[];
+  labTrends?: string[];
   bloodPressure: string[];
   growth: string[];
   vaccinations: string[];
@@ -123,30 +199,35 @@ export function doctorPacketWhatsAppText(packet: {
   documents: Array<{ label: string; href: string }>;
 }) {
   const lines = [
-    `SanoVault — for the doctor`,
+    `SanoVault — For the Doctor`,
     packet.name,
     packet.identityLine,
     '',
     'Conditions',
     ...(packet.conditions.length ? packet.conditions.map((line) => `- ${line}`) : ['- None recorded']),
     '',
-    'Current medicines',
+    'Current Medicines',
     ...(packet.medicines.length ? packet.medicines.map((line) => `- ${line}`) : ['- None recorded']),
     '',
-    'Lab highlights',
+    'Lab Highlights',
     ...(packet.labHighlights.length ? packet.labHighlights.map((line) => `- ${line}`) : ['- No recent lab highlights']),
     '',
-    'Blood pressure',
+    'Lab Trends',
+    ...(packet.labTrends && packet.labTrends.length
+      ? packet.labTrends.map((line) => `- ${line}`)
+      : ['- Need two lab dates for a trend']),
+    '',
+    'Blood Pressure',
     ...(packet.bloodPressure.length ? packet.bloodPressure.map((line) => `- ${line}`) : ['- Not logged in SanoVault yet']),
     '',
-    'Height & weight',
+    'Height & Weight',
     ...(packet.growth.length ? packet.growth.map((line) => `- ${line}`) : ['- Not logged in SanoVault yet']),
     '',
     'Vaccinations',
     ...(packet.vaccinations.length ? packet.vaccinations.map((line) => `- ${line}`) : ['- None recorded']),
   ];
   if (packet.visitNotes.length) {
-    lines.push('', 'Visit notes', ...packet.visitNotes.map((line) => `- ${line}`));
+    lines.push('', 'Visit Notes', ...packet.visitNotes.map((line) => `- ${line}`));
   }
   if (packet.documents.length) {
     lines.push('', 'Reports');

@@ -2,13 +2,18 @@
 @import "@heroui/styles";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #111827;
-  --brand: #0175c2;
-  --brand-strong: #015a96;
+  --ink: #2d3142;
+  --slate: #4f5d75;
+  --silver: #bfc0c0;
+  --coral: #ef8354;
+  --coral-strong: #d96c3d;
+  --background: #f4f4f5;
+  --foreground: #2d3142;
+  --brand: #ef8354;
+  --brand-strong: #d96c3d;
   --surface: #ffffff;
-  --border: #e5e7eb;
-  --accent: oklch(0.55 0.14 245);
+  --border: #bfc0c0;
+  --accent: oklch(0.72 0.14 48);
   --accent-foreground: oklch(0.99 0 0);
   --app-font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --app-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
@@ -18,6 +23,11 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-ink: var(--ink);
+  --color-blue-slate: var(--slate);
+  --color-silver: var(--silver);
+  --color-coral: var(--coral);
+  --color-coral-strong: var(--coral-strong);
   --font-sans: var(--app-font-sans);
   --font-mono: var(--app-font-mono);
 }
@@ -32,12 +42,12 @@ body {
 input,
 textarea,
 select {
-  color: #171717;
+  color: var(--ink);
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: #6b7280;
+  color: var(--slate);
   opacity: 1;
 }
 
@@ -50,13 +60,64 @@ textarea {
 }
 
 :focus-visible {
-  outline: 2px solid var(--brand);
+  outline: 2px solid var(--coral);
   outline-offset: 2px;
 }
 
 ::selection {
-  background: #dbeafe;
-  color: #172554;
+  background: color-mix(in srgb, var(--coral) 28%, white);
+  color: var(--ink);
+}
+
+.sv-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0 1rem;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+  text-decoration: none;
+  vertical-align: middle;
+}
+
+.sv-btn-primary {
+  background: var(--coral);
+  color: #ffffff;
+}
+
+.sv-btn-primary:hover {
+  background: var(--coral-strong);
+}
+
+.sv-btn-secondary {
+  background: var(--slate);
+  color: #ffffff;
+}
+
+.sv-btn-secondary:hover {
+  background: var(--ink);
+}
+
+.sv-btn-outline {
+  background: #ffffff;
+  color: var(--ink);
+  border: 1px solid var(--silver);
+}
+
+.sv-btn-outline:hover {
+  background: var(--background);
+}
+
+[data-slot="button"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.15;
+  text-align: center;
 }
 
 @media print {

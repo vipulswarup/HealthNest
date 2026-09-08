@@ -112,7 +112,7 @@ export default function PatientDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0175C2] mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-coral mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -133,7 +133,7 @@ export default function PatientDetailPage() {
               <p className="text-red-600">{error || 'Patient not found'}</p>
               <Link
                 href="/patients"
-                className="mt-4 inline-block text-[#0175C2] hover:text-[#015a96]"
+                className="mt-4 inline-block text-coral hover:text-coral-strong"
               >
                 Back to family
               </Link>
@@ -153,7 +153,7 @@ export default function PatientDetailPage() {
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
             <Link
               href="/patients"
-              className="text-sm font-medium text-[#0175C2] hover:underline"
+              className="text-sm font-medium text-coral hover:underline"
             >
               ← Back to family
             </Link>
@@ -238,15 +238,15 @@ export default function PatientDetailPage() {
               <h3 className="text-xl font-bold text-gray-900">Reports</h3>
               <Link
                 href={`/health-records/new?patientId=${patientId}`}
-                className="px-4 py-2 bg-[#0175C2] text-white rounded-lg hover:bg-[#015a96] transition-colors text-sm font-medium"
+                className="sv-btn sv-btn-primary"
               >
-                Add a report
+                Add a Report
               </Link>
             </div>
 
             {recordsLoading ? (
               <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0175C2] mx-auto"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-coral mx-auto"></div>
                 <p className="mt-4 text-gray-600">Loading records...</p>
               </div>
             ) : healthRecords.length === 0 ? (
@@ -254,9 +254,9 @@ export default function PatientDetailPage() {
                 <p>No reports yet</p>
                 <Link
                   href={`/health-records/new?patientId=${patientId}`}
-                  className="mt-4 inline-block text-[#0175C2] hover:text-[#015a96]"
+                  className="mt-4 inline-block text-coral hover:text-coral-strong"
                 >
-                  Add a report
+                  Add a Report
                 </Link>
               </div>
             ) : (
@@ -297,7 +297,7 @@ export default function PatientDetailPage() {
                         {record.documentId && (
                           <Link
                             href={`/health-records/${record.id}/document`}
-                            className="text-sm text-[#0175C2] hover:text-[#015a96] inline-flex items-center cursor-pointer"
+                            className="text-sm text-coral hover:text-coral-strong inline-flex items-center cursor-pointer"
                           >
                             View document
                           </Link>

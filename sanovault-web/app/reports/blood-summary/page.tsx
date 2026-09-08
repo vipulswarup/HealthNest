@@ -5,6 +5,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from '@/lib/auth/client';
 import { LabResultsEditor } from '@/components/lab/LabResultsEditor';
+import { Sparkline } from '@/components/lab/Sparkline';
 import { LabResult } from '@/lib/reports/blood-summary';
 import AppNav from '@/components/layout/AppNav';
 
@@ -71,40 +72,6 @@ const formatValue = (result: { value: number | null; rawValue?: string; unit: st
   const displayed = result.rawValue || (result.value === null ? '—' : String(result.value));
   return `${displayed}${result.unit ? ` ${result.unit}` : ''}`;
 };
-
-function Sparkline({ values }: { values: number[] }) {
-  if (values.length < 2) {
-    return <span className="text-xs text-slate-400">Need 2+ points</span>;
-  }
-  const width = 120;
-  const height = 36;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-  const points = values
-    .map((value, index) => {
-      const x = (index / (values.length - 1)) * width;
-      const y = height - ((value - min) / span) * (height - 6) - 3;
-      return `${x},${y}`;
-    })
-    .join(' ');
-  const rising = values[values.length - 1] >= values[0];
-  return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible" aria-hidden="true">
-      <polyline
-        fill="none"
-        stroke={rising ? '#b45309' : '#0175C2'}
-        strokeWidth="2"
-        points={points}
-      />
-      {values.map((value, index) => {
-        const x = (index / (values.length - 1)) * width;
-        const y = height - ((value - min) / span) * (height - 6) - 3;
-        return <circle key={index} cx={x} cy={y} r="2.5" fill={rising ? '#b45309' : '#0175C2'} />;
-      })}
-    </svg>
-  );
-}
 
 function BloodSummaryContent() {
   const { data: session, status } = useSession();
@@ -307,10 +274,10 @@ function BloodSummaryContent() {
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4 print:hidden">
           <div>
-            <Link href="/health-records" className="mb-3 inline-block text-sm font-medium text-[#0175C2] hover:underline">
-              ← Back to health records
+            <Link href="/health-records" className="mb-3 inline-block text-sm font-medium text-coral hover:underline">
+              ← Back to Health Records
             </Link>
-            <h1 className="text-3xl font-bold text-slate-900">Blood work summary</h1>
+            <h1 className="text-3xl font-bold text-ink">Blood Work Summary</h1>
             <p className="mt-1 text-slate-600">
               90-day trends for Blood, Iron, Kidney, Liver, Cholesterol, Thyroid, and related panels.
             </p>
@@ -318,7 +285,7 @@ function BloodSummaryContent() {
           <button
             onClick={() => window.print()}
             disabled={!summary || selectedCount === 0}
-            className="rounded-lg bg-[#0175C2] px-4 py-2 font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="rounded-lg bg-coral px-4 py-2 font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             Print / Save PDF
           </button>
@@ -368,7 +335,7 @@ function BloodSummaryContent() {
                 <section className="mb-6 rounded-xl bg-white p-5 shadow-sm print:hidden" aria-labelledby="test-selection-heading">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <h2 id="test-selection-heading" className="text-lg font-semibold text-slate-900">Choose tests to include</h2>
+                      <h2 id="test-selection-heading" className="text-lg font-semibold text-slate-900">Choose Tests to Include</h2>
                       <p className="mt-1 text-sm text-slate-600">
                         Uncheck tests that are not relevant for this doctor. Your saved lab results will not be changed.
                       </p>
@@ -384,7 +351,7 @@ function BloodSummaryContent() {
                       disabled={selectedCount === summary.comparisons.length}
                       className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      Select all
+                      Select All
                     </button>
                     <button
                       type="button"
@@ -392,7 +359,7 @@ function BloodSummaryContent() {
                       disabled={selectedCount === 0}
                       className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      Clear all
+                      Clear All
                     </button>
                   </div>
                   <div className="mt-5 grid gap-5 md:grid-cols-2">
@@ -409,7 +376,7 @@ function BloodSummaryContent() {
                                 type="checkbox"
                                 checked={selectedMetrics.has(comparison.metric)}
                                 onChange={() => toggleMetric(comparison.metric)}
-                                className="h-4 w-4 rounded border-slate-300 accent-[#0175C2]"
+                                className="h-4 w-4 rounded border-slate-300 accent-coral"
                               />
                               <span>
                                 {comparison.label}
@@ -427,7 +394,7 @@ function BloodSummaryContent() {
 
                 {selectedCount === 0 ? (
                   <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm print:hidden">
-                    <h2 className="font-semibold text-slate-900">Select at least one test</h2>
+                    <h2 className="font-semibold text-slate-900">Select at Least One Test</h2>
                     <p className="mt-1 text-sm text-slate-600">Choose the tests you want before printing or saving the report as a PDF.</p>
                   </div>
                 ) : (
@@ -440,7 +407,7 @@ function BloodSummaryContent() {
                     {formatDate(summary.periodStart)} – {formatDate(summary.periodEnd)} · {summary.candidateReportCount} report
                     {summary.candidateReportCount === 1 ? '' : 's'} considered
                   </p>
-                  <h3 className="mt-5 text-base font-semibold text-slate-900">Key findings</h3>
+                  <h3 className="mt-5 text-base font-semibold text-slate-900">Key Findings</h3>
                   <ul className="mt-3 space-y-2">
                     {(visibleFindings.length > 0
                       ? visibleFindings
@@ -540,7 +507,7 @@ function BloodSummaryContent() {
                     {summary.reports.map((report) => (
                       <li key={report.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
                         <div>
-                          <Link href={report.documentPath || `/health-records/${report.id}`} className="text-[#0175C2] hover:underline">
+                          <Link href={report.documentPath || `/health-records/${report.id}`} className="text-coral hover:underline">
                             {formatDate(report.date)} · {report.source}
                           </Link>
                           <div className="mt-1 text-slate-500">
@@ -594,7 +561,7 @@ function BloodSummaryContent() {
                 type="button"
                 disabled={savingEdits}
                 onClick={() => void saveManualResults(false)}
-                className="rounded-lg bg-[#0175C2] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                className="rounded-lg bg-coral px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
                 {savingEdits ? 'Saving…' : 'Save corrections'}
               </button>

@@ -83,7 +83,7 @@ function BetaAcknowledgementContent() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-100 px-4 py-12 sm:px-6">
       <section className="mx-auto w-full max-w-2xl rounded-2xl bg-white p-7 shadow-xl sm:p-10">
-        <p className="text-sm font-semibold uppercase tracking-wide text-[#0175C2]">Before you continue</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-coral">Before you continue</p>
         <h1 className="mt-2 text-3xl font-bold text-gray-900">{BETA_ACKNOWLEDGEMENT_TITLE}</h1>
         <p className="mt-6 text-lg leading-8 text-gray-800">
           {BETA_ACKNOWLEDGEMENT_TEXT}
@@ -96,14 +96,14 @@ function BetaAcknowledgementContent() {
               type="checkbox"
               checked={agreed}
               onChange={(event) => setAgreed(event.target.checked)}
-              className="mt-1 h-5 w-5 rounded border-gray-300 text-[#0175C2] focus:ring-[#0175C2]"
+              className="mt-1 h-5 w-5 rounded border-gray-300 text-coral focus:ring-coral"
             />
             <span>I understand, and I want to continue.</span>
           </label>
           <button
             type="submit"
             disabled={!agreed || loading}
-            className="w-full min-h-12 rounded-lg bg-[#0175C2] px-4 py-3 text-base font-medium text-white hover:bg-[#015a96] disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full min-h-12 rounded-lg bg-coral px-4 py-3 text-base font-medium text-white hover:bg-coral-strong disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? 'Saving…' : 'Continue'}
           </button>

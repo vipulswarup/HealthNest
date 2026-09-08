@@ -15,7 +15,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
-        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-[#0175C2]"></div>
+        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-coral"></div>
         <p className="mt-4 text-gray-600" role="status">Loading SanoVault…</p>
       </div>
     </div>

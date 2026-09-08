@@ -28,13 +28,13 @@ export default function PersonPicker({ people, selectedId, lastUsedId, onSelect 
               onClick={() => onSelect(person.id)}
               className={`flex min-h-16 w-full items-center justify-between rounded-xl border px-4 py-4 text-left text-lg font-semibold transition ${
                 selected
-                  ? 'border-[#0175C2] bg-blue-50 text-[#015a96]'
+                  ? 'border-coral bg-blue-50 text-[#D96C3D]'
                   : 'border-gray-200 bg-white text-gray-950 hover:border-blue-200 hover:bg-blue-50'
               }`}
             >
               <span>{displayName(person)}</span>
               {lastUsed && !selected && (
-                <span className="text-xs font-medium uppercase tracking-wide text-gray-500">Last used</span>
+                <span className="text-xs font-medium uppercase tracking-wide text-gray-500">Last Used</span>
               )}
             </button>
           </li>

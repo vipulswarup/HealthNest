@@ -284,7 +284,7 @@ export default function HouseholdDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0175C2] mx-auto" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-coral mx-auto" />
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -373,12 +373,12 @@ export default function HouseholdDetailPage() {
               <section>
                 <h2 className="text-lg font-semibold text-gray-900 mb-3">People in this folder</h2>
                 {patients.length === 0 ? (
-                  <p className="text-sm text-gray-600 mb-3">No one yet. <Link href="/patients/new" className="text-[#0175C2] hover:underline">Add a person</Link>.</p>
+                  <p className="text-sm text-gray-600 mb-3">No one yet. <Link href="/patients/new" className="text-coral hover:underline">Add a Person</Link>.</p>
                 ) : (
                   <ul className="divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden mb-3">
                     {patients.map((p) => (
                       <li key={p.id} className="flex items-center justify-between px-4 py-3 gap-3">
-                        <Link href={`/patients/${p.id}`} className="font-medium text-gray-900 hover:text-[#0175C2]">
+                        <Link href={`/patients/${p.id}`} className="font-medium text-gray-900 hover:text-coral">
                           {[p.firstName, p.lastName].filter(Boolean).join(' ')}
                         </Link>
                         <button
@@ -406,7 +406,7 @@ export default function HouseholdDetailPage() {
                         </option>
                       ))}
                     </select>
-                    <button type="submit" disabled={busy} className="bg-[#0175C2] text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                    <button type="submit" disabled={busy} className="bg-coral text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
                       Link existing person
                     </button>
                   </form>
@@ -447,14 +447,14 @@ export default function HouseholdDetailPage() {
                     className="flex-1 min-h-12 border border-gray-300 rounded-md px-3 py-2 text-base text-gray-900 bg-white placeholder:text-gray-500"
                     required
                   />
-                  <button type="submit" disabled={busy} className="min-h-12 bg-[#0175C2] text-white px-4 py-2 rounded-md text-base font-medium hover:bg-[#015a96] disabled:opacity-50">
+                  <button type="submit" disabled={busy} className="min-h-12 bg-coral text-white px-4 py-2 rounded-md text-base font-medium hover:bg-coral-strong disabled:opacity-50">
                     Create invite
                   </button>
                 </form>
                 {inviteUrl && (
                   <a
                     href={whatsappShareHref(familyInviteMessage(session.user?.name || 'A family member', inviteUrl))}
-                    className="mt-3 inline-flex min-h-12 items-center text-base font-medium text-[#0175C2] hover:underline"
+                    className="mt-3 inline-flex min-h-12 items-center text-base font-medium text-coral hover:underline"
                   >
                     Send this invite on WhatsApp
                   </a>
@@ -473,7 +473,7 @@ export default function HouseholdDetailPage() {
                           <div className="flex items-center gap-3">
                             <a
                               href={whatsappShareHref(familyInviteMessage(session.user?.name || 'A family member', acceptUrl))}
-                              className="font-medium text-[#0175C2] hover:underline"
+                              className="font-medium text-coral hover:underline"
                             >
                               WhatsApp
                             </a>

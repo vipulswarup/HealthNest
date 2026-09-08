@@ -176,7 +176,7 @@ function LogBpContent() {
                         onClick={() => setPeriod(value)}
                         className={`min-h-12 rounded-xl border px-3 text-base font-medium ${
                           period === value
-                            ? 'border-[#0175C2] bg-blue-50 text-[#015a96]'
+                            ? 'border-coral bg-blue-50 text-[#D96C3D]'
                             : 'border-gray-300 bg-white text-gray-800'
                         }`}
                       >
@@ -229,7 +229,7 @@ function LogBpContent() {
                 <button
                   type="submit"
                   disabled={saving || !systolic || !diastolic}
-                  className="flex min-h-14 w-full items-center justify-center rounded-xl bg-[#0175C2] text-lg font-medium text-white hover:bg-[#015a96] disabled:opacity-50"
+                  className="flex min-h-14 w-full items-center justify-center rounded-xl bg-coral text-lg font-medium text-white hover:bg-coral-strong disabled:opacity-50"
                 >
                   {saving ? 'Saving…' : 'Save'}
                 </button>

@@ -98,7 +98,7 @@ export default function AcceptInvitePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0175C2] mx-auto" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-coral mx-auto" />
           <p className="mt-4 text-gray-600">Loading invite...</p>
         </div>
       </div>
@@ -126,7 +126,7 @@ export default function AcceptInvitePage() {
                 priority
               />
             </div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#0175C2]">
+            <p className="text-xs font-semibold uppercase tracking-wide text-coral">
               Invite pending
             </p>
             <h1 className="mt-2 text-2xl font-bold text-gray-900">
@@ -159,7 +159,7 @@ export default function AcceptInvitePage() {
             <div className="space-y-3">
               <Link
                 href={`/auth/signin?${authQuery}`}
-                className="flex min-h-12 w-full justify-center rounded-lg bg-[#0175C2] px-4 py-3 text-base font-medium text-white hover:bg-[#015a96] transition-colors"
+                className="flex min-h-12 w-full justify-center rounded-lg bg-coral px-4 py-3 text-base font-medium text-white hover:bg-coral-strong transition-colors"
               >
                 Join with Google
               </Link>
@@ -203,7 +203,7 @@ export default function AcceptInvitePage() {
                       type="button"
                       disabled={busy}
                       onClick={() => void accept()}
-                      className="min-h-12 rounded-lg bg-[#0175C2] px-4 py-3 text-base font-medium text-white hover:bg-[#015a96] disabled:opacity-50"
+                      className="min-h-12 rounded-lg bg-coral px-4 py-3 text-base font-medium text-white hover:bg-coral-strong disabled:opacity-50"
                     >
                       {busy ? 'Joining...' : 'Join family folder'}
                     </button>
@@ -220,7 +220,7 @@ export default function AcceptInvitePage() {
               )}
 
               {!isPending && (
-                <Link href="/households" className="text-sm text-[#0175C2] hover:underline">
+                <Link href="/households" className="text-sm text-coral hover:underline">
                   Back to who can see this
                 </Link>
               )}

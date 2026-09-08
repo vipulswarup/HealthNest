@@ -363,7 +363,7 @@ export function MultiPageScanner({
                 onClick={() => void changeFilter(item.id)}
                 className={`min-h-10 rounded-full border px-3 text-sm font-medium ${
                   filter === item.id
-                    ? 'border-[#0175C2] bg-blue-50 text-[#0175C2]'
+                    ? 'border-coral bg-blue-50 text-coral'
                     : 'border-gray-300 bg-white text-gray-800'
                 }`}
               >
@@ -383,7 +383,7 @@ export function MultiPageScanner({
             type="button"
             onClick={() => void confirmDraft()}
             disabled={Boolean(busy)}
-            className="min-h-12 rounded-xl bg-[#0175C2] px-4 text-base font-medium text-white hover:bg-[#015a96] disabled:opacity-50"
+            className="min-h-12 rounded-xl bg-coral px-4 text-base font-medium text-white hover:bg-coral-strong disabled:opacity-50"
           >
             Keep page
           </button>
@@ -403,7 +403,7 @@ export function MultiPageScanner({
               type="button"
               onClick={() => void captureLive()}
               disabled={Boolean(busy)}
-              className="min-h-12 rounded-xl bg-[#0175C2] px-4 text-base font-medium text-white hover:bg-[#015a96] disabled:opacity-50"
+              className="min-h-12 rounded-xl bg-coral px-4 text-base font-medium text-white hover:bg-coral-strong disabled:opacity-50"
             >
               {pages.length === 0 ? 'Capture page' : 'Capture another page'}
             </button>
@@ -412,7 +412,7 @@ export function MultiPageScanner({
               type="button"
               onClick={() => cameraInputRef.current?.click()}
               disabled={Boolean(busy) || cameraMode === 'pending'}
-              className="min-h-12 rounded-xl bg-[#0175C2] px-4 text-base font-medium text-white hover:bg-[#015a96] disabled:opacity-50"
+              className="min-h-12 rounded-xl bg-coral px-4 text-base font-medium text-white hover:bg-coral-strong disabled:opacity-50"
             >
               {pages.length === 0 ? 'Take photo' : 'Add another page'}
             </button>

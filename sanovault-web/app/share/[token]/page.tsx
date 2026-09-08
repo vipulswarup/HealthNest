@@ -54,7 +54,7 @@ export default function PublicSharePage() {
         <div className="mx-auto max-w-lg rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
           <h1 className="text-xl font-semibold text-gray-900">Link unavailable</h1>
           <p className="mt-2 text-gray-600">{error || 'This share link has expired or been stopped.'}</p>
-          <Link href="/" className="mt-6 inline-block text-[#0175C2] hover:underline">Go to SanoVault</Link>
+          <Link href="/" className="mt-6 inline-block text-coral hover:underline">Go to SanoVault</Link>
         </div>
       </div>
     );
@@ -68,13 +68,13 @@ export default function PublicSharePage() {
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div>
-            <p className="text-sm font-medium text-[#0175C2]">SanoVault shared record</p>
+            <p className="text-sm font-medium text-coral">SanoVault shared record</p>
             <h1 className="text-xl font-semibold text-gray-950">{share.label}</h1>
             <p className="mt-1 text-sm text-gray-600">Link expires {expiry}</p>
           </div>
           <a
             href={share.fileUrl}
-            className="rounded-lg bg-[#0175C2] px-4 py-2 text-sm font-medium text-white hover:bg-[#015a96]"
+            className="rounded-lg bg-coral px-4 py-2 text-sm font-medium text-white hover:bg-coral-strong"
           >
             Download
           </a>
@@ -103,7 +103,7 @@ export default function PublicSharePage() {
           ) : (
             <div className="p-10 text-center">
               <p className="text-gray-600">Preview not available for this file type.</p>
-              <a href={share.fileUrl} className="mt-4 inline-block text-[#0175C2] hover:underline">Download file</a>
+              <a href={share.fileUrl} className="mt-4 inline-block text-coral hover:underline">Download file</a>
             </div>
           )}
         </div>

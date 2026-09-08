@@ -141,7 +141,7 @@ export function DocumentUploader({
 
       {isUploading ? (
         <div className="flex flex-col items-center rounded-lg border border-gray-200 bg-gray-50 p-10">
-          <div className="mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-[#0175C2]" />
+          <div className="mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-coral" />
           <p className="text-gray-600">Uploading...</p>
         </div>
       ) : (
@@ -151,7 +151,7 @@ export function DocumentUploader({
               type="button"
               disabled={blocked}
               onClick={() => setScanning(true)}
-              className="min-h-16 rounded-xl border border-gray-300 bg-white px-4 py-4 text-base font-semibold text-gray-950 hover:border-[#0175C2] hover:bg-blue-50 disabled:opacity-50"
+              className="min-h-16 rounded-xl border border-gray-300 bg-white px-4 py-4 text-base font-semibold text-gray-950 hover:border-coral hover:bg-blue-50 disabled:opacity-50"
             >
               Scan pages
             </button>
@@ -159,7 +159,7 @@ export function DocumentUploader({
               type="button"
               disabled={blocked}
               onClick={() => fileInputRef.current?.click()}
-              className="min-h-16 rounded-xl bg-[#0175C2] px-4 py-4 text-base font-semibold text-white hover:bg-[#015a96] disabled:opacity-50"
+              className="min-h-16 rounded-xl bg-coral px-4 py-4 text-base font-semibold text-white hover:bg-coral-strong disabled:opacity-50"
             >
               {multiple ? 'Choose files' : 'Choose from phone'}
             </button>
@@ -171,7 +171,7 @@ export function DocumentUploader({
           <div
             className={`hidden rounded-lg border-2 border-dashed p-8 text-center transition-colors sm:block ${
               isDragging
-                ? 'border-[#0175C2] bg-blue-50'
+                ? 'border-coral bg-blue-50'
                 : 'border-gray-300 bg-gray-50 hover:border-gray-400'
             } ${blocked ? 'pointer-events-none opacity-60' : 'cursor-pointer'}`}
             onDragOver={(e) => {

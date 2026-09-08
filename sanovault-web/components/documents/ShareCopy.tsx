@@ -114,7 +114,7 @@ export function ShareCopy({
             </div>
 
             <div className="mt-4 flex flex-wrap gap-3">
-              <button type="button" onClick={() => void exportCopy()} disabled={Boolean(busy)} className="rounded-lg bg-[#0175C2] px-4 py-2 text-sm font-medium text-white hover:bg-[#015a96] disabled:opacity-50">
+              <button type="button" onClick={() => void exportCopy()} disabled={Boolean(busy)} className="rounded-lg bg-coral px-4 py-2 text-sm font-medium text-white hover:bg-coral-strong disabled:opacity-50">
                 Download / share
               </button>
               <button type="button" onClick={() => setOpen(false)} className="rounded-lg px-3 py-2 text-sm text-gray-700 hover:underline">

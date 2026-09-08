@@ -15,7 +15,7 @@ export default function SocialAuthButtons({
   disabled = false,
   onError,
 }: SocialAuthButtonsProps) {
-  const verb = mode === 'signup' ? 'Sign up' : 'Sign in';
+  const verb = mode === 'signup' ? 'Sign Up' : 'Sign In';
 
   const handleGoogle = async () => {
     try {

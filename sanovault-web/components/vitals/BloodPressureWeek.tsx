@@ -29,7 +29,7 @@ export function BloodPressureWeek({ days }: { days: BpDaySlot[] }) {
                   return (
                     <div
                       key={period}
-                      className={`w-2.5 rounded-sm ${reading ? 'bg-[#0175C2]' : 'bg-gray-200'}`}
+                      className={`w-2.5 rounded-sm ${reading ? 'bg-coral' : 'bg-gray-200'}`}
                       style={{ height: `${height}px` }}
                       title={reading ? `${reading.systolic}/${reading.diastolic}` : 'No reading'}
                     />

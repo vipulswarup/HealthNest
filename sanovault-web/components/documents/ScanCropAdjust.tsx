@@ -92,7 +92,7 @@ export function ScanCropAdjust({
           key={corner}
           type="button"
           aria-label={`Move ${corner} corner`}
-          className="absolute z-10 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[#0175C2] touch-none"
+          className="absolute z-10 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-coral touch-none"
           style={{
             left: box.x + (quad[corner].x / width) * box.width,
             top: box.y + (quad[corner].y / height) * box.height,

@@ -60,7 +60,7 @@ export default function AddToHomeScreenPrompt() {
       <button
         type="button"
         onClick={dismiss}
-        className="mt-4 min-h-11 w-full rounded-lg bg-[#0175C2] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#015a96]"
+        className="mt-4 min-h-11 w-full rounded-lg bg-coral px-4 py-2.5 text-sm font-medium text-white hover:bg-coral-strong"
       >
         I have added it
       </button>

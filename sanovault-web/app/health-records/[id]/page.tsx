@@ -230,7 +230,7 @@ export default function HealthRecordDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0175C2] mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-coral mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -251,7 +251,7 @@ export default function HealthRecordDetailPage() {
               <p className="text-red-600">{error || 'Health record not found'}</p>
               <Link
                 href="/health-records"
-                className="mt-4 inline-block text-[#0175C2] hover:text-[#015a96]"
+                className="mt-4 inline-block text-coral hover:text-coral-strong"
               >
                 Back to reports
               </Link>
@@ -270,7 +270,7 @@ export default function HealthRecordDetailPage() {
         <div className="px-4 py-6 sm:px-0">
           <Link
             href={record.patientId ? `/health-records?patientId=${record.patientId}` : '/health-records'}
-            className="mb-5 inline-block text-sm font-medium text-[#0175C2] hover:underline"
+            className="mb-5 inline-block text-sm font-medium text-coral hover:underline"
           >
             ← Back to health records
           </Link>
@@ -283,7 +283,7 @@ export default function HealthRecordDetailPage() {
                 {patient && (
                   <Link
                     href={`/patients/${patient.id}`}
-                    className="text-sm text-[#0175C2] hover:text-[#015a96] transition-colors"
+                    className="text-sm text-coral hover:text-coral-strong transition-colors"
                   >
                     Patient: {patient.firstName} {patient.lastName || ''}
                   </Link>
@@ -296,7 +296,7 @@ export default function HealthRecordDetailPage() {
                       type="button"
                       onClick={() => void handleSave()}
                       disabled={saving}
-                      className="rounded-lg bg-[#0175C2] px-4 py-2 text-sm font-medium text-white hover:bg-[#015a96] disabled:opacity-50"
+                      className="rounded-lg bg-coral px-4 py-2 text-sm font-medium text-white hover:bg-coral-strong disabled:opacity-50"
                     >
                       {saving ? 'Saving…' : 'Save'}
                     </button>
@@ -500,7 +500,7 @@ export default function HealthRecordDetailPage() {
                   <h3 className="text-sm font-medium text-gray-500 mb-2">Document</h3>
                   <Link
                     href={`/health-records/${recordId}/document`}
-                    className="inline-flex items-center text-[#0175C2] hover:text-[#015a96] transition-colors cursor-pointer"
+                    className="inline-flex items-center text-coral hover:text-coral-strong transition-colors cursor-pointer"
                   >
                     <span className="mr-2">📄</span>
                     View Document

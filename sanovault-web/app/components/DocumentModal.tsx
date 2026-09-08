@@ -163,7 +163,7 @@ export default function DocumentModal({ isOpen, onClose, documentId, fileName }:
             <div className="mt-4">
               {loading && (
                 <div className="flex items-center justify-center py-12" role="status" aria-live="polite">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0175C2]"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-coral"></div>
                   <p className="ml-3 text-gray-600">Loading document...</p>
                 </div>
               )}
@@ -202,7 +202,7 @@ export default function DocumentModal({ isOpen, onClose, documentId, fileName }:
                               href={signedUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-xs bg-white px-3 py-1 rounded shadow-sm text-[#0175C2] hover:bg-gray-50 transition-colors"
+                              className="text-xs bg-white px-3 py-1 rounded shadow-sm text-coral hover:bg-gray-50 transition-colors"
                               title="Open in new tab if PDF doesn't display"
                             >
                               Open in New Tab
@@ -217,7 +217,7 @@ export default function DocumentModal({ isOpen, onClose, documentId, fileName }:
                         href={downloadUrl || signedUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-block px-6 py-2 bg-[#0175C2] text-white rounded-lg hover:bg-[#015a96] transition-colors"
+                        className="inline-block px-6 py-2 bg-coral text-white rounded-lg hover:bg-coral-strong transition-colors"
                       >
                         Download Document
                       </a>
@@ -241,7 +241,7 @@ export default function DocumentModal({ isOpen, onClose, documentId, fileName }:
                 href={downloadUrl || signedUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 inline-flex w-full justify-center rounded-md border border-transparent bg-[#0175C2] px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-[#015a96] sm:mt-0 sm:w-auto sm:text-sm"
+                className="mt-3 inline-flex w-full justify-center rounded-md border border-transparent bg-coral px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-coral-strong sm:mt-0 sm:w-auto sm:text-sm"
               >
                 Open in New Tab
               </a>

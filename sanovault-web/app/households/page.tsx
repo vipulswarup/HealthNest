@@ -82,7 +82,7 @@ export default function HouseholdsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0175C2] mx-auto" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-coral mx-auto" />
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -94,7 +94,7 @@ export default function HouseholdsPage() {
       <AppNav />
       <main className="max-w-3xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Who can see this</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Who Can See This</h1>
           <p className="text-gray-600 text-sm mb-6">
             Invite family so they can open the same reports. WhatsApp is the easiest way to send the link.
           </p>
@@ -117,7 +117,7 @@ export default function HouseholdsPage() {
             <button
               type="submit"
               disabled={creating}
-              className="bg-[#0175C2] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#015a96] disabled:opacity-50"
+              className="bg-coral text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-coral-strong disabled:opacity-50"
             >
               {creating ? 'Creating...' : 'Create folder'}
             </button>
@@ -141,7 +141,7 @@ export default function HouseholdsPage() {
                     </div>
                     <Link
                       href={`/households/invites/${invite.token}`}
-                      className="text-sm font-medium text-[#0175C2] hover:underline shrink-0"
+                      className="text-sm font-medium text-coral hover:underline shrink-0"
                     >
                       Review
                     </Link>
@@ -165,7 +165,7 @@ export default function HouseholdsPage() {
                     className="flex items-center justify-between px-4 py-3 hover:bg-gray-50"
                   >
                     <span className="font-medium text-gray-900">{h.name}</span>
-                    <span className="text-sm text-[#0175C2]">Manage</span>
+                    <span className="text-sm text-coral">Manage</span>
                   </Link>
                 </li>
               ))}

@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, buttonVariants } from '@heroui/react';
+import { Card } from '@heroui/react';
 import AppNav from '@/components/layout/AppNav';
 import { PersonCardActions } from '@/components/dashboard/PersonCardActions';
 import { useHouseholdContext } from '@/components/households/useHouseholdContext';
 import { useSession } from '@/lib/auth/client';
 import { humanizeLabel } from '@/lib/constants/labels';
 import { getLastPatientId, setLastPatientId } from '@/lib/patients/last-used';
+import { svBtnOutline, svBtnPrimary } from '@/lib/ui/buttons';
 
 type PendingInvite = {
   id: string;
@@ -134,37 +135,37 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background">
       <AppNav />
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-950">
+            <h1 className="text-3xl font-bold tracking-tight text-ink">
               Family{session.user.firstName ? `, ${session.user.firstName}` : ''}
             </h1>
-            <p className="mt-2 max-w-2xl text-base text-gray-600">Choose a person, add a report, or open what a doctor needs.</p>
+            <p className="mt-2 max-w-2xl text-base text-blue-slate">Choose a Person, Add a Report, or Open What a Doctor Needs.</p>
           </div>
-          <Link href="/patients/new" className={buttonVariants({ variant: 'outline', size: 'lg' })}>
-            Add a person
+          <Link href="/patients/new" className={svBtnOutline}>
+            Add a Person
           </Link>
         </div>
 
         {!householdsLoading && households.length === 0 && (
-          <section className="mt-8 rounded-2xl border border-blue-200 bg-blue-50 p-6">
-            <h2 className="text-lg font-semibold text-blue-950">No family folder yet</h2>
-            <p className="mt-1 text-base text-blue-900">If someone invited you, open the WhatsApp link they sent. Otherwise ask a family member to add you.</p>
-            <Link href="/households" className="mt-4 inline-flex min-h-12 items-center rounded-lg bg-[#0175C2] px-4 py-2 text-base font-medium text-white hover:bg-[#015a96]">Who can see this</Link>
+          <section className="mt-8 rounded-2xl border border-silver bg-white p-6">
+            <h2 className="text-lg font-semibold text-ink">No Family Folder Yet</h2>
+            <p className="mt-1 text-base text-blue-slate">If someone invited you, open the WhatsApp link they sent. Otherwise ask a family member to add you.</p>
+            <Link href="/households" className={`${svBtnPrimary} mt-4`}>Who Can See This</Link>
           </section>
         )}
 
         {pending.length > 0 && (
           <section className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5" aria-labelledby="pending-invites-title">
-            <h2 id="pending-invites-title" className="font-semibold text-amber-950">You have an invite</h2>
+            <h2 id="pending-invites-title" className="font-semibold text-amber-950">You Have an Invite</h2>
             <ul className="mt-3 divide-y divide-amber-200">
               {pending.map((invite) => (
                 <li key={invite.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-base text-amber-950">
-                  <span>{invite.invitedByName || 'A family member'} invited you to {invite.householdName || 'the family folder'}.</span>
-                  <Link href={`/households/invites/${invite.token}`} className="min-h-11 font-medium text-[#0175C2] hover:underline">Open invite</Link>
+                  <span>{invite.invitedByName || 'A Family Member'} invited you to {invite.householdName || 'the family folder'}.</span>
+                  <Link href={`/households/invites/${invite.token}`} className="min-h-11 font-medium text-coral hover:underline">Open Invite</Link>
                 </li>
               ))}
             </ul>
@@ -174,11 +175,11 @@ export default function Dashboard() {
         {error && <div role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-base text-red-800">{error}</div>}
 
         {households.length > 0 && !loading && patients.length === 0 && (
-          <section className="mt-8 rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-            <h2 className="text-xl font-semibold text-gray-950">Add someone to this folder</h2>
-            <p className="mt-2 text-base text-gray-600">Add Dad, your daughter, or anyone whose reports you keep here.</p>
-            <Link href="/patients/new" className="mt-6 inline-flex min-h-12 items-center rounded-lg bg-[#0175C2] px-5 py-3 text-base font-medium text-white hover:bg-[#015a96]">
-              Add a person
+          <section className="mt-8 rounded-2xl border border-silver bg-white p-8 text-center shadow-sm">
+            <h2 className="text-xl font-semibold text-ink">Add Someone to This Folder</h2>
+            <p className="mt-2 text-base text-blue-slate">Add Dad, your daughter, or anyone whose reports you keep here.</p>
+            <Link href="/patients/new" className={`${svBtnPrimary} mt-6`}>
+              Add a Person
             </Link>
           </section>
         )}
@@ -190,25 +191,24 @@ export default function Dashboard() {
               const name = personName(person);
               return (
                 <Card key={person.id} className="h-full p-5">
-                  <h2 className="text-2xl font-bold text-gray-950">{name}</h2>
-                  <p className={`mt-1 min-h-6 text-sm font-medium ${person.id === lastPatientId ? 'text-[#0175C2]' : 'invisible'}`}>
-                    Last used
+                  <h2 className="text-2xl font-bold text-ink">{name}</h2>
+                  <p className={`mt-1 min-h-6 text-sm font-medium ${person.id === lastPatientId ? 'text-coral' : 'invisible'}`}>
+                    Last Used
                   </p>
                   <PersonCardActions
                     patientId={person.id}
-                    dateOfBirth={person.dateOfBirth}
                     onAddReport={() => openAdd(person.id)}
                     onNavigate={() => setLastPatientId(person.id)}
                   />
                   <div className="mt-5">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-medium text-gray-500">Recent files</p>
+                      <p className="text-sm font-medium text-blue-slate">Recent Files</p>
                       <Link
                         href={`/health-records?patientId=${person.id}`}
                         onClick={() => setLastPatientId(person.id)}
-                        className="text-sm font-medium text-[#0175C2] hover:underline"
+                        className="text-sm font-medium text-coral hover:underline"
                       >
-                        View all
+                        View All
                       </Link>
                     </div>
                     {recent.length === 0 ? (
@@ -217,7 +217,7 @@ export default function Dashboard() {
                       <ul className="mt-2 divide-y divide-gray-100">
                         {recent.map((record) => (
                           <li key={record.id}>
-                            <Link href={`/health-records/${record.id}`} className="flex min-h-12 items-center justify-between gap-3 py-2 text-base text-gray-800 hover:text-[#0175C2]">
+                            <Link href={`/health-records/${record.id}`} className="flex min-h-12 items-center justify-between gap-3 py-2 text-base text-ink hover:text-coral">
                               <span className="truncate">{humanizeLabel(record.recordType)}</span>
                               <time className="shrink-0 text-sm text-gray-500">{formatDate(record.documentDate || record.createdAt)}</time>
                             </Link>

@@ -139,7 +139,7 @@ export function DocumentPrepare({
         />
         {error ? <p className="text-sm text-red-700">{error}</p> : null}
         <div className="flex flex-wrap gap-3">
-          <button type="button" onClick={() => void unlockLocked()} disabled={!password.trim() || Boolean(busy)} className="min-h-12 rounded-xl bg-[#0175C2] px-4 text-base font-medium text-white hover:bg-[#015a96] disabled:opacity-50">
+          <button type="button" onClick={() => void unlockLocked()} disabled={!password.trim() || Boolean(busy)} className="min-h-12 rounded-xl bg-coral px-4 text-base font-medium text-white hover:bg-coral-strong disabled:opacity-50">
             {busy || 'Unlock'}
           </button>
           <button type="button" onClick={onCancel} className="min-h-12 rounded-xl px-4 text-base font-medium text-gray-700 hover:underline">Cancel</button>
@@ -177,7 +177,7 @@ export function DocumentPrepare({
                   <input type="checkbox" checked={page.included} onChange={() => togglePage(page.id)} />
                   Keep
                 </label>
-                <button type="button" onClick={() => rotate(page.id)} className="text-xs font-medium text-[#0175C2] hover:underline">
+                <button type="button" onClick={() => rotate(page.id)} className="text-xs font-medium text-coral hover:underline">
                   Rotate
                 </button>
               </div>
@@ -212,7 +212,7 @@ export function DocumentPrepare({
           type="button"
           onClick={() => void continuePrepare()}
           disabled={Boolean(busy) || pages.every((page) => !page.included)}
-          className="min-h-12 rounded-xl bg-[#0175C2] px-4 text-base font-medium text-white hover:bg-[#015a96] disabled:opacity-50"
+          className="min-h-12 rounded-xl bg-coral px-4 text-base font-medium text-white hover:bg-coral-strong disabled:opacity-50"
         >
           Continue
         </button>

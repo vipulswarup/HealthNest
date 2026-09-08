@@ -60,7 +60,7 @@ export default function PatientsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0175C2] mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-coral mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -82,9 +82,9 @@ export default function PatientsPage() {
               <h2 className="text-2xl font-bold text-gray-900">Family</h2>
               <Link
                 href="/patients/new"
-                className="min-h-12 px-4 py-2 bg-[#0175C2] text-white rounded-lg hover:bg-[#015a96] transition-colors text-base font-medium"
+                className="sv-btn sv-btn-primary"
               >
-                Add a person
+                Add a Person
               </Link>
             </div>
 
@@ -92,8 +92,8 @@ export default function PatientsPage() {
               <div className="mb-4 rounded-md bg-red-50 p-4">
                 <div className="text-sm text-red-800">{error}</div>
                 {error.includes('folder') && (
-                  <Link href="/households" className="mt-2 inline-block text-sm font-medium text-[#0175C2] hover:underline">
-                    Go to who can see this
+                  <Link href="/households" className="mt-2 inline-block text-sm font-medium text-coral hover:underline">
+                    Go to Who Can See This
                   </Link>
                 )}
               </div>
@@ -109,9 +109,9 @@ export default function PatientsPage() {
                 </p>
                 <Link
                   href="/patients/new"
-                  className="inline-block min-h-12 px-6 py-3 bg-[#0175C2] text-white rounded-lg hover:bg-[#015a96] transition-colors font-medium"
+                  className="sv-btn sv-btn-primary"
                 >
-                  Add a person
+                  Add a Person
                 </Link>
               </div>
             ) : (

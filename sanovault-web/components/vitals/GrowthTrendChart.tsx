@@ -135,7 +135,7 @@ export function GrowthTrendChart({ measurements }: { measurements: GrowthMeasure
   return (
     <div className="space-y-3">
       {hasHeightTrend ? (
-        <LineChart title="Height" unit="cm" points={heightPoints} color="#0175C2" />
+        <LineChart title="Height" unit="cm" points={heightPoints} color="#EF8354" />
       ) : heightPoints.length === 1 ? (
         <p className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600">
           Height: {heightPoints[0].value} cm on {formatCalendarDate(heightPoints[0].date)}. Add one more entry for a trend line.

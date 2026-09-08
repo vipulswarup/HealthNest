@@ -50,7 +50,7 @@ export default function MagicLinkForm({
         </p>
         <a
           href={whatsappShareHref(familyReentryMessage(origin))}
-          className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-[#0175C2] hover:underline"
+          className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-coral hover:underline"
         >
           Send SanoVault on WhatsApp
         </a>
@@ -61,7 +61,7 @@ export default function MagicLinkForm({
   return (
     <form onSubmit={(event) => void submit(event)} className="space-y-3">
       <label htmlFor="magic-link-email" className="block text-sm font-medium text-gray-700">
-        Email me a sign-in link
+        Email Me a Sign-In Link
       </label>
       <input
         id="magic-link-email"
@@ -72,14 +72,14 @@ export default function MagicLinkForm({
         value={email}
         onChange={(event) => onEmailChange(event.target.value)}
         placeholder="you@example.com"
-        className="block w-full rounded-lg border border-gray-300 px-3.5 py-3 text-gray-900 placeholder-gray-400 focus:border-[#0175C2] focus:outline-none focus:ring-2 focus:ring-[#0175C2]/30"
+        className="block w-full rounded-lg border border-gray-300 px-3.5 py-3 text-gray-900 placeholder-gray-400 focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
       />
       <button
         type="submit"
         disabled={disabled || loading}
-        className="min-h-12 w-full rounded-lg border border-[#0175C2] bg-white px-4 py-3 text-base font-medium text-[#0175C2] hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+        className="sv-btn sv-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {loading ? 'Sending link…' : 'Email me a sign-in link'}
+        {loading ? 'Sending Link…' : 'Email Me a Sign-In Link'}
       </button>
     </form>
   );

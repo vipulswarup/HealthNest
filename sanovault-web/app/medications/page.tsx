@@ -338,7 +338,7 @@ function MedicationsContent() {
             </div>
             <div className="flex flex-wrap gap-3">
               {patientId && (
-                <Link href={`/medications/report?patientId=${patientId}`} className="rounded-lg border border-[#0175C2] px-4 py-2 text-sm font-medium text-[#0175C2] hover:bg-blue-50">
+                <Link href={`/medications/report?patientId=${patientId}`} className="rounded-lg border border-coral px-4 py-2 text-sm font-medium text-coral hover:bg-blue-50">
                   Doctor-facing list
                 </Link>
               )}
@@ -346,7 +346,7 @@ function MedicationsContent() {
                 <button
                   type="button"
                   onClick={openAddForm}
-                  className="rounded-lg bg-[#0175C2] px-4 py-2 text-sm font-medium text-white hover:bg-[#015a96]"
+                  className="rounded-lg bg-coral px-4 py-2 text-sm font-medium text-white hover:bg-coral-strong"
                 >
                   Add medication
                 </button>
@@ -358,8 +358,8 @@ function MedicationsContent() {
 
           {patients.length === 0 ? (
             <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-              <p className="text-gray-600">Add a person before recording medicines.</p>
-              <Link href="/patients/new" className="mt-4 inline-block text-[#0175C2] hover:underline">Add a person</Link>
+              <p className="text-gray-600">Add a Person before recording medicines.</p>
+              <Link href="/patients/new" className="mt-4 inline-block text-coral hover:underline">Add a Person</Link>
             </div>
           ) : (
             <>

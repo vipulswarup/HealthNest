@@ -10,7 +10,7 @@ import Image from 'next/image';
 
 const FEATURES = [
   {
-    title: 'Privacy & security',
+    title: 'Privacy & Security',
     description: 'Your records stay in an encrypted vault you control.',
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
@@ -19,7 +19,7 @@ const FEATURES = [
     ),
   },
   {
-    title: 'AI insights',
+    title: 'AI Insights',
     description: 'Get clear summaries and trends from your lab results and records.',
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
@@ -28,7 +28,7 @@ const FEATURES = [
     ),
   },
   {
-    title: 'Family profiles',
+    title: 'Family Profiles',
     description: 'Manage health records for everyone in your family, in one place.',
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
@@ -114,11 +114,11 @@ function SignInContent() {
   }
 
   const inputClassName =
-    'mt-1.5 block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-gray-900 placeholder-gray-400 shadow-none focus:border-[#0175C2] focus:outline-none focus:ring-2 focus:ring-[#0175C2]/30 sm:text-sm';
+    'mt-1.5 block w-full rounded-lg border border-silver px-3.5 py-2.5 text-ink placeholder-blue-slate shadow-none focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30 sm:text-sm';
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-2">
-      <section className="relative hidden flex-col justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-100 px-6 py-12 sm:px-10 lg:flex lg:px-14 lg:py-16">
+      <section className="relative hidden flex-col justify-center bg-gradient-to-br from-coral/10 via-white to-silver/40 px-6 py-12 sm:px-10 lg:flex lg:px-14 lg:py-16">
         <div className="mx-auto w-full max-w-md lg:mx-0 lg:max-w-lg">
           <div className="flex items-center gap-3">
             <Image
@@ -129,13 +129,13 @@ function SignInContent() {
               className="rounded-full"
               priority
             />
-            <span className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+            <span className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
               SanoVault
             </span>
           </div>
 
-          <h1 className="mt-8 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-            One vault for your family&apos;s health
+          <h1 className="mt-8 text-3xl font-bold tracking-tight text-ink sm:text-4xl">
+            One Vault for Your Family&apos;s Health
           </h1>
           <p className="mt-3 text-base text-gray-600 sm:text-lg">
             Store records securely, understand what they mean, and keep everyone&apos;s care in sync.
@@ -144,7 +144,7 @@ function SignInContent() {
           <ul className="mt-10 space-y-5">
             {FEATURES.map((feature) => (
               <li key={feature.title} className="flex gap-3.5">
-                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0175C2]/10 text-[#0175C2]">
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-coral/10 text-coral">
                   {feature.icon}
                 </span>
                 <div>
@@ -201,14 +201,14 @@ function SignInContent() {
 
             <a
               href={whatsappShareHref(familyReentryMessage(origin))}
-              className="inline-flex min-h-11 w-full items-center justify-center text-sm font-medium text-[#0175C2] hover:underline"
+              className="inline-flex min-h-11 w-full items-center justify-center text-sm font-medium text-coral hover:underline"
             >
-              Send this page on WhatsApp
+              Send This Page on WhatsApp
             </a>
 
             {showPasswordForm ? (
               <form className="space-y-5 border-t border-gray-200 pt-6" onSubmit={handleSubmit}>
-                <p className="text-sm font-medium text-gray-700">Or sign in with a password</p>
+                <p className="text-sm font-medium text-gray-700">Or Sign In with a Password</p>
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                     Email address
@@ -229,7 +229,7 @@ function SignInContent() {
                 <div>
                   <div className="flex items-center justify-between gap-4">
                     <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-                    <a href={`/auth/forgot-password?${new URLSearchParams({ callbackUrl, email: email.trim().toLowerCase() })}`} className="text-sm font-medium text-[#0175C2] hover:underline">Forgot password?</a>
+                    <a href={`/auth/forgot-password?${new URLSearchParams({ callbackUrl, email: email.trim().toLowerCase() })}`} className="text-sm font-medium text-coral hover:underline">Forgot Password?</a>
                   </div>
                   <div className="relative">
                     <input
@@ -257,9 +257,9 @@ function SignInContent() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full rounded-lg bg-[#0175C2] px-4 py-3 text-sm font-medium text-white transition-colors duration-200 hover:bg-[#015a96] focus:outline-none focus:ring-2 focus:ring-[#0175C2] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="sv-btn sv-btn-primary w-full"
                 >
-                  {loading ? 'Signing in...' : 'Sign in with password'}
+                  {loading ? 'Signing In...' : 'Sign In with Password'}
                 </button>
               </form>
             ) : (
@@ -268,7 +268,7 @@ function SignInContent() {
                 onClick={() => setShowPasswordForm(true)}
                 className="w-full text-center text-sm font-medium text-gray-600 hover:text-gray-950"
               >
-                Use a password instead
+                Use a Password Instead
               </button>
             )}
 
@@ -280,9 +280,9 @@ function SignInContent() {
                   if (email.trim()) qs.set('email', email.trim().toLowerCase());
                   return `/auth/signup?${qs.toString()}`;
                 })()}
-                className="font-medium text-[#0175C2] hover:text-[#015a96] transition-colors"
+                className="font-medium text-coral hover:text-coral-strong transition-colors"
               >
-                Sign up
+                Sign Up
               </a>
             </p>
           </div>

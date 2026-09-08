@@ -638,7 +638,7 @@ function NewHealthRecordContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0175C2] mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-coral mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -676,7 +676,7 @@ function NewHealthRecordContent() {
             <li
               key={item.localId}
               className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
-                index === currentQueueIndex ? 'bg-white border border-[#0175C2]' : 'bg-white/70 border border-transparent'
+                index === currentQueueIndex ? 'bg-white border border-coral' : 'bg-white/70 border border-transparent'
               }`}
             >
               <span className="truncate mr-3 text-gray-800">{item.fileName}</span>
@@ -710,7 +710,7 @@ function NewHealthRecordContent() {
             href={documentDownloadUrl || documentPreviewUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="shrink-0 text-xs font-medium text-[#0175C2] hover:text-[#015a96]"
+            className="shrink-0 text-xs font-medium text-coral hover:text-coral-strong"
           >
             Open full size
           </a>
@@ -744,7 +744,7 @@ function NewHealthRecordContent() {
       {patients.length === 0 ? (
         <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 text-center">
           <p className="text-sm text-gray-700">Add a family member before saving a report.</p>
-          <Link href="/patients/new" className="mt-4 inline-block font-medium text-[#0175C2] hover:underline">
+          <Link href="/patients/new" className="mt-4 inline-block font-medium text-coral hover:underline">
             Add family member
           </Link>
         </div>
@@ -832,7 +832,7 @@ function NewHealthRecordContent() {
               <button
                 type="button"
                 onClick={handleRetryCurrent}
-                className="px-4 py-2 rounded-lg font-medium bg-[#0175C2] text-white hover:bg-[#015a96]"
+                className="px-4 py-2 rounded-lg font-medium bg-coral text-white hover:bg-coral-strong"
               >
                 Retry this file
               </button>
@@ -863,7 +863,7 @@ function NewHealthRecordContent() {
                 ocrStatus !== 'PROCESSING' &&
                 aiStatus !== 'PROCESSING' &&
                 ocrStatus !== 'PENDING'
-                  ? 'bg-[#0175C2] hover:bg-[#015a96] text-white'
+                  ? 'bg-coral hover:bg-coral-strong text-white'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
@@ -911,7 +911,7 @@ function NewHealthRecordContent() {
             required
             value={formData.patientId}
             onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral focus:border-transparent"
           >
             <option value="">Select a person</option>
             {patients.map((patient) => (
@@ -932,7 +932,7 @@ function NewHealthRecordContent() {
             required
             value={formData.recordType}
             onChange={(e) => setFormData({ ...formData, recordType: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral focus:border-transparent"
             disabled={categories.length === 0}
           >
             <option value="">{categories.length === 0 ? 'Loading…' : 'Choose one'}</option>
@@ -958,7 +958,7 @@ function NewHealthRecordContent() {
             name="idType"
             value={formData.idType}
             onChange={(e) => setFormData({ ...formData, idType: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral focus:border-transparent"
           >
             <option value="">Choose one</option>
             {ID_DOCUMENT_TYPES.map((item) => (
@@ -978,7 +978,7 @@ function NewHealthRecordContent() {
             value={sourceInput || formData.source}
             onChange={(e) => handleSourceChange(e.target.value)}
             placeholder="UIDAI, Passport Seva, DVLA…"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral focus:border-transparent"
           />
         </div>
 
@@ -992,7 +992,7 @@ function NewHealthRecordContent() {
             name="documentDate"
             value={formData.documentDate}
             onChange={(e) => setFormData({ ...formData, documentDate: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral focus:border-transparent"
           />
         </div>
 
@@ -1006,7 +1006,7 @@ function NewHealthRecordContent() {
             name="expiryDate"
             value={formData.expiryDate}
             onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral focus:border-transparent"
           />
           <p className="mt-1 text-xs text-gray-500">Leave blank if the document has no expiry (for example Aadhaar).</p>
         </div>
@@ -1031,7 +1031,7 @@ function NewHealthRecordContent() {
               }}
               onBlur={handleSourceBlur}
               placeholder="Type to search or enter new source..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral focus:border-transparent"
             />
             {showSourceDropdown && !sourcesLoading && filteredSources.length > 0 && (
               <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
@@ -1080,7 +1080,7 @@ function NewHealthRecordContent() {
             name="documentDate"
             value={formData.documentDate}
             onChange={(e) => setFormData({ ...formData, documentDate: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral focus:border-transparent"
           />
           <p className="mt-1 text-xs text-gray-500">
             Date when the document was created, written, or reported (e.g., prescription date, test report date)
@@ -1105,7 +1105,7 @@ function NewHealthRecordContent() {
               }}
               onBlur={handleDoctorBlur}
               placeholder="Type to search or enter new doctor name..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral focus:border-transparent"
             />
             {showDoctorDropdown && !doctorsLoading && filteredDoctors.length > 0 && (
               <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
@@ -1153,7 +1153,7 @@ function NewHealthRecordContent() {
               {formData.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-[#0175C2] text-white"
+                  className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-coral text-white"
                 >
                   {tag}
                   <button
@@ -1177,7 +1177,7 @@ function NewHealthRecordContent() {
                 type="button"
                 onClick={() => handleTagToggle(tag)}
                 className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${formData.tags.includes(tag)
-                  ? 'bg-[#0175C2] text-white'
+                  ? 'bg-coral text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
@@ -1211,7 +1211,7 @@ function NewHealthRecordContent() {
                       }
                       setLabEditorOpen(true);
                     }}
-                    className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-[#0175C2] ring-1 ring-slate-300 hover:bg-slate-100"
+                    className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-coral ring-1 ring-slate-300 hover:bg-slate-100"
                   >
                     Review / edit lab values
                   </button>
@@ -1278,7 +1278,7 @@ function NewHealthRecordContent() {
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 min-w-[12rem] bg-[#0175C2] hover:bg-[#015a96] text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 min-w-[12rem] bg-coral hover:bg-coral-strong text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitLabel}
           </button>
@@ -1303,13 +1303,13 @@ function NewHealthRecordContent() {
         <div className="px-4 py-6 sm:px-0">
           <Link
             href="/health-records"
-            className="mb-5 inline-block text-sm font-medium text-[#0175C2] hover:underline"
+            className="mb-5 inline-block text-sm font-medium text-coral hover:underline"
           >
             ← Back to reports
           </Link>
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Add a report</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Add a Report</h2>
               {selectedPerson && (
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-blue-50 px-4 py-3">
                   <p className="text-sm font-medium text-blue-950">
@@ -1319,7 +1319,7 @@ function NewHealthRecordContent() {
                     <button
                       type="button"
                       onClick={() => setFormData((prev) => ({ ...prev, patientId: '' }))}
-                      className="text-sm font-medium text-[#0175C2] hover:underline"
+                      className="text-sm font-medium text-coral hover:underline"
                     >
                       Change person
                     </button>
@@ -1328,15 +1328,15 @@ function NewHealthRecordContent() {
               )}
               {formData.patientId && (
               <div className="flex items-center space-x-2">
-                <div className={`flex items-center ${currentStep >= 1 ? 'text-[#0175C2]' : 'text-gray-400'}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 1 ? 'bg-[#0175C2] text-white' : 'bg-gray-200 text-gray-500'}`}>
+                <div className={`flex items-center ${currentStep >= 1 ? 'text-coral' : 'text-gray-400'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 1 ? 'bg-coral text-white' : 'bg-gray-200 text-gray-500'}`}>
                     {currentStep > 1 ? '✓' : '1'}
                   </div>
                   <span className="ml-2 text-sm font-medium">Document</span>
                 </div>
                 <div className="w-12 h-0.5 bg-gray-300"></div>
-                <div className={`flex items-center ${currentStep >= 2 ? 'text-[#0175C2]' : 'text-gray-400'}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 2 ? 'bg-[#0175C2] text-white' : 'bg-gray-200 text-gray-500'}`}>
+                <div className={`flex items-center ${currentStep >= 2 ? 'text-coral' : 'text-gray-400'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 2 ? 'bg-coral text-white' : 'bg-gray-200 text-gray-500'}`}>
                     2
                   </div>
                   <span className="ml-2 text-sm font-medium">Details</span>
@@ -1364,7 +1364,7 @@ export default function NewHealthRecordPage() {
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0175C2] mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-coral mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
