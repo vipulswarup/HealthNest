@@ -4,12 +4,14 @@ import { useSession } from '@/lib/auth/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Chip } from '@heroui/react';
 import AppNav from '@/components/layout/AppNav';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/ToastProvider';
 import { HealthRecordCategory } from '@/lib/types/health-record-category.types';
 import { HealthcareSource } from '@/lib/types/healthcare-source.types';
 import { humanizeLabel } from '@/lib/constants/labels';
+import { getLastPatientId, setLastPatientId } from '@/lib/patients/last-used';
 
 interface HealthRecord {
   id: string;
@@ -114,10 +116,12 @@ function HealthRecordsContent() {
       setPatients(patientsMap);
       
       if (data.length > 0) {
+        const stored = getLastPatientId();
         const nextPatientId = requestedPatientId && data.some((patient: Patient) => patient.id === requestedPatientId)
           ? requestedPatientId
-          : data[0].id;
+          : (stored && data.some((patient: Patient) => patient.id === stored) ? stored : data[0].id);
         setSelectedPatientId(nextPatientId);
+        if (nextPatientId) setLastPatientId(nextPatientId);
         if (nextPatientId !== requestedPatientId) updateQuery({ patientId: nextPatientId });
       }
     } catch (err) {
@@ -242,11 +246,11 @@ function HealthRecordsContent() {
 
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
+      return new Intl.DateTimeFormat('en-IN', {
         day: 'numeric',
-      });
+        month: 'short',
+        year: 'numeric',
+      }).format(new Date(dateString));
     } catch {
       return dateString;
     }
@@ -303,6 +307,7 @@ function HealthRecordsContent() {
                     value={selectedPatientId}
                     onChange={(e) => {
                       setSelectedPatientId(e.target.value);
+                      if (e.target.value) setLastPatientId(e.target.value);
                       updateQuery({ patientId: e.target.value });
                     }}
                     className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0175C2] focus:border-transparent"
@@ -587,79 +592,65 @@ function HealthRecordsContent() {
                   )}
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="text-sm text-gray-600 mb-2">
-                    Found {records.length} record{records.length !== 1 ? 's' : ''}
+                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                  <div className="border-b border-gray-100 px-4 py-3 text-sm text-gray-600">
+                    {records.length} report{records.length !== 1 ? 's' : ''}
                   </div>
-                  {records.map((record) => (
-                    <div
-                      key={record.id}
-                      className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow p-6"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {getRecordTypeLabel(record.recordType)}
-                            </h3>
-                            {record.documentId && (
-                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                Has Document
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-600 mb-2">
-                            Source: {record.source}
-                            {record.doctorName && (
-                              <span className="ml-2">• {record.doctorName}</span>
-                            )}
+                  <ul className="divide-y divide-gray-100">
+                    {records.map((record) => (
+                      <li key={record.id} className="flex items-start gap-3 px-4 py-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-medium text-gray-950">
+                            {getRecordTypeLabel(record.recordType)}
+                            {record.documentId ? (
+                              <span className="ml-2 text-xs font-normal text-[#0175C2]">File</span>
+                            ) : null}
                           </p>
-                          <p className="text-sm text-gray-500 mb-2">
-                            {record.documentDate ? (
-                              <>
-                                Document Date: {formatDate(record.documentDate)}
-                                <span className="ml-2">• Created: {formatDate(record.createdAt)}</span>
-                              </>
-                            ) : (
-                              formatDate(record.createdAt)
-                            )}
-                            {patients[record.patientId] && (
-                              <span className="ml-2">
-                                • {patients[record.patientId].firstName} {patients[record.patientId].lastName || ''}
-                              </span>
-                            )}
+                          <p className="mt-0.5 truncate text-sm text-gray-600">
+                            {record.source}
+                            {record.doctorName ? ` · ${record.doctorName}` : ''}
+                          </p>
+                          <p className="mt-0.5 text-sm text-gray-500">
+                            {formatDate(record.documentDate || record.createdAt)}
+                            {patients[record.patientId]
+                              ? ` · ${patients[record.patientId].firstName} ${patients[record.patientId].lastName || ''}`.trimEnd()
+                              : ''}
                           </p>
                           {record.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-3">
-                              {record.tags.map((tag, idx) => (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {record.tags.map((tag) => (
                                 <button
-                                  key={idx}
+                                  key={tag}
+                                  type="button"
                                   onClick={() => handleTagClick(tag)}
-                                  className="text-xs bg-gray-100 hover:bg-[#0175C2] hover:text-white text-gray-700 px-2 py-1 rounded transition-colors cursor-pointer"
+                                  className="rounded-full"
                                 >
-                                  {humanizeLabel(tag)}
+                                  <Chip size="sm" variant="soft">
+                                    <Chip.Label>{humanizeLabel(tag)}</Chip.Label>
+                                  </Chip>
                                 </button>
                               ))}
                             </div>
                           )}
                         </div>
-                        <div className="flex space-x-2 ml-4">
+                        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
                           <Link
                             href={`/health-records/${record.id}`}
-                            className="bg-blue-50 hover:bg-blue-100 text-[#0175C2] px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+                            className="inline-flex min-h-10 items-center justify-center rounded-lg bg-blue-50 px-3 text-sm font-medium text-[#0175C2] hover:bg-blue-100"
                           >
                             View
                           </Link>
                           <button
+                            type="button"
                             onClick={() => setRecordPendingDelete(record.id)}
-                            className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+                            className="inline-flex min-h-10 items-center justify-center rounded-lg bg-red-50 px-3 text-sm font-medium text-red-600 hover:bg-red-100"
                           >
                             Delete
                           </button>
                         </div>
-                      </div>
-                    </div>
-                  ))}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </>

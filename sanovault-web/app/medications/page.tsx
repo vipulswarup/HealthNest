@@ -59,6 +59,10 @@ function MedicationsContent() {
   const formValuesRef = useRef(formValues);
 
   const activeCount = useMemo(() => medications.filter((medication) => medication.isActive).length, [medications]);
+  const unconfirmedCount = useMemo(
+    () => medications.filter((medication) => medication.composition.requiresWarning).length,
+    [medications],
+  );
   const editingMedication = medications.find((medication) => medication.id === editingId) || null;
 
   useEffect(() => {
@@ -433,6 +437,11 @@ function MedicationsContent() {
 
               <section className="rounded-2xl bg-white p-6 shadow-xl">
                 <h2 className="text-xl font-semibold text-gray-900">Medication list</h2>
+                {unconfirmedCount > 0 ? (
+                  <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                    {unconfirmedCount} medicine{unconfirmedCount === 1 ? '' : 's'} {unconfirmedCount === 1 ? 'has' : 'have'} an unconfirmed composition. Confirm from the catalogue before relying on the salt or strength.
+                  </p>
+                ) : null}
                 <div className="mt-5 space-y-3">
                   {medications.length === 0 ? (
                     <p className="py-6 text-center text-gray-500">No medications recorded for this person. Take a photo above to add the first one.</p>
@@ -455,16 +464,15 @@ function MedicationsContent() {
                           </p>
                           {medication.indication && <p className="mt-1 text-sm text-gray-600">For: {medication.indication}</p>}
                         </div>
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${medication.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}`}>
-                          {medication.isActive ? 'Active' : 'Stopped'}
-                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {medication.composition.requiresWarning ? (
+                            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-900">Unconfirmed</span>
+                          ) : null}
+                          <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${medication.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}`}>
+                            {medication.isActive ? 'Active' : 'Stopped'}
+                          </span>
+                        </div>
                       </div>
-
-                      {medication.composition.requiresWarning && (
-                        <p className="mt-3 text-sm font-medium text-amber-900">
-                          Warning: this composition is unconfirmed or requires review. Confirm it from a verified catalogue match before relying on it.
-                        </p>
-                      )}
 
                       <p className="mt-3 text-sm text-gray-600">{medication.dosage} · {medication.frequency} · {medication.route}</p>
                       {medication.instructions && <p className="mt-1 text-sm text-gray-600">Original instructions: {medication.instructions}</p>}

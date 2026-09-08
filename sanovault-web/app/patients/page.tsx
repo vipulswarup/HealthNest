@@ -120,36 +120,35 @@ export default function PatientsPage() {
                   <Link
                     key={patient.id}
                     href={`/patients/${patient.id}`}
-                    className="cursor-pointer rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-blue-200 hover:shadow-md"
+                    className="flex h-full min-h-[11rem] cursor-pointer flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-blue-200 hover:shadow-md"
                   >
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {patient.firstName} {patient.lastName || ''}
-                        </h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {new Date(patient.dateOfBirth).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="text-2xl">👤</div>
-                    </div>
-                    <div className="space-y-2 text-sm">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {patient.firstName} {patient.lastName || ''}
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-600">
+                      {new Date(patient.dateOfBirth).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                    <div className="mt-4 space-y-2 text-sm">
                       <div className="flex items-center text-gray-600">
                         <span className="font-medium mr-2">Gender:</span>
                         {patient.gender}
                       </div>
-                      {patient.bloodGroup && (
-                        <div className="flex items-center text-gray-600">
-                          <span className="font-medium mr-2">Blood Group:</span>
-                          {patient.bloodGroup}
-                        </div>
-                      )}
-                      {patient.abhaNumber && (
-                        <div className="flex items-center text-gray-600">
-                          <span className="font-medium mr-2">ABHA:</span>
-                          {patient.abhaNumber}
-                        </div>
-                      )}
+                      <div className="flex min-h-5 items-center text-gray-600">
+                        {patient.bloodGroup ? (
+                          <>
+                            <span className="font-medium mr-2">Blood Group:</span>
+                            {patient.bloodGroup}
+                          </>
+                        ) : null}
+                      </div>
+                      <div className="flex min-h-5 items-center text-gray-600">
+                        {patient.abhaNumber ? (
+                          <>
+                            <span className="font-medium mr-2">ABHA:</span>
+                            {patient.abhaNumber}
+                          </>
+                        ) : null}
+                      </div>
                     </div>
                   </Link>
                 ))}

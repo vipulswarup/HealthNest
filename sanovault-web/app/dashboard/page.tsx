@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Card, buttonVariants } from '@heroui/react';
 import AppNav from '@/components/layout/AppNav';
 import { PersonCardActions } from '@/components/dashboard/PersonCardActions';
 import { useHouseholdContext } from '@/components/households/useHouseholdContext';
@@ -143,7 +144,7 @@ export default function Dashboard() {
             </h1>
             <p className="mt-2 max-w-2xl text-base text-gray-600">Choose a person, add a report, or open what a doctor needs.</p>
           </div>
-          <Link href="/patients/new" className="inline-flex min-h-12 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+          <Link href="/patients/new" className={buttonVariants({ variant: 'outline', size: 'lg' })}>
             Add a person
           </Link>
         </div>
@@ -188,9 +189,11 @@ export default function Dashboard() {
               const recent = (recordsByPerson.get(person.id) || []).slice(0, 3);
               const name = personName(person);
               return (
-                <article key={person.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <Card key={person.id} className="h-full p-5">
                   <h2 className="text-2xl font-bold text-gray-950">{name}</h2>
-                  {person.id === lastPatientId && <p className="mt-1 text-sm font-medium text-[#0175C2]">Last used</p>}
+                  <p className={`mt-1 min-h-6 text-sm font-medium ${person.id === lastPatientId ? 'text-[#0175C2]' : 'invisible'}`}>
+                    Last used
+                  </p>
                   <PersonCardActions
                     patientId={person.id}
                     dateOfBirth={person.dateOfBirth}
@@ -198,7 +201,16 @@ export default function Dashboard() {
                     onNavigate={() => setLastPatientId(person.id)}
                   />
                   <div className="mt-5">
-                    <p className="text-sm font-medium text-gray-500">Recent files</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium text-gray-500">Recent files</p>
+                      <Link
+                        href={`/health-records?patientId=${person.id}`}
+                        onClick={() => setLastPatientId(person.id)}
+                        className="text-sm font-medium text-[#0175C2] hover:underline"
+                      >
+                        View all
+                      </Link>
+                    </div>
                     {recent.length === 0 ? (
                       <p className="mt-2 text-base text-gray-600">None yet.</p>
                     ) : (
@@ -214,7 +226,7 @@ export default function Dashboard() {
                       </ul>
                     )}
                   </div>
-                </article>
+                </Card>
               );
             })}
           </section>

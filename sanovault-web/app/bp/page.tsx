@@ -1,8 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import AppNav from '@/components/layout/AppNav';
 import PersonPicker from '@/components/patients/PersonPicker';
 import { BloodPressureWeek } from '@/components/vitals/BloodPressureWeek';
 import { useHouseholdContext } from '@/components/households/useHouseholdContext';
@@ -142,15 +142,10 @@ function LogBpContent() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-gray-200 bg-white px-4 py-4">
-        <div className="mx-auto flex max-w-lg items-center justify-between">
-          <Link href="/dashboard" className="min-h-11 text-base font-medium text-[#0175C2]">Family</Link>
-          <p className="text-base font-semibold text-gray-950">Log BP</p>
-          <span className="w-14" />
-        </div>
-      </header>
+      <AppNav />
 
       <main className="mx-auto max-w-lg px-4 py-6">
+        <h1 className="text-3xl font-bold tracking-tight text-gray-950">Log BP</h1>
         {households.length === 0 ? (
           <p className="text-gray-600">Ask a family member to add you to the family folder first.</p>
         ) : (
@@ -170,7 +165,7 @@ function LogBpContent() {
                   void save();
                 }}
               >
-                <h1 className="text-3xl font-bold tracking-tight text-gray-950">{personName(selected)}</h1>
+                <h2 className="text-3xl font-bold tracking-tight text-gray-950">{personName(selected)}</h2>
                 <fieldset>
                   <legend className="text-base font-medium text-gray-800">Time of day</legend>
                   <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">

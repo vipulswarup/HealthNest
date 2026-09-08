@@ -91,6 +91,15 @@ export async function updateDocumentStatus(
       updated_at = NOW()
     WHERE id = ${id}::uuid
   `;
+
+  if (typeof updates.ocrText === 'string' && updates.ocrText.length > 0) {
+    await sql`
+      UPDATE health_records
+      SET ocr_text = ${updates.ocrText}
+      WHERE document_id = ${id}::uuid
+        AND length(${updates.ocrText}) > COALESCE(length(ocr_text), 0)
+    `;
+  }
 }
 
 export async function updateDocumentStorage(

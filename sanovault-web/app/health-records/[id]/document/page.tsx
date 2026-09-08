@@ -8,6 +8,7 @@ import { HealthRecordCategory } from '@/lib/types/health-record-category.types';
 import AppNav from '@/components/layout/AppNav';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
+import { Button, buttonVariants } from '@heroui/react';
 
 const DocumentSharePanel = dynamic(
   () => import('@/components/documents/DocumentSharePanel').then((mod) => mod.DocumentSharePanel),
@@ -49,6 +50,8 @@ export default function DocumentPreviewPage() {
   const [documentFileType, setDocumentFileType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [readingPages, setReadingPages] = useState(false);
+  const [readPagesMessage, setReadPagesMessage] = useState('');
 
   const getRecordTypeLabel = (code: string): string => {
     const category = categories.find(cat => cat.code === code);
@@ -173,18 +176,18 @@ export default function DocumentPreviewPage() {
             ← Back to record
           </Link>
           <div className="bg-white rounded-lg shadow-md p-4 mb-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h1 className="text-lg font-semibold text-gray-900">
                   {getRecordTypeLabel(record.recordType)} - {record.source}
-                </h2>
+                </h1>
                 {patient && (
                   <p className="text-sm text-gray-600 mt-1">
                     Patient: {patient.firstName} {patient.lastName || ''}
                   </p>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {record.documentId ? (
                   <DocumentSharePanel
                     documentId={record.documentId}
@@ -192,16 +195,49 @@ export default function DocumentPreviewPage() {
                     senderName={session.user?.name || session.user?.email || 'A family member'}
                   />
                 ) : null}
+                {fileType === 'pdf' && record.documentId ? (
+                  <Button
+                    variant="outline"
+                    size="md"
+                    className="min-h-12"
+                    isDisabled={readingPages}
+                    onPress={() => {
+                      void (async () => {
+                        setReadingPages(true);
+                        setReadPagesMessage('');
+                        try {
+                          const response = await fetch('/api/ocr/process', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ documentId: record.documentId, mode: 'full' }),
+                          });
+                          const data = await response.json().catch(() => ({}));
+                          if (!response.ok) throw new Error(data.error || 'Could not read all pages');
+                          setReadPagesMessage('Finished reading all pages. Lab highlights will use this text on the next refresh.');
+                        } catch (err) {
+                          setReadPagesMessage(err instanceof Error ? err.message : 'Could not read all pages');
+                        } finally {
+                          setReadingPages(false);
+                        }
+                      })();
+                    }}
+                  >
+                    {readingPages ? 'Reading pages…' : 'Read all pages'}
+                  </Button>
+                ) : null}
                 <a
                   href={downloadUrl || signedUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-2 bg-[#0175C2] text-white rounded-lg hover:bg-[#015a96] transition-colors text-sm font-medium"
+                  className={`${buttonVariants({ variant: 'primary', size: 'md' })} inline-flex min-h-12 items-center justify-center`}
                 >
                   Open in New Tab
                 </a>
               </div>
             </div>
+            {readPagesMessage ? (
+              <p className="mt-3 text-sm text-gray-700" role="status">{readPagesMessage}</p>
+            ) : null}
           </div>
 
           <div className="bg-white rounded-lg shadow-md overflow-hidden">

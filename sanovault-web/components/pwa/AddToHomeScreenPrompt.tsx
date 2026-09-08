@@ -26,7 +26,7 @@ export default function AddToHomeScreenPrompt() {
 
   useEffect(() => {
     if (status !== 'authenticated') return;
-    if (pathname.startsWith('/auth') || pathname === '/beta-acknowledgement') return;
+    if (pathname !== '/dashboard') return;
     try {
       if (window.localStorage.getItem(STORAGE_KEY) === '1') return;
     } catch {
@@ -34,7 +34,8 @@ export default function AddToHomeScreenPrompt() {
     }
     if (isStandalone()) return;
     setIos(isAppleDevice());
-    setVisible(true);
+    const timer = window.setTimeout(() => setVisible(true), 4000);
+    return () => window.clearTimeout(timer);
   }, [pathname, status]);
 
   if (!visible) return null;

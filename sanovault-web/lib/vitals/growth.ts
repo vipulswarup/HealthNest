@@ -30,13 +30,35 @@ export function calendarDateFromInstant(at: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+const ISO_DAY = /(\d{4})-(\d{2})-(\d{2})/;
+
+export function isoDateFromUnknown(value: string | Date | null | undefined): string | null {
+  if (!value) return null;
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return null;
+    return calendarDateFromInstant(value);
+  }
+  const match = String(value).match(ISO_DAY);
+  if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+  const parsed = new Date(String(value));
+  if (Number.isNaN(parsed.getTime())) return null;
+  return calendarDateFromInstant(parsed);
+}
+
+function partsFromIsoDay(iso: string) {
+  const [year, month, day] = iso.split('-').map(Number);
+  return { year, month, day };
+}
+
 export function ageAtDate(dateOfBirth: string | Date | null | undefined, at: Date): string | null {
-  if (!dateOfBirth) return null;
-  const birth = new Date(dateOfBirth);
-  if (Number.isNaN(birth.getTime())) return null;
-  let years = at.getFullYear() - birth.getFullYear();
-  let months = at.getMonth() - birth.getMonth();
-  if (at.getDate() < birth.getDate()) months -= 1;
+  const birthIso = isoDateFromUnknown(dateOfBirth);
+  const atIso = isoDateFromUnknown(at);
+  if (!birthIso || !atIso) return null;
+  const birth = partsFromIsoDay(birthIso);
+  const when = partsFromIsoDay(atIso);
+  let years = when.year - birth.year;
+  let months = when.month - birth.month;
+  if (when.day < birth.day) months -= 1;
   if (months < 0) {
     years -= 1;
     months += 12;
@@ -57,13 +79,15 @@ export function bmi(heightCm: number | null, weightKg: number | null): number | 
 export function measurementLine(
   measurement: GrowthMeasurement,
   dateOfBirth?: string | Date | null,
+  options?: { includeAge?: boolean },
 ) {
   const when = formatCalendarDate(measurement.calendarDate);
   const parts: string[] = [];
   if (measurement.heightCm !== null) parts.push(`${measurement.heightCm} cm`);
   if (measurement.weightKg !== null) parts.push(`${measurement.weightKg} kg`);
   if (measurement.headCircumCm !== null) parts.push(`head ${measurement.headCircumCm} cm`);
-  const age = dateOfBirth ? ageAtDate(dateOfBirth, new Date(measurement.measuredAt)) : null;
+  const includeAge = options?.includeAge !== false;
+  const age = includeAge && dateOfBirth ? ageAtDate(dateOfBirth, new Date(measurement.measuredAt)) : null;
   const bmiValue = bmi(measurement.heightCm, measurement.weightKg);
   const suffix = [
     age ? `age ${age}` : '',
@@ -78,7 +102,10 @@ export function packetGrowthLines(
   dateOfBirth?: string | Date | null,
   limit = 6,
 ) {
-  return measurements.slice(0, limit).map((measurement) => measurementLine(measurement, dateOfBirth));
+  const ageYears = dateOfBirth ? ageAtDate(dateOfBirth, new Date()) : null;
+  const years = ageYears ? Number.parseInt(ageYears, 10) : null;
+  const includeAge = years === null || Number.isNaN(years) || years < 18;
+  return measurements.slice(0, limit).map((measurement) => measurementLine(measurement, dateOfBirth, { includeAge }));
 }
 
 export function toGrowthMeasurement(row: Record<string, unknown>): GrowthMeasurement {

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "@heroui/styles";
 
 :root {
   --background: #f8fafc;
@@ -7,6 +8,8 @@
   --brand-strong: #015a96;
   --surface: #ffffff;
   --border: #e5e7eb;
+  --accent: oklch(0.55 0.14 245);
+  --accent-foreground: oklch(0.99 0 0);
   --app-font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --app-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   color-scheme: light;

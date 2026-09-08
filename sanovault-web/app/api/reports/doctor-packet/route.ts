@@ -10,9 +10,9 @@ import { loadBloodSummaryForPatient } from '@/lib/reports/load-blood-summary';
 import {
   ageFromDateOfBirth,
   conditionLines,
+  labPacketLines,
   medicationDetailLine,
   medicationSummaryLine,
-  pickLabHighlights,
 } from '@/lib/reports/doctor-packet';
 import { listAccessibleMedications, toMedication } from '@/lib/services/medication.service';
 import { listBloodPressureWeek } from '@/lib/services/blood-pressure.service';
@@ -52,7 +52,10 @@ export async function GET(request: NextRequest) {
     ]);
 
     const medications = medicationRows.map(toMedication);
-    const highlights = pickLabHighlights(summary.keyFindings);
+    const highlights = labPacketLines({
+      findings: summary.keyFindings,
+      latestCandidate: summary.latestCandidate,
+    });
 
     return NextResponse.json({
       patient: {
@@ -71,7 +74,7 @@ export async function GET(request: NextRequest) {
         detailLine: medicationDetailLine(medication),
         warning: medication.composition.requiresWarning,
       })),
-      labHighlights: highlights.map((finding) => finding.text),
+      labHighlights: highlights,
       bloodPressure: {
         available: Boolean(bpWeek && bpWeek.lines.length > 0),
         lines: bpWeek?.lines || [],

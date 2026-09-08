@@ -29,6 +29,7 @@ interface HealthRecord {
   recordType: string;
   source: string;
   tags: string[];
+  documentDate?: string;
   createdAt: string;
   documentId?: string;
   data: Record<string, unknown>;
@@ -169,12 +170,6 @@ export default function PatientDetailPage() {
               >
                 All records
               </Link>
-              <Link
-                href={`/patients/${patientId}/records/new`}
-                className="rounded-lg bg-[#0175C2] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#015a96]"
-              >
-                Add health record
-              </Link>
             </div>
           </div>
           <div className="mb-6 rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
@@ -242,7 +237,7 @@ export default function PatientDetailPage() {
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-gray-900">Reports</h3>
               <Link
-                href={`/patients/${patientId}/records/new`}
+                href={`/health-records/new?patientId=${patientId}`}
                 className="px-4 py-2 bg-[#0175C2] text-white rounded-lg hover:bg-[#015a96] transition-colors text-sm font-medium"
               >
                 Add a report
@@ -258,7 +253,7 @@ export default function PatientDetailPage() {
               <div className="text-center py-12 text-gray-500">
                 <p>No reports yet</p>
                 <Link
-                  href={`/patients/${patientId}/records/new`}
+                  href={`/health-records/new?patientId=${patientId}`}
                   className="mt-4 inline-block text-[#0175C2] hover:text-[#015a96]"
                 >
                   Add a report
@@ -281,7 +276,11 @@ export default function PatientDetailPage() {
                           <span className="text-sm text-gray-600">{record.source}</span>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
-                          {new Date(record.createdAt).toLocaleDateString()}
+                          {new Date(record.documentDate || record.createdAt).toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
                         </p>
                         {record.tags.length > 0 && (
                           <div className="flex flex-wrap gap-2 mb-2">
@@ -300,7 +299,7 @@ export default function PatientDetailPage() {
                             href={`/health-records/${record.id}/document`}
                             className="text-sm text-[#0175C2] hover:text-[#015a96] inline-flex items-center cursor-pointer"
                           >
-                            📄 View Document
+                            View document
                           </Link>
                         )}
                       </div>

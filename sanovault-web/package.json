@@ -19,6 +19,8 @@
     "@aws-sdk/client-s3": "3.1108.0",
     "@aws-sdk/s3-request-presigner": "3.1108.0",
     "@cantoo/pdf-lib": "^2.9.1",
+    "@heroui/react": "^3.2.4",
+    "@heroui/styles": "^3.2.4",
     "@neondatabase/auth": "0.5.0-beta",
     "@neondatabase/serverless": "^1.1.0",
     "dotenv": "^17.2.3",

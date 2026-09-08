@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -104,12 +105,13 @@ export default function AppNav({ links = defaultLinks }: AppNavProps) {
               <span className="text-sm text-gray-700 truncate hidden sm:inline max-w-[10rem]">
                 {session?.user?.email || session?.user?.name}
               </span>
-              <button
-                onClick={() => signOut({ callbackUrl: '/auth/signin' })}
-                className="text-sm text-[#0175C2] hover:text-[#015a96] font-medium transition-colors shrink-0"
+              <Button
+                variant="ghost"
+                size="sm"
+                onPress={() => signOut({ callbackUrl: '/auth/signin' })}
               >
                 Sign out
-              </button>
+              </Button>
             </div>
             <button
               type="button"
@@ -174,13 +176,15 @@ export default function AppNav({ links = defaultLinks }: AppNavProps) {
                       <option key={h.id} value={h.id}>{h.name}</option>
                     ))}
                   </select>
-                  <Link
-                    href="/households"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="mt-2 inline-block min-h-11 py-2 text-sm font-medium text-[#0175C2] hover:underline"
-                  >
-                    Who can see this
-                  </Link>
+                  {households.length === 0 ? (
+                    <Link
+                      href="/households"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="mt-2 inline-block min-h-11 py-2 text-sm font-medium text-[#0175C2] hover:underline"
+                    >
+                      Who can see this
+                    </Link>
+                  ) : null}
                 </div>
 
                 <div className="border-t border-gray-200 pt-4">

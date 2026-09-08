@@ -4,8 +4,10 @@ import {
   hasManualLabOverride,
   LAB_METRIC_OPTIONS,
   LabAliasMapping,
+  parseBloodResults,
   readManualLabResults,
 } from '@/lib/reports/blood-summary';
+import type { LatestLabCandidate } from '@/lib/reports/doctor-packet';
 
 export const BLOOD_SUMMARY_LOOKBACK_DAYS = 90;
 
@@ -23,12 +25,16 @@ export async function loadBloodSummaryForPatient(patientId: string) {
       hr.record_type,
       hr.tags,
       hr.data,
-      hr.ocr_text,
+      CASE
+        WHEN COALESCE(length(d.ocr_text), 0) >= COALESCE(length(hr.ocr_text), 0) THEN d.ocr_text
+        ELSE hr.ocr_text
+      END AS ocr_text,
       hr.document_id,
       hr.document_date,
       hr.created_at,
       COALESCE(hr.document_date, hr.created_at::date) AS effective_date
     FROM health_records hr
+    LEFT JOIN documents d ON d.id = hr.document_id
     WHERE hr.patient_id = ${patientId}::uuid
       AND COALESCE(hr.document_date, hr.created_at::date) BETWEEN ${periodStartIso}::date AND ${periodEndIso}::date
       AND (
@@ -39,6 +45,7 @@ export async function loadBloodSummaryForPatient(patientId: string) {
           WHERE tag ~* '(blood|lab|pathology|haemat|hemat|cbc|lipid|thyroid|kidney|liver|iron|urine|diabetes|glucose)'
         )
         OR hr.ocr_text ~* '(hemoglobin|haemoglobin|creatinine|hba1c|triglyceride|cholesterol|tsh|platelet|ferritin)'
+        OR d.ocr_text ~* '(hemoglobin|haemoglobin|creatinine|hba1c|triglyceride|cholesterol|tsh|platelet|ferritin)'
         OR (hr.data ? 'labResultsManual' AND (hr.data->>'labResultsManual') = 'true')
       )
     ORDER BY effective_date DESC, hr.created_at DESC
@@ -66,31 +73,44 @@ export async function loadBloodSummaryForPatient(patientId: string) {
     mappingsBySource.set(source, sourceMappings);
   }
 
-  const summary = buildBloodReportSummary(
-    records.map((record) => {
-      const data = record.data || {};
-      const useManualResults = hasManualLabOverride(data);
-      const source = String(record.source || 'Unknown source');
-      return {
-        id: String(record.id),
-        date: new Date(record.effective_date || record.document_date || record.created_at),
-        source,
-        documentPath: record.document_id
-          ? `/health-records/${record.id}/document`
-          : `/health-records/${record.id}`,
-        ocrText: record.ocr_text ? String(record.ocr_text) : undefined,
-        useManualResults,
-        manualResults: useManualResults ? readManualLabResults(data) : undefined,
-        aliasMappings: [...(mappingsBySource.get(source.trim().toLowerCase())?.values() || [])],
-      };
-    }),
-  );
+  const mapped = records.map((record) => {
+    const data = record.data || {};
+    const useManualResults = hasManualLabOverride(data);
+    const source = String(record.source || 'Unknown source');
+    const ocrText = record.ocr_text ? String(record.ocr_text) : '';
+    return {
+      id: String(record.id),
+      date: new Date(record.effective_date || record.document_date || record.created_at),
+      source,
+      documentPath: record.document_id
+        ? `/health-records/${record.id}/document`
+        : `/health-records/${record.id}`,
+      ocrText: ocrText || undefined,
+      useManualResults,
+      manualResults: useManualResults ? readManualLabResults(data) : undefined,
+      aliasMappings: [...(mappingsBySource.get(source.trim().toLowerCase())?.values() || [])],
+    };
+  });
+
+  const summary = buildBloodReportSummary(mapped);
+  const latest = mapped[0];
+  const latestCandidate: LatestLabCandidate | null = latest
+    ? {
+        id: latest.id,
+        date: latest.date,
+        source: latest.source,
+        resultCount: (latest.useManualResults ? latest.manualResults : parseBloodResults(latest.ocrText || '', latest.aliasMappings))?.length || 0,
+        ocrChars: (latest.ocrText || '').length,
+        documentPath: latest.documentPath,
+      }
+    : null;
 
   return {
     periodStart,
     periodEnd,
     lookbackDays: BLOOD_SUMMARY_LOOKBACK_DAYS,
     candidateReportCount: records.length,
+    latestCandidate,
     ...summary,
   };
 }

@@ -1,6 +1,7 @@
 import { sql } from '@/lib/db/neon';
 import { getAccessiblePatient } from '@/lib/households/access';
 import {
+  isoDateFromUnknown,
   packetGrowthLines,
   toGrowthMeasurement,
   type GrowthMeasurement,
@@ -25,7 +26,7 @@ export async function listGrowthHistory(userId: string, patientId: string): Prom
     LIMIT ${HISTORY_LIMIT}
   `;
   const measurements = rows.map(toGrowthMeasurement);
-  const dateOfBirth = patient.date_of_birth ? String(patient.date_of_birth).slice(0, 10) : null;
+  const dateOfBirth = isoDateFromUnknown(patient.date_of_birth as string | Date | null | undefined);
   const latestRow = measurements[0];
   return {
     measurements,

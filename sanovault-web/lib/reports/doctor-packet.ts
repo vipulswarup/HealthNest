@@ -1,4 +1,5 @@
 import type { KeyFinding } from '@/lib/reports/blood-summary';
+import { isoDateFromUnknown } from '@/lib/vitals/growth';
 
 export const DOCTOR_PACKET_HIGHLIGHT_LIMIT = 5;
 
@@ -66,14 +67,44 @@ export function pickLabHighlights(findings: KeyFinding[]) {
   return picked;
 }
 
+export type LatestLabCandidate = {
+  id: string;
+  date: Date;
+  source: string;
+  resultCount: number;
+  ocrChars: number;
+  documentPath?: string;
+};
+
+export function formatPacketDate(date: Date) {
+  return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
+}
+
+export function labPacketLines(options: {
+  findings: KeyFinding[];
+  latestCandidate: LatestLabCandidate | null;
+}) {
+  const highlights = pickLabHighlights(options.findings).map((finding) => finding.text);
+  const latest = options.latestCandidate;
+  if (!latest) return highlights;
+  const latestLabel = `${formatPacketDate(latest.date)} · ${latest.source}`;
+  if (latest.resultCount === 0) {
+    return [
+      `Latest lab (${latestLabel}) is attached, but values could not be read yet.`,
+      ...highlights.map((line) => `Earlier result: ${line}`),
+    ];
+  }
+  return highlights;
+}
+
 export function ageFromDateOfBirth(value: string | Date | null | undefined) {
-  if (!value) return null;
-  const birth = new Date(value);
-  if (Number.isNaN(birth.getTime())) return null;
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const month = today.getMonth() - birth.getMonth();
-  if (month < 0 || (month === 0 && today.getDate() < birth.getDate())) age -= 1;
+  const birthIso = isoDateFromUnknown(value);
+  const todayIso = isoDateFromUnknown(new Date());
+  if (!birthIso || !todayIso) return null;
+  const [birthYear, birthMonth, birthDay] = birthIso.split('-').map(Number);
+  const [todayYear, todayMonth, todayDay] = todayIso.split('-').map(Number);
+  let age = todayYear - birthYear;
+  if (todayMonth < birthMonth || (todayMonth === birthMonth && todayDay < birthDay)) age -= 1;
   return age >= 0 && age < 130 ? age : null;
 }
 

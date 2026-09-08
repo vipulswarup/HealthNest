@@ -358,7 +358,7 @@ function NewHealthRecordContent() {
       setUploadedDocument({ id: documentId, fileName });
       updateQueueItem(item.localId, { status: 'processing', documentId, fileName });
       await loadDocumentPreview(documentId, item.file);
-      await processDocument(documentId);
+      await processDocument(documentId, item.file);
       updateQueueItem(item.localId, { status: 'review' });
       setCurrentStep(2);
     } catch (err) {
@@ -406,7 +406,7 @@ function NewHealthRecordContent() {
     void processQueueItem(currentQueueIndex);
   };
 
-  const processDocument = async (documentId: string) => {
+  const processDocument = async (documentId: string, file?: File) => {
     try {
       // 1. Trigger OCR
       setOcrStatus('PROCESSING');
@@ -427,11 +427,23 @@ function NewHealthRecordContent() {
 
       const extractedText = typeof ocrPayload.text === 'string' ? ocrPayload.text : '';
       setOcrText(extractedText);
-      setLabResults(parseBloodResults(extractedText));
+      const parsedLabs = parseBloodResults(extractedText);
+      setLabResults(parsedLabs);
       setLabResultsTouched(false);
       setLabEditorOpen(false);
       
       setOcrStatus('COMPLETED');
+
+      const isPdf = Boolean(
+        file?.type === 'application/pdf' || file?.name.toLowerCase().endsWith('.pdf'),
+      );
+      if (isPdf && parsedLabs.length === 0) {
+        void fetch('/api/ocr/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ documentId, mode: 'full' }),
+        }).catch(() => undefined);
+      }
 
       // 2. Trigger AI Analysis
       setAiStatus('PROCESSING');

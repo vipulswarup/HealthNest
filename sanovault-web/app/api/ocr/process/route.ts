@@ -7,8 +7,8 @@ import { handleError, AppError } from '@/lib/middleware/error-handler';
 import { enforceHourlyRateLimit } from '@/lib/security/rate-limit';
 
 export const runtime = 'nodejs';
-/** Intake OCR is first-page / text-layer only. Full multi-page OCR should use a dedicated job later. */
-export const maxDuration = 60;
+/** Full multi-page OCR can exceed 60s on long scanned labs. */
+export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
     try {
