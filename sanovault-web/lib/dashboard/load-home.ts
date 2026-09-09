@@ -1,12 +1,25 @@
 import { sql } from '@/lib/db/neon';
-import { toPatient } from '@/lib/db/mappers';
-import { toHousehold, toHouseholdInvite } from '@/lib/households/helpers';
 
 export type DashboardHome = {
   householdId: string | null;
-  households: ReturnType<typeof toHousehold>[];
-  pending: ReturnType<typeof toHouseholdInvite>[];
-  patients: ReturnType<typeof toPatient>[];
+  households: Array<{
+    id: string;
+    name: string;
+    createdBy: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  pending: Array<{
+    id: string;
+    token: string;
+    householdName?: string;
+    invitedByName?: string;
+  }>;
+  patients: Array<{
+    id: string;
+    firstName: string;
+    lastName?: string;
+  }>;
   records: Array<{
     id: string;
     patientId: string;
@@ -22,14 +35,14 @@ export async function loadDashboardHome(userId: string, email: string): Promise<
 
   const [householdRows, inviteRows, preferenceRows] = await Promise.all([
     sql`
-      SELECT h.*, hm.joined_at
+      SELECT h.id, h.name, h.created_by, h.created_at, h.updated_at, hm.joined_at
       FROM households h
       INNER JOIN household_members hm ON hm.household_id = h.id
       WHERE hm.user_id = ${userId}
       ORDER BY h.name ASC
     `,
     sql`
-      SELECT i.*, h.name AS household_name,
+      SELECT i.id, i.token, h.name AS household_name,
         CONCAT_WS(' ', p.first_name, p.last_name) AS invited_by_name
       FROM household_invites i
       INNER JOIN households h ON h.id = i.household_id
@@ -47,8 +60,19 @@ export async function loadDashboardHome(userId: string, email: string): Promise<
     `,
   ]);
 
-  const households = householdRows.map(toHousehold);
-  const pending = inviteRows.map(toHouseholdInvite);
+  const households = householdRows.map((row) => ({
+    id: String(row.id),
+    name: String(row.name || ''),
+    createdBy: String(row.created_by || ''),
+    createdAt: String(row.created_at || ''),
+    updatedAt: String(row.updated_at || ''),
+  }));
+  const pending = inviteRows.map((row) => ({
+    id: String(row.id),
+    token: String(row.token),
+    householdName: row.household_name ? String(row.household_name) : undefined,
+    invitedByName: row.invited_by_name ? String(row.invited_by_name) : undefined,
+  }));
   const preferredId = preferenceRows[0]?.active_household_id ? String(preferenceRows[0].active_household_id) : '';
   const fallbackId = [...householdRows]
     .sort((a, b) => new Date(String(a.joined_at)).getTime() - new Date(String(b.joined_at)).getTime())[0];
@@ -64,7 +88,7 @@ export async function loadDashboardHome(userId: string, email: string): Promise<
 
   const [patientRows, recordRows] = await Promise.all([
     sql`
-      SELECT p.*
+      SELECT p.id, p.first_name, p.last_name
       FROM patients p
       INNER JOIN household_patients hp ON hp.patient_id = p.id
       WHERE hp.household_id = ${householdId}::uuid
@@ -96,7 +120,11 @@ export async function loadDashboardHome(userId: string, email: string): Promise<
     householdId,
     households,
     pending,
-    patients: patientRows.map(toPatient),
+    patients: patientRows.map((row) => ({
+      id: String(row.id),
+      firstName: String(row.first_name || ''),
+      lastName: row.last_name ? String(row.last_name) : undefined,
+    })),
     records: recordRows.map((row) => ({
       id: String(row.id),
       patientId: String(row.patient_id),

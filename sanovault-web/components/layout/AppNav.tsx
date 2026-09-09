@@ -60,7 +60,7 @@ export default function AppNav({ links = defaultLinks }: AppNavProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between gap-4">
             <div className="flex items-center space-x-3 min-w-0">
-              <Link href="/dashboard" className="flex items-center space-x-3 shrink-0">
+              <Link href="/dashboard" prefetch={false} className="flex items-center space-x-3 shrink-0">
                 <Image src="/logo.png" alt="SanoVault Logo" width={40} height={40} className="rounded-full" />
                 <span className="text-xl font-bold text-ink">SanoVault</span>
               </Link>
@@ -71,6 +71,7 @@ export default function AppNav({ links = defaultLinks }: AppNavProps) {
                     <Link
                       key={link.href}
                       href={link.href}
+                      prefetch={false}
                       aria-current={active ? 'page' : undefined}
                       className={`px-3 py-2 text-sm font-medium rounded-md ${
                         active ? 'text-coral bg-coral/10' : 'text-blue-slate hover:text-coral'
@@ -84,7 +85,7 @@ export default function AppNav({ links = defaultLinks }: AppNavProps) {
             </div>
             <div className="hidden xl:flex items-center space-x-3 min-w-0">
               {households.length === 0 && !loading ? (
-                <Link href="/households" className="rounded-lg border border-silver px-3 py-2 text-sm font-medium text-coral hover:bg-coral/10">Who Can See This</Link>
+                <Link href="/households" prefetch={false} className="rounded-lg border border-silver px-3 py-2 text-sm font-medium text-coral hover:bg-coral/10">Who Can See This</Link>
               ) : (
                 <>
                   <label className="sr-only" htmlFor="household-switcher">Active household</label>
@@ -144,6 +145,7 @@ export default function AppNav({ links = defaultLinks }: AppNavProps) {
                     <Link
                       key={link.href}
                       href={link.href}
+                      prefetch={false}
                       aria-current={active ? 'page' : undefined}
                       onClick={() => setMobileMenuOpen(false)}
                       className={`block rounded-lg px-3 py-3 text-base font-medium ${
@@ -179,6 +181,7 @@ export default function AppNav({ links = defaultLinks }: AppNavProps) {
                   {households.length === 0 ? (
                     <Link
                       href="/households"
+                      prefetch={false}
                       onClick={() => setMobileMenuOpen(false)}
                       className="mt-2 inline-block min-h-11 py-2 text-sm font-medium text-coral hover:underline"
                     >
@@ -216,6 +219,7 @@ export default function AppNav({ links = defaultLinks }: AppNavProps) {
               <li key={link.href}>
                 <Link
                   href={link.href}
+                  prefetch={false}
                   aria-current={active ? 'page' : undefined}
                   className={`flex min-h-14 flex-col items-center justify-center px-2 text-sm font-medium ${
                     active ? 'text-coral' : 'text-blue-slate'
