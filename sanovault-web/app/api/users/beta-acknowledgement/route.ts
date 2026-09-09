@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getAuthenticatedUser } from '@/lib/auth/session';
+import { getAuthenticatedUser, ensureProfile } from '@/lib/auth/session';
 import { sql } from '@/lib/db/neon';
 import {
   BETA_ACKNOWLEDGEMENT_TEXT,
@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
     if (!user) throw new AppError('Unauthorized', 401);
+    await ensureProfile(user);
 
     const parsed = acknowledgementSchema.safeParse(await request.json());
     if (!parsed.success) {

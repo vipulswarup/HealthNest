@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@heroui/react';
 import AppNav from '@/components/layout/AppNav';
@@ -36,22 +36,23 @@ function personName(person: Patient) {
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { householdId, households, loading: householdsLoading, refresh } = useHouseholdContext();
+  const { householdId, households, hydrate } = useHouseholdContext();
   const [pending, setPending] = useState<PendingInvite[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [records, setRecords] = useState<HealthRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lastPatientId, setLastPatientIdState] = useState<string | null>(null);
+  const skipHouseholdReload = useRef(false);
 
   useEffect(() => {
-    if (status === 'authenticated') void refresh();
-  }, [refresh, status]);
-
-  useEffect(() => {
-    if (status === 'loading' || householdsLoading) return;
+    if (status === 'loading') return;
     if (!session) {
       router.replace('/auth/signin');
+      return;
+    }
+    if (skipHouseholdReload.current) {
+      skipHouseholdReload.current = false;
       return;
     }
 
@@ -60,32 +61,25 @@ export default function Dashboard() {
       setLoading(true);
       setError('');
       try {
-        const inviteResponse = await fetch('/api/households/invites/pending');
-        if (active && inviteResponse.ok) {
-          const inviteData = await inviteResponse.json();
-          setPending(Array.isArray(inviteData) ? inviteData : []);
-        }
-
-        if (households.length === 0 || !householdId) {
-          if (active) {
-            setPatients([]);
-            setRecords([]);
-          }
+        const response = await fetch('/api/dashboard');
+        if (response.status === 401) {
+          router.replace('/auth/signin');
           return;
         }
-
-        const [patientsResponse, recordsResponse] = await Promise.all([
-          fetch('/api/patients'),
-          fetch('/api/health-records'),
-        ]);
-        if (!patientsResponse.ok || !recordsResponse.ok) throw new Error('Could not load your home screen');
-        const patientData = await patientsResponse.json() as Patient[];
-        const recordData = await recordsResponse.json() as HealthRecord[];
-
-        if (active) {
-          setPatients(patientData);
-          setRecords(recordData);
-        }
+        if (!response.ok) throw new Error('Could not load your home screen');
+        const data = await response.json() as {
+          householdId: string | null;
+          households: typeof households;
+          pending: PendingInvite[];
+          patients: Patient[];
+          records: HealthRecord[];
+        };
+        if (!active) return;
+        skipHouseholdReload.current = true;
+        hydrate({ householdId: data.householdId, households: data.households });
+        setPending(Array.isArray(data.pending) ? data.pending : []);
+        setPatients(Array.isArray(data.patients) ? data.patients : []);
+        setRecords(Array.isArray(data.records) ? data.records : []);
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : 'Could not load your home screen');
       } finally {
@@ -95,7 +89,7 @@ export default function Dashboard() {
 
     void loadDashboard();
     return () => { active = false; };
-  }, [householdId, households.length, householdsLoading, router, session, status]);
+  }, [hydrate, householdId, router, session, status]);
 
   useEffect(() => {
     const stored = getLastPatientId();
@@ -120,7 +114,7 @@ export default function Dashboard() {
     return grouped;
   }, [records]);
 
-  if (status === 'loading' || householdsLoading) {
+  if (status === 'loading' || loading) {
     return <div className="min-h-screen grid place-items-center bg-slate-50 text-gray-600" role="status">Loading…</div>;
   }
   if (!session) return null;
@@ -150,7 +144,7 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {!householdsLoading && households.length === 0 && (
+        {!loading && households.length === 0 && (
           <section className="mt-8 rounded-2xl border border-silver bg-white p-6">
             <h2 className="text-lg font-semibold text-ink">No Family Folder Yet</h2>
             <p className="mt-1 text-base text-blue-slate">If someone invited you, open the WhatsApp link they sent. Otherwise ask a family member to add you.</p>

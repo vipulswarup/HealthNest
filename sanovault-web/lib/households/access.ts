@@ -3,17 +3,6 @@ import { sql } from '@/lib/db/neon';
 export type ActiveHouseholdId = string;
 export type DatabaseRow = Record<string, unknown>;
 
-async function firstMembership(userId: string): Promise<string | null> {
-  const [row] = await sql`
-    SELECT household_id
-    FROM household_members
-    WHERE user_id = ${userId}
-    ORDER BY joined_at ASC
-    LIMIT 1
-  `;
-  return row ? String(row.household_id) : null;
-}
-
 /** Accessible if user is a member of any household linked to the patient. */
 export async function canAccessPatient(userId: string, patientId: string): Promise<boolean> {
   const [row] = await sql`
@@ -59,20 +48,28 @@ export async function isHouseholdMember(userId: string, householdId: string): Pr
 /** Resolve active household: stored preference if valid, else first membership. */
 export async function getActiveHouseholdId(userId: string): Promise<ActiveHouseholdId | null> {
   const [row] = await sql`
-    SELECT preferences->>'activeHouseholdId' AS active_household_id
-    FROM profiles WHERE user_id = ${userId}
+    WITH memberships AS (
+      SELECT household_id, joined_at
+      FROM household_members
+      WHERE user_id = ${userId}
+    )
+    SELECT COALESCE(
+      (
+        SELECT m.household_id
+        FROM memberships m
+        INNER JOIN profiles p ON p.user_id = ${userId}
+        WHERE m.household_id::text = p.preferences->>'activeHouseholdId'
+        LIMIT 1
+      ),
+      (
+        SELECT household_id
+        FROM memberships
+        ORDER BY joined_at ASC
+        LIMIT 1
+      )
+    ) AS household_id
   `;
-  const raw = row?.active_household_id;
-  if (raw && raw !== 'null' && raw !== '') {
-    const id = String(raw);
-    if (await isHouseholdMember(userId, id)) return id;
-  }
-  const fallback = await firstMembership(userId);
-  if (fallback) {
-    await setActiveHouseholdId(userId, fallback);
-    return fallback;
-  }
-  return null;
+  return row?.household_id ? String(row.household_id) : null;
 }
 
 export async function requireActiveHouseholdId(userId: string): Promise<ActiveHouseholdId> {

@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useSession } from '@/lib/auth/client';
 
 export type HouseholdSummary = {
@@ -16,6 +17,7 @@ export type ActiveHouseholdState = {
   households: HouseholdSummary[];
   loading: boolean;
   refresh: () => Promise<void>;
+  hydrate: (next: { householdId: string | null; households: HouseholdSummary[] }) => void;
   setActive: (householdId: string) => Promise<void>;
 };
 
@@ -23,9 +25,16 @@ const HouseholdContext = createContext<ActiveHouseholdState | null>(null);
 
 export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const { status } = useSession();
+  const pathname = usePathname();
   const [householdId, setHouseholdId] = useState<string | null>(null);
   const [households, setHouseholds] = useState<HouseholdSummary[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const hydrate = useCallback((next: { householdId: string | null; households: HouseholdSummary[] }) => {
+    setHouseholdId(next.householdId);
+    setHouseholds(next.households);
+    setLoading(false);
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -48,8 +57,11 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (status === 'authenticated') void refresh();
-  }, [refresh, status]);
+    if (status !== 'authenticated') return;
+    if (pathname === '/dashboard') return;
+    if (householdId !== null || households.length > 0) return;
+    void refresh();
+  }, [householdId, households.length, pathname, refresh, status]);
 
   const setActive = useCallback(async (next: string) => {
     const res = await fetch('/api/me/active-household', {
@@ -66,8 +78,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ householdId, households, loading, refresh, setActive }),
-    [householdId, households, loading, refresh, setActive],
+    () => ({ householdId, households, loading, refresh, hydrate, setActive }),
+    [householdId, households, hydrate, loading, refresh, setActive],
   );
 
   return <HouseholdContext.Provider value={value}>{children}</HouseholdContext.Provider>;
