@@ -1,7 +1,9 @@
 import { sql } from '@/lib/db/neon';
+import { BETA_ACKNOWLEDGEMENT_VERSION } from '@/lib/legal/beta-acknowledgement';
 
 export type DashboardHome = {
   householdId: string | null;
+  acknowledged: boolean;
   households: Array<{
     id: string;
     name: string;
@@ -33,7 +35,7 @@ export type DashboardHome = {
 export async function loadDashboardHome(userId: string, email: string): Promise<DashboardHome> {
   const normalizedEmail = email.toLowerCase();
 
-  const [householdRows, inviteRows, preferenceRows] = await Promise.all([
+  const [householdRows, inviteRows, preferenceRows, acknowledgementRows] = await Promise.all([
     sql`
       SELECT h.id, h.name, h.created_by, h.created_at, h.updated_at, hm.joined_at
       FROM households h
@@ -56,6 +58,13 @@ export async function loadDashboardHome(userId: string, email: string): Promise<
       SELECT preferences->>'activeHouseholdId' AS active_household_id
       FROM profiles
       WHERE user_id = ${userId}
+      LIMIT 1
+    `,
+    sql`
+      SELECT 1
+      FROM beta_acknowledgements
+      WHERE user_id = ${userId}
+        AND acknowledgement_version = ${BETA_ACKNOWLEDGEMENT_VERSION}
       LIMIT 1
     `,
   ]);
@@ -81,9 +90,10 @@ export async function loadDashboardHome(userId: string, email: string): Promise<
     : fallbackId
       ? String(fallbackId.id)
       : null;
+  const acknowledged = acknowledgementRows.length > 0;
 
   if (!householdId) {
-    return { householdId: null, households, pending, patients: [], records: [] };
+    return { householdId: null, acknowledged, households, pending, patients: [], records: [] };
   }
 
   const [patientRows, recordRows] = await Promise.all([
@@ -118,6 +128,7 @@ export async function loadDashboardHome(userId: string, email: string): Promise<
 
   return {
     householdId,
+    acknowledged,
     households,
     pending,
     patients: patientRows.map((row) => ({

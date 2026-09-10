@@ -44,7 +44,6 @@ function SignInContent() {
   const isNative = searchParams.get('native') === '1';
   const callbackUrl = isNative ? '/auth/native-bridge' : (searchParams.get('callbackUrl') || '/dashboard');
   const emailFromInvite = searchParams.get('email')?.trim().toLowerCase() || '';
-  const betaAcknowledgementUrl = `/beta-acknowledgement?${new URLSearchParams({ callbackUrl })}`;
 
   const [email, setEmail] = useState(emailFromInvite);
   const [password, setPassword] = useState('');
@@ -72,12 +71,12 @@ function SignInContent() {
 
     authClient.getSession().then(({ data }) => {
       if (data?.user) {
-        router.push(betaAcknowledgementUrl);
+        router.push(callbackUrl);
       } else {
         setIsCheckingSession(false);
       }
     });
-  }, [router, betaAcknowledgementUrl, searchParams, emailFromInvite]);
+  }, [router, callbackUrl, searchParams, emailFromInvite]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +87,7 @@ function SignInContent() {
       const result = await authClient.signIn.email({
         email: email.trim().toLowerCase(),
         password,
-        callbackURL: betaAcknowledgementUrl,
+        callbackURL: callbackUrl,
       });
 
       if (result?.error) {
@@ -96,7 +95,7 @@ function SignInContent() {
         return;
       }
 
-      router.push(betaAcknowledgementUrl);
+      router.push(callbackUrl);
       router.refresh();
     } catch {
       setError('Unable to sign in. Please try again.');
@@ -186,7 +185,7 @@ function SignInContent() {
 
             <SocialAuthButtons
               mode="signin"
-              callbackURL={betaAcknowledgementUrl}
+              callbackURL={callbackUrl}
               disabled={loading}
               onError={setError}
             />
@@ -194,7 +193,7 @@ function SignInContent() {
             <MagicLinkForm
               email={email}
               onEmailChange={setEmail}
-              callbackURL={betaAcknowledgementUrl}
+              callbackURL={callbackUrl}
               disabled={loading}
               onError={setError}
             />

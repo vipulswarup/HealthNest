@@ -24,7 +24,6 @@ export type ActiveHouseholdState = {
 const HouseholdContext = createContext<ActiveHouseholdState | null>(null);
 
 export function HouseholdProvider({ children }: { children: React.ReactNode }) {
-  const { status } = useSession();
   const pathname = usePathname();
   const [householdId, setHouseholdId] = useState<string | null>(null);
   const [households, setHouseholds] = useState<HouseholdSummary[]>([]);
@@ -56,13 +55,6 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  useEffect(() => {
-    if (status !== 'authenticated') return;
-    if (pathname === '/dashboard') return;
-    if (householdId !== null || households.length > 0) return;
-    void refresh();
-  }, [householdId, households.length, pathname, refresh, status]);
-
   const setActive = useCallback(async (next: string) => {
     const res = await fetch('/api/me/active-household', {
       method: 'PATCH',
@@ -82,7 +74,40 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     [householdId, households, hydrate, loading, refresh, setActive],
   );
 
-  return <HouseholdContext.Provider value={value}>{children}</HouseholdContext.Provider>;
+  const skipSessionLoad = pathname === '/dashboard' || pathname.startsWith('/auth/');
+
+  return (
+    <HouseholdContext.Provider value={value}>
+      {!skipSessionLoad && (
+        <HouseholdSessionLoader
+          householdId={householdId}
+          householdsLength={households.length}
+          refresh={refresh}
+        />
+      )}
+      {children}
+    </HouseholdContext.Provider>
+  );
+}
+
+function HouseholdSessionLoader({
+  householdId,
+  householdsLength,
+  refresh,
+}: {
+  householdId: string | null;
+  householdsLength: number;
+  refresh: () => Promise<void>;
+}) {
+  const { status } = useSession();
+
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    if (householdId !== null || householdsLength > 0) return;
+    void refresh();
+  }, [householdId, householdsLength, refresh, status]);
+
+  return null;
 }
 
 export function useHouseholdContext(): ActiveHouseholdState {

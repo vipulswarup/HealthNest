@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/ToastProvider';
 
 type AppNavProps = {
   links?: Array<{ href: string; label: string }>;
+  userLabel?: string;
 };
 
 const defaultLinks = [
@@ -27,8 +28,25 @@ const bottomLinks = [
   { href: '/for-the-doctor', label: 'For the Doctor', match: '/for-the-doctor' },
 ] as const;
 
-export default function AppNav({ links = defaultLinks }: AppNavProps) {
+export default function AppNav({ links = defaultLinks, userLabel }: AppNavProps) {
+  if (userLabel !== undefined) {
+    return <AppNavView links={links} userLabel={userLabel} />;
+  }
+  return <AppNavFromSession links={links} />;
+}
+
+function AppNavFromSession({ links }: { links: Array<{ href: string; label: string }> }) {
   const { data: session } = useSession();
+  return <AppNavView links={links} userLabel={session?.user?.email || session?.user?.name || ''} />;
+}
+
+function AppNavView({
+  links,
+  userLabel,
+}: {
+  links: Array<{ href: string; label: string }>;
+  userLabel: string;
+}) {
   const { notify } = useToast();
   const pathname = usePathname();
   const router = useRouter();
@@ -104,7 +122,7 @@ export default function AppNav({ links = defaultLinks }: AppNavProps) {
                 </>
               )}
               <span className="text-sm text-gray-700 truncate hidden sm:inline max-w-[10rem]">
-                {session?.user?.email || session?.user?.name}
+                {userLabel}
               </span>
               <Button
                 variant="ghost"
@@ -192,7 +210,7 @@ export default function AppNav({ links = defaultLinks }: AppNavProps) {
 
                 <div className="border-t border-gray-200 pt-4">
                   <p className="truncate text-sm text-gray-600">
-                    {session?.user?.email || session?.user?.name || 'Signed in'}
+                    {userLabel || 'Signed in'}
                   </p>
                   <button
                     type="button"

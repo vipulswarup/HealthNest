@@ -7,8 +7,19 @@ import { useEffect } from 'react';
 const ACKNOWLEDGEMENT_PATH = '/beta-acknowledgement';
 
 export default function BetaAcknowledgementGate() {
-  const { data: session, status } = useSession();
   const pathname = usePathname();
+  if (
+    pathname === '/dashboard'
+    || pathname === ACKNOWLEDGEMENT_PATH
+    || pathname.startsWith('/auth/')
+  ) {
+    return null;
+  }
+  return <BetaAcknowledgementChecker pathname={pathname} />;
+}
+
+function BetaAcknowledgementChecker({ pathname }: { pathname: string }) {
+  const { data: session, status } = useSession();
   const router = useRouter();
 
   useEffect(() => {

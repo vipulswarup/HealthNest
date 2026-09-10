@@ -26,9 +26,11 @@ function formatDate(value: string) {
 
 export function DashboardHome({
   firstName,
+  userLabel,
   initial,
 }: {
   firstName: string;
+  userLabel: string;
   initial: DashboardHome;
 }) {
   const router = useRouter();
@@ -93,7 +95,7 @@ export function DashboardHome({
 
   return (
     <div className="min-h-screen bg-background">
-      <AppNav />
+      <AppNav userLabel={userLabel} />
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div>

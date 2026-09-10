@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { useSession } from '@/lib/auth/client';
 
 const STORAGE_KEY = 'sanovault.a2hs.dismissed';
 
@@ -19,13 +18,11 @@ function isAppleDevice() {
 }
 
 export default function AddToHomeScreenPrompt() {
-  const { status } = useSession();
   const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const [ios, setIos] = useState(false);
 
   useEffect(() => {
-    if (status !== 'authenticated') return;
     if (pathname !== '/dashboard') return;
     try {
       if (window.localStorage.getItem(STORAGE_KEY) === '1') return;
@@ -36,7 +33,7 @@ export default function AddToHomeScreenPrompt() {
     setIos(isAppleDevice());
     const timer = window.setTimeout(() => setVisible(true), 4000);
     return () => window.clearTimeout(timer);
-  }, [pathname, status]);
+  }, [pathname]);
 
   if (!visible) return null;
 
