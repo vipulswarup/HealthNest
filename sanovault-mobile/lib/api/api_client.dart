@@ -47,6 +47,7 @@ class ApiClient {
     final request = http.MultipartRequest('POST', Uri.parse('$baseUrl$path'));
     request.headers['Accept'] = 'application/json';
     request.headers['User-Agent'] = 'SanoVault-iOS/1.0';
+    request.headers['Origin'] = Uri.parse(baseUrl).origin;
     if (token != null && token.isNotEmpty) {
       request.headers['Authorization'] = 'Bearer $token';
     }
@@ -101,6 +102,7 @@ class ApiClient {
     final request = http.Request(method, uri);
     request.headers['Accept'] = 'application/json';
     request.headers['User-Agent'] = 'SanoVault-iOS/1.0';
+    request.headers['Origin'] = Uri.parse(baseUrl).origin;
     if (token != null && token.isNotEmpty) {
       request.headers['Authorization'] = 'Bearer $token';
     }
