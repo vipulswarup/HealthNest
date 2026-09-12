@@ -30,6 +30,27 @@ class SessionController extends ChangeNotifier {
     await _loadAfterToken();
   }
 
+  int dataEpoch = 0;
+
+  void invalidateData() {
+    dataEpoch += 1;
+    notifyListeners();
+  }
+
+  Future<void> signInWithPassword(String email, String password) async {
+    error = null;
+    notifyListeners();
+    try {
+      final token = await api.signInWithPassword(email: email, password: password);
+      await store.writeToken(token);
+      await _loadAfterToken();
+    } catch (caught) {
+      error = caught is ApiException ? caught.message : 'Could not sign in with email.';
+      status = SessionStatus.signedOut;
+      notifyListeners();
+    }
+  }
+
   Future<void> signInWithApple() async {
     error = null;
     notifyListeners();

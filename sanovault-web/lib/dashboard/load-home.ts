@@ -1,6 +1,27 @@
 import { sql } from '@/lib/db/neon';
 import { BETA_ACKNOWLEDGEMENT_VERSION } from '@/lib/legal/beta-acknowledgement';
 
+function toIsoDay(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+  const text = String(value);
+  const iso = text.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (iso) return iso[1];
+  const parsed = new Date(text);
+  if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
+  return text;
+}
+
+function toIsoInstant(value: unknown): string {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString();
+  const text = String(value ?? '');
+  const parsed = new Date(text);
+  if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  return text;
+}
+
 export type DashboardHome = {
   householdId: string | null;
   acknowledged: boolean;
@@ -141,8 +162,8 @@ export async function loadDashboardHome(userId: string, email: string): Promise<
       patientId: String(row.patient_id),
       recordType: String(row.record_type || ''),
       source: String(row.source || ''),
-      documentDate: row.document_date ? String(row.document_date) : undefined,
-      createdAt: String(row.created_at),
+      documentDate: toIsoDay(row.document_date),
+      createdAt: toIsoInstant(row.created_at),
     })),
   };
 }

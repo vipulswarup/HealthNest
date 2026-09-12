@@ -41,6 +41,14 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>SanoVault uses the camera to photograph lab reports and medicine labels.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SanoVault uses your photo library to attach lab reports and medicine labels.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>SanoVault may save a copy of a report you capture.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SanoVault needs the microphone only if a video capture includes audio.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

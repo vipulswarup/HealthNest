@@ -1,6 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:sanovault/api/models.dart';
-import 'package:sanovault/features/placeholder/coming_soon_page.dart';
+import 'package:sanovault/features/doctor/doctor_page.dart';
+import 'package:sanovault/features/households/households_page.dart';
+import 'package:sanovault/features/reports/add_report_page.dart';
+import 'package:sanovault/features/tracking/vaccinations_page.dart';
+import 'package:sanovault/features/tracking/visit_notes_page.dart';
+import 'package:sanovault/features/vitals/bp_page.dart';
+import 'package:sanovault/features/vitals/growth_page.dart';
 import 'package:sanovault/session/session_scope.dart';
 import 'package:sanovault/theme/sv_colors.dart';
 
@@ -15,11 +21,18 @@ class _MorePageState extends State<MorePage> {
   List<Household> _households = const [];
   String? _activeId;
   bool _loading = true;
+  int _epoch = -1;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final epoch = SessionScope.of(context).dataEpoch;
+    if (epoch != _epoch) {
+      _epoch = epoch;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _load();
+      });
+    }
   }
 
   Future<void> _load() async {
@@ -39,8 +52,14 @@ class _MorePageState extends State<MorePage> {
 
   Future<void> _switchHousehold(String id) async {
     if (id == _activeId) return;
-    await SessionScope.of(context).api.setActiveHousehold(id);
+    final session = SessionScope.of(context);
+    await session.api.setActiveHousehold(id);
+    session.invalidateData();
     await _load();
+  }
+
+  void _open(Widget page) {
+    Navigator.of(context).push(CupertinoPageRoute<void>(builder: (_) => page));
   }
 
   @override
@@ -88,20 +107,13 @@ class _MorePageState extends State<MorePage> {
                 ),
               CupertinoListSection.insetGrouped(
                 children: [
-                  CupertinoListTile(
-                    title: const Text('Who Can See This'),
-                    trailing: const CupertinoListTileChevron(),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        CupertinoPageRoute<void>(
-                          builder: (_) => const ComingSoonPage(
-                            title: 'Who Can See This',
-                            body: 'Invites, members, and leaving a folder land in Phase 8.',
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                  CupertinoListTile(title: const Text('Add a Report'), trailing: const CupertinoListTileChevron(), onTap: () => _open(const AddReportPage())),
+                  CupertinoListTile(title: const Text('For the Doctor'), trailing: const CupertinoListTileChevron(), onTap: () => _open(const DoctorPage())),
+                  CupertinoListTile(title: const Text('Blood Pressure'), trailing: const CupertinoListTileChevron(), onTap: () => _open(const BpPage())),
+                  CupertinoListTile(title: const Text('Height & Weight'), trailing: const CupertinoListTileChevron(), onTap: () => _open(const GrowthPage())),
+                  CupertinoListTile(title: const Text('Vaccinations'), trailing: const CupertinoListTileChevron(), onTap: () => _open(const VaccinationsPage())),
+                  CupertinoListTile(title: const Text('Visit Notes'), trailing: const CupertinoListTileChevron(), onTap: () => _open(const VisitNotesPage())),
+                  CupertinoListTile(title: const Text('Who Can See This'), trailing: const CupertinoListTileChevron(), onTap: () => _open(const HouseholdsPage())),
                   CupertinoListTile(
                     title: const Text('Sign Out', style: TextStyle(color: SvColors.danger)),
                     onTap: () => session.signOut(),

@@ -3,7 +3,12 @@ import 'package:sanovault/api/api_exception.dart';
 import 'package:sanovault/api/models.dart';
 import 'package:sanovault/features/home/add_person_page.dart';
 import 'package:sanovault/features/home/create_household_page.dart';
-import 'package:sanovault/features/placeholder/coming_soon_page.dart';
+import 'package:sanovault/features/doctor/doctor_page.dart';
+import 'package:sanovault/features/family/person_detail_page.dart';
+import 'package:sanovault/features/reports/add_report_page.dart';
+import 'package:sanovault/features/reports/record_detail_page.dart';
+import 'package:sanovault/features/reports/reports_page.dart';
+import 'package:sanovault/features/vitals/bp_page.dart';
 import 'package:sanovault/session/app_preferences.dart';
 import 'package:sanovault/session/session_scope.dart';
 import 'package:sanovault/theme/sv_colors.dart';
@@ -24,11 +29,18 @@ class _HomePageState extends State<HomePage> {
   String? _error;
   String? _lastPatientId;
   bool _loading = true;
+  int _epoch = -1;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final epoch = SessionScope.of(context).dataEpoch;
+    if (epoch != _epoch) {
+      _epoch = epoch;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _load();
+      });
+    }
   }
 
   Future<void> _load() async {
@@ -70,12 +82,9 @@ class _HomePageState extends State<HomePage> {
     if (mounted) setState(() => _lastPatientId = id);
   }
 
-  void _openComingSoon(String title, String body) {
-    Navigator.of(context).push(
-      CupertinoPageRoute<void>(
-        builder: (_) => ComingSoonPage(title: title, body: body),
-      ),
-    );
+  Future<void> _open(Widget page) async {
+    await Navigator.of(context).push(CupertinoPageRoute<void>(builder: (_) => page));
+    if (mounted) _load();
   }
 
   void _openAddPerson() {
@@ -232,38 +241,27 @@ class _HomePageState extends State<HomePage> {
           recent: recordsByPerson[person.id] ?? const [],
           onAddReport: () {
             _markLast(person.id);
-            _openComingSoon(
-              'Add a Report',
-              'Camera, files, and OCR land in Phase 4. On the website this is Health Records, New.',
-            );
+            _open(AddReportPage(patientId: person.id));
           },
           onDoctor: () {
             _markLast(person.id);
-            _openComingSoon(
-              'For the Doctor',
-              'The doctor packet lands in Phase 6. It will use the same API as the website.',
-            );
+            _open(DoctorPage(patientId: person.id));
           },
           onLogBp: () {
             _markLast(person.id);
-            _openComingSoon(
-              'Log BP',
-              'Blood pressure logging lands in Phase 7, then Apple Health.',
-            );
+            _open(BpPage(patientId: person.id));
           },
           onViewAll: () {
             _markLast(person.id);
-            _openComingSoon(
-              'Reports',
-              'Browsing and opening reports lands in Phase 3.',
-            );
+            _open(ReportsPage(patientId: person.id));
           },
           onOpenRecord: (record) {
             _markLast(person.id);
-            _openComingSoon(
-              humanizeLabel(record.recordType),
-              'Record detail and document viewing land in Phase 3.',
-            );
+            _open(RecordDetailPage(recordId: record.id));
+          },
+          onOpenPerson: () {
+            _markLast(person.id);
+            _open(PersonDetailPage(personId: person.id));
           },
         ),
       ],
@@ -281,6 +279,7 @@ class _PersonCard extends StatelessWidget {
     required this.onLogBp,
     required this.onViewAll,
     required this.onOpenRecord,
+    required this.onOpenPerson,
   });
 
   final DashboardPerson person;
@@ -291,6 +290,7 @@ class _PersonCard extends StatelessWidget {
   final VoidCallback onLogBp;
   final VoidCallback onViewAll;
   final ValueChanged<DashboardRecord> onOpenRecord;
+  final VoidCallback onOpenPerson;
 
   @override
   Widget build(BuildContext context) {
@@ -299,7 +299,10 @@ class _PersonCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: SvColors.ink)),
+          GestureDetector(
+            onTap: onOpenPerson,
+            child: Text(name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: SvColors.ink)),
+          ),
           const SizedBox(height: 4),
           Text(
             lastUsed ? 'Last Used' : ' ',
@@ -336,23 +339,26 @@ class _PersonCard extends StatelessWidget {
             const Text('None yet.', style: TextStyle(fontSize: 16, color: SvColors.slate))
           else
             for (final record in recent)
-              CupertinoButton(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                onPressed: () => onOpenRecord(record),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        humanizeLabel(record.recordType),
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 17, color: SvColors.ink),
+              GestureDetector(
+                onTap: () => onOpenRecord(record),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          humanizeLabel(record.recordType),
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 17, color: SvColors.ink),
+                        ),
                       ),
-                    ),
-                    Text(
-                      formatDisplayDate(record.documentDate ?? record.createdAt),
-                      style: const TextStyle(fontSize: 15, color: SvColors.slate),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      Text(
+                        formatDisplayDate(record.documentDate ?? record.createdAt),
+                        style: const TextStyle(fontSize: 15, color: SvColors.slate),
+                      ),
+                    ],
+                  ),
                 ),
               ),
         ],
