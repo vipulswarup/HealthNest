@@ -43,6 +43,9 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 
+# Expo local cache and device files
+.expo/
+
 # Secrets and signing
 .env
 .env.*
