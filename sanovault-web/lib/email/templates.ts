@@ -1,3 +1,5 @@
+import { appBaseUrl } from '@/lib/site';
+
 const BRAND = {
   primary: '#EF8354',
   primaryDark: '#D96C3D',
@@ -9,9 +11,7 @@ const BRAND = {
   footer: '#4F5D75',
 };
 
-export function appBaseUrl(): string {
-  return (process.env.NEXT_PUBLIC_APP_URL || 'https://sanovault.com').replace(/\/$/, '');
-}
+export { appBaseUrl };
 
 export function logoUrl(): string {
   return `${appBaseUrl()}/logo.png`;

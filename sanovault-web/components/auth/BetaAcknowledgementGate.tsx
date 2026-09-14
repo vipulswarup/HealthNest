@@ -9,7 +9,10 @@ const ACKNOWLEDGEMENT_PATH = '/beta-acknowledgement';
 export default function BetaAcknowledgementGate() {
   const pathname = usePathname();
   if (
-    pathname === '/dashboard'
+    pathname === '/'
+    || pathname === '/privacy'
+    || pathname === '/pricing'
+    || pathname === '/dashboard'
     || pathname === ACKNOWLEDGEMENT_PATH
     || pathname.startsWith('/auth/')
   ) {

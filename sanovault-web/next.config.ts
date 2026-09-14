@@ -10,6 +10,11 @@ if (existsSync(pdfWorkerSrc)) {
   copyFileSync(pdfWorkerSrc, pdfWorkerDest);
 }
 
+const scriptSrc = [
+  "script-src 'self' 'unsafe-inline'",
+  process.env.NODE_ENV !== "production" ? "'unsafe-eval'" : "",
+].filter(Boolean).join(" ");
+
 const securityHeaders = [
   {
     key: "Content-Security-Policy",
@@ -19,7 +24,7 @@ const securityHeaders = [
       "object-src 'none'",
       "form-action 'self'",
       "frame-ancestors 'none'",
-      "script-src 'self' 'unsafe-inline'",
+      scriptSrc,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com",
       "font-src 'self' data:",
@@ -39,6 +44,36 @@ const securityHeaders = [
   { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
 ];
 
+const privatePageSources = [
+  "/dashboard",
+  "/dashboard/:path*",
+  "/patients",
+  "/patients/:path*",
+  "/health-records",
+  "/health-records/:path*",
+  "/medications",
+  "/medications/:path*",
+  "/documents",
+  "/documents/:path*",
+  "/reports",
+  "/reports/:path*",
+  "/households",
+  "/households/:path*",
+  "/bp",
+  "/bp/:path*",
+  "/growth",
+  "/growth/:path*",
+  "/vaccinations",
+  "/vaccinations/:path*",
+  "/visit-notes",
+  "/visit-notes/:path*",
+  "/for-the-doctor",
+  "/for-the-doctor/:path*",
+  "/beta-acknowledgement",
+  "/auth/:path*",
+  "/share/:path*",
+];
+
 const nextConfig: NextConfig = {
   // This repository is nested under an asset repository with its own lockfile.
   // Pin Turbopack to this application so dependency and environment discovery is deterministic.
@@ -49,12 +84,25 @@ const nextConfig: NextConfig = {
   // Keep libheif's WebAssembly loader intact in server functions. Bundling it
   // triggers a dynamic-require warning and is unnecessary for this Node-only path.
   serverExternalPackages: ['heic-convert'],
+  async redirects() {
+    return [
+      {
+        source: "/sites.xml",
+        destination: "/sitemap.xml",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {
         source: "/(.*)",
         headers: securityHeaders,
       },
+      ...privatePageSources.map((source) => ({
+        source,
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      })),
     ];
   },
 };
