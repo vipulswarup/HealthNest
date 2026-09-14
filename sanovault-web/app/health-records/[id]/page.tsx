@@ -77,12 +77,17 @@ export default function HealthRecordDetailPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [approving, setApproving] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [reassignPatientId, setReassignPatientId] = useState('');
 
   const getRecordTypeLabel = (code: string): string => {
     const category = categories.find(cat => cat.code === code);
     return category?.displayName || code;
   };
+
+  const needsReview = Boolean(record?.tags?.includes('needs_review'));
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -96,6 +101,15 @@ export default function HealthRecordDetailPage() {
     }
   }, []);
 
+  const fetchPatients = useCallback(async () => {
+    try {
+      const response = await fetch('/api/patients');
+      if (response.ok) setPatients(await response.json());
+    } catch {
+      // Non-critical for view mode.
+    }
+  }, []);
+
   const fetchRecord = useCallback(async () => {
     try {
       setLoading(true);
@@ -105,6 +119,7 @@ export default function HealthRecordDetailPage() {
       }
       const data = await response.json();
       setRecord(data);
+      setReassignPatientId(data.patientId || '');
       
       if (data.patientId) {
         const patientResponse = await fetch(`/api/patients/${data.patientId}`);
@@ -118,14 +133,45 @@ export default function HealthRecordDetailPage() {
   }, [recordId]);
 
   useEffect(() => {
-    if (status === 'loading') return;
-    if (!session) {
+    if (status === 'unauthenticated') {
       router.push('/auth/signin');
       return;
     }
-    void fetchRecord();
-    void fetchCategories();
-  }, [fetchCategories, fetchRecord, router, session, status]);
+    if (status === 'authenticated') {
+      void fetchCategories();
+      void fetchPatients();
+      void fetchRecord();
+    }
+  }, [status, router, fetchCategories, fetchPatients, fetchRecord]);
+
+  const handleApproveReview = async () => {
+    if (!record) return;
+    setApproving(true);
+    setError('');
+    try {
+      const payload: Record<string, unknown> = { approveReview: true };
+      if (reassignPatientId && reassignPatientId !== record.patientId) {
+        payload.patientId = reassignPatientId;
+      }
+      const response = await fetch(`/api/health-records/${recordId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const body = await response.json() as HealthRecord & { error?: string };
+      if (!response.ok) throw new Error(body.error || 'Could not confirm');
+      setRecord(body);
+      if (body.patientId) {
+        const patientResponse = await fetch(`/api/patients/${body.patientId}`);
+        if (patientResponse.ok) setPatient(await patientResponse.json());
+      }
+      notify('Marked as reviewed.', 'success');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not confirm');
+    } finally {
+      setApproving(false);
+    }
+  };
 
   const handleDelete = async () => {
     try {
@@ -275,6 +321,41 @@ export default function HealthRecordDetailPage() {
             ← Back to health records
           </Link>
           <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+            {needsReview && (
+              <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                <p className="text-sm font-medium text-amber-900">Needs review</p>
+                <p className="mt-1 text-sm text-amber-800">
+                  This report arrived via WhatsApp. Confirm the person and details, then mark it reviewed.
+                </p>
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <div className="flex-1">
+                    <label htmlFor="reassign-patient" className="mb-1 block text-xs font-medium text-amber-900">
+                      Filed for
+                    </label>
+                    <select
+                      id="reassign-patient"
+                      value={reassignPatientId}
+                      onChange={(e) => setReassignPatientId(e.target.value)}
+                      className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm text-gray-900"
+                    >
+                      {patients.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {[p.firstName, p.lastName].filter(Boolean).join(' ')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={approving}
+                    onClick={() => void handleApproveReview()}
+                    className="rounded-lg bg-coral px-4 py-2 text-sm font-medium text-white hover:bg-coral-strong disabled:opacity-50"
+                  >
+                    {approving ? 'Saving…' : 'Confirm filing'}
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">

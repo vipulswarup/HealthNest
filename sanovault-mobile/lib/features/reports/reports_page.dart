@@ -21,6 +21,7 @@ class _ReportsPageState extends State<ReportsPage> {
   List<HealthRecord> _records = const [];
   String? _patientId;
   String _query = '';
+  bool _needsReviewOnly = false;
   String? _error;
   bool _loading = true;
   int _epoch = -1;
@@ -47,7 +48,11 @@ class _ReportsPageState extends State<ReportsPage> {
     try {
       final people = await api.patients();
       _patientId ??= await loadInitialPersonId(people);
-      final records = await api.healthRecords(patientId: _patientId, keyword: _query);
+      final records = await api.healthRecords(
+        patientId: _needsReviewOnly ? null : _patientId,
+        keyword: _query,
+        tag: _needsReviewOnly ? 'needs_review' : null,
+      );
       if (!mounted) return;
       setState(() {
         _people = people;
@@ -81,6 +86,28 @@ class _ReportsPageState extends State<ReportsPage> {
             },
           ),
           Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Row(
+              children: [
+                CupertinoButton(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  color: _needsReviewOnly ? SvColors.coral : CupertinoColors.systemGrey5,
+                  onPressed: () {
+                    setState(() => _needsReviewOnly = !_needsReviewOnly);
+                    _load();
+                  },
+                  child: Text(
+                    'Needs review',
+                    style: TextStyle(
+                      color: _needsReviewOnly ? CupertinoColors.white : SvColors.ink,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: CupertinoSearchTextField(
               onSubmitted: (value) {
@@ -101,7 +128,21 @@ class _ReportsPageState extends State<ReportsPage> {
               children: [
                 for (final record in _records)
                   CupertinoListTile(
-                    title: Text(humanizeLabel(record.recordType)),
+                    title: Row(
+                      children: [
+                        Expanded(child: Text(humanizeLabel(record.recordType))),
+                        if (record.tags.contains('needs_review'))
+                          Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: CupertinoColors.systemYellow.withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text('Review', style: TextStyle(fontSize: 12, color: SvColors.ink)),
+                          ),
+                      ],
+                    ),
                     subtitle: Text(record.source),
                     additionalInfo: Text(formatDisplayDate(record.documentDate ?? record.createdAt)),
                     trailing: const CupertinoListTileChevron(),

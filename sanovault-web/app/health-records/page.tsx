@@ -267,6 +267,12 @@ function HealthRecordsContent() {
             <h1 className="text-3xl font-bold text-ink">Reports</h1>
             <div className="flex flex-wrap items-center gap-3">
               <Link
+                href="/health-records?tag=needs_review"
+                className={`inline-flex min-h-12 items-center text-base font-medium ${filterTag === 'needs_review' ? 'text-ink underline' : 'text-coral hover:underline'}`}
+              >
+                Needs review
+              </Link>
+              <Link
                 href={selectedPatientId ? `/reports/blood-summary?patientId=${selectedPatientId}` : '/reports/blood-summary'}
                 className="inline-flex min-h-12 items-center text-base font-medium text-coral hover:underline"
               >

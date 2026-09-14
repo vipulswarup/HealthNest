@@ -41,6 +41,21 @@ This guide covers free, serverless deployment options with CI/CD for SanoVault W
 
 Keep the R2 bucket private. SanoVault generates short-lived signed download URLs, so no public bucket URL is required.
 
+**WhatsApp report forwarding (optional):**
+
+1. Create a Meta Business app with WhatsApp Cloud API and a business phone number.
+2. Set webhook URL to `https://www.sanovault.com/api/webhooks/whatsapp` (or your production domain).
+3. Subscribe to the `messages` field. Use the same value for Meta verify token and `WHATSAPP_VERIFY_TOKEN`.
+4. Add Vercel env vars:
+   - `WHATSAPP_VERIFY_TOKEN`
+   - `WHATSAPP_ACCESS_TOKEN`
+   - `WHATSAPP_PHONE_NUMBER_ID`
+   - `WHATSAPP_APP_SECRET` (used to verify `X-Hub-Signature-256`)
+5. In SanoVault, open **Household → WhatsApp intake** and link each sender's phone (country code, digits only).
+6. Users forward a PDF, photo, or text to the business number, pick the person in WhatsApp, then confirm in the app under **Reports → Needs review**.
+
+Optional: set `WHATSAPP_INTERNAL_SECRET` (or reuse `CRON_SECRET`) for `POST /api/internal/whatsapp/process` retries.
+
 **Custom Domain:**
 - Add your domain in Project Settings → Domains
 - Vercel automatically configures SSL

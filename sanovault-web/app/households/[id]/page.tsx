@@ -28,6 +28,12 @@ type Invite = {
 
 type Patient = { id: string; firstName: string; lastName?: string };
 
+type WhatsAppSenderMap = {
+  phone: string;
+  householdId: string;
+  defaultPatientId: string | null;
+};
+
 type OrphanErrorResponse = {
   error?: string;
   details?: { patients?: Array<{ firstName?: string; lastName?: string }> };
@@ -37,6 +43,7 @@ type PendingAction =
   | { kind: 'unlink-patient'; id: string; label: string }
   | { kind: 'remove-member'; id: string; label: string }
   | { kind: 'revoke-invite'; id: string; label: string }
+  | { kind: 'unlink-whatsapp'; id: string; label: string }
   | { kind: 'leave' }
   | { kind: 'dissolve' };
 
@@ -68,6 +75,8 @@ export default function HouseholdDetailPage() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteUrl, setInviteUrl] = useState('');
   const [origin, setOrigin] = useState('https://sanovault.com');
+  const [whatsappMaps, setWhatsappMaps] = useState<WhatsAppSenderMap[]>([]);
+  const [whatsappPhone, setWhatsappPhone] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -79,12 +88,13 @@ export default function HouseholdDetailPage() {
     setLoading(true);
     setError('');
     try {
-      const [hRes, mRes, iRes, pRes, householdsRes] = await Promise.all([
+      const [hRes, mRes, iRes, pRes, householdsRes, waRes] = await Promise.all([
         fetch(`/api/households/${id}`),
         fetch(`/api/households/${id}/members`),
         fetch(`/api/households/${id}/invites`),
         fetch(`/api/households/${id}/patients`),
         fetch('/api/households'),
+        fetch(`/api/whatsapp/sender-map?householdId=${encodeURIComponent(id)}`),
       ]);
       if (!hRes.ok) throw new Error('Household not found');
       const household = await hRes.json();
@@ -92,6 +102,8 @@ export default function HouseholdDetailPage() {
       setEditName(household.name);
       if (mRes.ok) setMembers(await mRes.json());
       if (iRes.ok) setInvites(await iRes.json());
+      if (waRes.ok) setWhatsappMaps(await waRes.json());
+      else setWhatsappMaps([]);
       const householdPatients: Patient[] = pRes.ok ? await pRes.json() : [];
       setPatients(householdPatients);
 
@@ -218,6 +230,48 @@ export default function HouseholdDetailPage() {
     }
   };
 
+  const linkWhatsApp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const res = await fetch('/api/whatsapp/sender-map', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: whatsappPhone, householdId: id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not link WhatsApp number');
+      setWhatsappPhone('');
+      setMessage(`Linked WhatsApp +${data.phone}. Forward reports to the SanoVault WhatsApp number, then pick who they belong to.`);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not link WhatsApp');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const unlinkWhatsApp = async (phone: string) => {
+    setBusy(true);
+    setError('');
+    try {
+      const res = await fetch(
+        `/api/whatsapp/sender-map?phone=${encodeURIComponent(phone)}&householdId=${encodeURIComponent(id)}`,
+        { method: 'DELETE' },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not unlink');
+      setMessage('WhatsApp number unlinked.');
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not unlink WhatsApp');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const revokeInvite = async (inviteId: string) => {
     setBusy(true);
     setError('');
@@ -299,6 +353,7 @@ export default function HouseholdDetailPage() {
     if (action.kind === 'unlink-patient') void unlinkPatient(action.id);
     if (action.kind === 'remove-member') void removeMember(action.id);
     if (action.kind === 'revoke-invite') void revokeInvite(action.id);
+    if (action.kind === 'unlink-whatsapp') void unlinkWhatsApp(action.id);
     if (action.kind === 'leave') void leave();
     if (action.kind === 'dissolve') void dissolve();
   };
@@ -319,6 +374,11 @@ export default function HouseholdDetailPage() {
       title: `Revoke the invite for ${pendingAction.label}?`,
       description: 'The existing invitation link will stop working.',
       label: 'Revoke invite', tone: 'danger' as const,
+    };
+    if (pendingAction.kind === 'unlink-whatsapp') return {
+      title: `Unlink +${pendingAction.label}?`,
+      description: 'Reports forwarded from this WhatsApp number will no longer be accepted for this family folder.',
+      label: 'Unlink WhatsApp', tone: 'danger' as const,
     };
     if (pendingAction.kind === 'leave') return {
       title: 'Leave this household?',
@@ -411,6 +471,44 @@ export default function HouseholdDetailPage() {
                     </button>
                   </form>
                 )}
+              </section>
+
+              <section>
+                <h2 className="text-lg font-semibold text-gray-900 mb-3">WhatsApp intake</h2>
+                <p className="mb-3 text-sm text-gray-600">
+                  Link a phone number so forwards to the SanoVault WhatsApp business number are filed here.
+                  After each forward you will pick who the report belongs to in WhatsApp.
+                </p>
+                {whatsappMaps.length > 0 && (
+                  <ul className="mb-3 divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden">
+                    {whatsappMaps.map((map) => (
+                      <li key={map.phone} className="flex items-center justify-between gap-3 px-4 py-3">
+                        <p className="font-medium text-gray-900">+{map.phone}</p>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => setPendingAction({ kind: 'unlink-whatsapp', id: map.phone, label: map.phone })}
+                          className="text-sm text-red-600 hover:underline disabled:opacity-50"
+                        >
+                          Unlink
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <form onSubmit={linkWhatsApp} className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="tel"
+                    value={whatsappPhone}
+                    onChange={(e) => setWhatsappPhone(e.target.value)}
+                    placeholder="e.g. +919876543210"
+                    className="flex-1 min-h-12 border border-gray-300 rounded-md px-3 py-2 text-base text-gray-900 bg-white placeholder:text-gray-500"
+                    required
+                  />
+                  <button type="submit" disabled={busy} className="min-h-12 bg-coral text-white px-4 py-2 rounded-md text-base font-medium hover:bg-coral-strong disabled:opacity-50">
+                    Link WhatsApp number
+                  </button>
+                </form>
               </section>
 
               <section>

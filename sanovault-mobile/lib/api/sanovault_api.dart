@@ -107,13 +107,18 @@ class SanoVaultApi {
     return Person.fromJson(await _client.put('/api/patients/$id', body) as Map<String, dynamic>);
   }
 
-  Future<List<HealthRecord>> healthRecords({String? patientId, String? keyword, String? recordType}) async {
+  Future<List<HealthRecord>> healthRecords({String? patientId, String? keyword, String? recordType, String? tag}) async {
     final json = await _client.get('/api/health-records', query: {
       'patientId': patientId,
       'keyword': keyword,
       'recordType': recordType,
+      'tag': tag,
     }) as List;
     return json.whereType<Map>().map((item) => HealthRecord.fromJson(Map<String, dynamic>.from(item))).toList();
+  }
+
+  Future<HealthRecord> updateHealthRecord(String id, Map<String, dynamic> body) async {
+    return HealthRecord.fromJson(await _client.put('/api/health-records/$id', body) as Map<String, dynamic>);
   }
 
   Future<HealthRecord> healthRecord(String id) async {
