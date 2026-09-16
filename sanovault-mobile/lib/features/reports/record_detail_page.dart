@@ -115,11 +115,23 @@ class _RecordDetailPageState extends State<RecordDetailPage> {
                   ),
                 CupertinoListSection.insetGrouped(
                   children: [
-                    CupertinoListTile(title: const Text('Source'), additionalInfo: Text(record.source)),
-                    CupertinoListTile(title: const Text('Doctor'), additionalInfo: Text(record.doctorName ?? '—')),
-                    CupertinoListTile(title: const Text('Date'), additionalInfo: Text(formatDisplayDate(record.documentDate ?? record.createdAt))),
+                    CupertinoListTile(
+                      title: const Text('Source'),
+                      additionalInfo: _trailingInfo(record.source),
+                    ),
+                    CupertinoListTile(
+                      title: const Text('Doctor'),
+                      additionalInfo: _trailingInfo(record.doctorName ?? '—'),
+                    ),
+                    CupertinoListTile(
+                      title: const Text('Date'),
+                      additionalInfo: _trailingInfo(formatDisplayDate(record.documentDate ?? record.createdAt)),
+                    ),
                     if (record.tags.isNotEmpty)
-                      CupertinoListTile(title: const Text('Tags'), subtitle: Text(record.tags.join(', '))),
+                      CupertinoListTile(
+                        title: const Text('Tags'),
+                        subtitle: Text(record.tags.join(', '), maxLines: 3, overflow: TextOverflow.ellipsis),
+                      ),
                     if (record.documentId != null)
                       CupertinoListTile(
                         title: const Text('Open file'),
@@ -133,12 +145,24 @@ class _RecordDetailPageState extends State<RecordDetailPage> {
                     if (record.ocrText != null && record.ocrText!.isNotEmpty)
                       CupertinoListTile(
                         title: const Text('Extracted text'),
-                        subtitle: Text(record.ocrText!, maxLines: 8),
+                        subtitle: Text(record.ocrText!, maxLines: 8, overflow: TextOverflow.ellipsis),
                       ),
                   ],
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _trailingInfo(String value) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 220),
+      child: Text(
+        value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.end,
+      ),
     );
   }
 }
