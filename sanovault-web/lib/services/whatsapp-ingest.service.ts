@@ -1,6 +1,6 @@
 import { sql } from '@/lib/db/neon';
 import { getDocumentById, updateDocumentStatus } from '@/lib/services/document.service';
-import { extractTextFromImage } from '@/lib/services/ocr.service';
+import { extractDocumentText } from '@/lib/services/document-text.service';
 import { analyzeDocument } from '@/lib/services/ai.service';
 import { getAllCategories } from '@/lib/services/category.service';
 import { notifyPatientHousehold } from '@/lib/services/device-push.service';
@@ -52,7 +52,12 @@ export async function processWhatsAppIngest(inboundId: string): Promise<void> {
       const document = await getDocumentById(documentId);
       if (!document?.r2Key) throw new Error('Document missing storage key');
       await updateDocumentStatus(documentId, { ocrStatus: 'PROCESSING', aiStatus: 'PROCESSING' });
-      ocrText = await extractTextFromImage(document.r2Key, true, { mode: 'intake' });
+      ocrText = await extractDocumentText({
+        r2Key: document.r2Key,
+        fileType: document.fileType,
+        fileName: document.fileName,
+        patientId,
+      });
       await updateDocumentStatus(documentId, {
         ocrStatus: 'COMPLETED',
         ocrText,
@@ -185,6 +190,10 @@ export async function fileInboundForPatient(opts: {
   const documentId = inbound.document_id ? String(inbound.document_id) : null;
   const textBody = typeof inbound.text_body === 'string' ? inbound.text_body : null;
   const tags = ['whatsapp', 'needs_review'];
+  if (documentId) {
+    const { attachDocumentToPatient } = await import('@/lib/services/document.service');
+    await attachDocumentToPatient(documentId, patientId);
+  }
 
   const [record] = await sql`
     INSERT INTO health_records (

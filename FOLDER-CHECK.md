@@ -130,7 +130,11 @@ The backend already has helpers for common date-of-birth password formats (`lib/
 
 ## Implementation plan
 
-Product decisions above are closed. Build in this order so web/mobile gain Office + password + hash behavior before the Mac walk exists.
+Product decisions above are closed.
+
+**Status:** Phase 1 implemented on 2026-09-16 (hashes, Office upload/text, encrypted per-person PDF passwords, shared unlock). Phases 2 and 3 are not started.
+
+Build in this order so web/mobile gain Office + password + hash behavior before the Mac walk exists.
 
 ### Already in the codebase
 

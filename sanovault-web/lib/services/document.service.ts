@@ -8,6 +8,7 @@ type DocumentRow = {
   file_name: string;
   file_size: number | string;
   file_type: string;
+  checksum_sha256?: string | null;
   r2_key: string;
   uploaded_at: Date;
   status: DocumentMetadata['status'];
@@ -32,6 +33,7 @@ function toDocument(row: DocumentRow): DocumentMetadata {
     fileName: row.file_name,
     fileSize: Number(row.file_size),
     fileType: row.file_type,
+    checksumSha256: row.checksum_sha256 || undefined,
     r2Key: row.r2_key,
     uploadedAt: row.uploaded_at,
     status: row.status,
@@ -51,11 +53,99 @@ function toDocument(row: DocumentRow): DocumentMetadata {
 
 export async function createDocument(input: CreateDocumentInput): Promise<DocumentMetadata> {
   const [row] = await sql`
-    INSERT INTO documents (owner_id, file_name, file_size, file_type, r2_key, storage_provider)
-    VALUES (${input.userId}, ${input.fileName}, ${input.fileSize}, ${input.fileType}, ${input.r2Key}, 'r2')
+    INSERT INTO documents (owner_id, patient_id, file_name, file_size, file_type, r2_key, storage_provider, checksum_sha256)
+    VALUES (
+      ${input.userId},
+      ${input.patientId ?? null}::uuid,
+      ${input.fileName},
+      ${input.fileSize},
+      ${input.fileType},
+      ${input.r2Key},
+      'r2',
+      ${input.checksumSha256 ?? null}
+    )
     RETURNING *
   `;
   return toDocument(row as DocumentRow);
+}
+
+export async function attachDocumentToPatient(documentId: string, patientId: string): Promise<void> {
+  await sql`
+    UPDATE documents
+    SET patient_id = ${patientId}::uuid, updated_at = NOW()
+    WHERE id = ${documentId}::uuid
+      AND (patient_id IS NULL OR patient_id = ${patientId}::uuid)
+  `;
+}
+
+export async function findPatientDocumentByChecksum(
+  patientId: string,
+  checksumSha256: string,
+): Promise<DocumentMetadata | null> {
+  const [row] = await sql`
+    SELECT d.*
+    FROM documents d
+    WHERE d.checksum_sha256 = ${checksumSha256}
+      AND (
+        d.patient_id = ${patientId}::uuid
+        OR EXISTS (
+          SELECT 1 FROM health_records hr
+          WHERE hr.document_id = d.id AND hr.patient_id = ${patientId}::uuid
+        )
+      )
+    ORDER BY d.uploaded_at ASC
+    LIMIT 1
+  `;
+  return row ? toDocument(row as DocumentRow) : null;
+}
+
+type UnhashedDocument = { id: string; r2_key: string };
+
+export async function listUnhashedPatientDocuments(
+  patientId: string,
+  limit = 25,
+): Promise<UnhashedDocument[]> {
+  const rows = await sql`
+    SELECT d.id, d.r2_key
+    FROM documents d
+    WHERE d.checksum_sha256 IS NULL
+      AND d.r2_key IS NOT NULL
+      AND (
+        d.patient_id = ${patientId}::uuid
+        OR EXISTS (
+          SELECT 1 FROM health_records hr
+          WHERE hr.document_id = d.id AND hr.patient_id = ${patientId}::uuid
+        )
+      )
+    ORDER BY d.uploaded_at ASC
+    LIMIT ${limit}
+  `;
+  return rows.map((row) => ({ id: String(row.id), r2_key: String(row.r2_key) }));
+}
+
+export async function countUnhashedPatientDocuments(patientId: string): Promise<number> {
+  const [row] = await sql`
+    SELECT COUNT(*)::int AS count
+    FROM documents d
+    WHERE d.checksum_sha256 IS NULL
+      AND d.r2_key IS NOT NULL
+      AND (
+        d.patient_id = ${patientId}::uuid
+        OR EXISTS (
+          SELECT 1 FROM health_records hr
+          WHERE hr.document_id = d.id AND hr.patient_id = ${patientId}::uuid
+        )
+      )
+  `;
+  return Number(row?.count || 0);
+}
+
+export async function saveDocumentChecksum(documentId: string, checksumSha256: string): Promise<void> {
+  await sql`
+    UPDATE documents
+    SET checksum_sha256 = ${checksumSha256}, updated_at = NOW()
+    WHERE id = ${documentId}::uuid AND checksum_sha256 IS NULL
+  `;
 }
 
 export async function getDocumentById(id: string): Promise<DocumentMetadata | null> {

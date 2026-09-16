@@ -4,6 +4,7 @@ import { PNG } from 'pngjs';
 import { extractImages, extractText, getDocumentProxy } from 'unpdf';
 import { normalizeImageToJpeg } from '../images/normalize';
 import { getR2Object } from '../r2';
+import { isOfficeMime } from '@/lib/services/office-text.service';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 /** Llama 4 Scout was shut down 2026-07-17; qwen3.6 still accepts image inputs on Groq. */
@@ -60,6 +61,18 @@ function mimeFromExtension(ext: string): string {
       return 'image/bmp';
     case '.pdf':
       return 'application/pdf';
+    case '.docx':
+      return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    case '.xlsx':
+      return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    case '.pptx':
+      return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+    case '.doc':
+      return 'application/msword';
+    case '.xls':
+      return 'application/vnd.ms-excel';
+    case '.ppt':
+      return 'application/vnd.ms-powerpoint';
     default:
       return 'application/octet-stream';
   }
@@ -329,50 +342,75 @@ async function extractFullVisionText(buffer: Buffer): Promise<string> {
   return chunks.join('\n\n');
 }
 
+export async function extractTextFromBuffer(
+  originalBuffer: Buffer,
+  mime: string,
+  options: OcrOptions = {},
+): Promise<string> {
+  const mode: OcrMode = options.mode || 'intake';
+  const normalizedMime = mime.toLowerCase() || 'application/octet-stream';
+  const isImage = normalizedMime.startsWith('image/');
+  const buffer = isImage
+    ? await normalizeImageToJpeg(originalBuffer, normalizedMime, MAX_VISION_IMAGE_EDGE)
+    : originalBuffer;
+  const processingMime = isImage ? 'image/jpeg' : normalizedMime;
+  const processingFileName = isImage ? 'document.jpg' : `document${extensionForMime(normalizedMime)}`;
+
+  const externalText = await extractViaExternalService(buffer, processingFileName, processingMime);
+  if (mode !== 'full' && externalText && externalText.length >= MIN_USEFUL_TEXT_CHARS) {
+    return externalText;
+  }
+
+  if (normalizedMime === 'application/pdf') {
+    const pdfText = await extractPdfText(buffer, {
+      firstPageOnly: false,
+    });
+    if (mode === 'full') {
+      const visionText = await extractFullVisionText(buffer);
+      const candidates = [externalText || '', pdfText, visionText].sort((a, b) => b.length - a.length);
+      return candidates[0] || pdfText || visionText;
+    }
+    if (pdfText.length >= MIN_USEFUL_TEXT_CHARS) {
+      return pdfText;
+    }
+
+    const visionText = await extractIntakeVisionText(buffer);
+    return visionText;
+  }
+
+  const imageText = await extractFromImageBuffer(buffer, processingMime);
+  return imageText;
+}
+
+function extensionForMime(mime: string): string {
+  if (mime === 'application/pdf') return '.pdf';
+  if (mime === 'image/png') return '.png';
+  if (mime === 'image/webp') return '.webp';
+  if (mime === 'image/tiff') return '.tif';
+  if (mime === 'image/heic' || mime === 'image/heif') return '.heic';
+  if (mime === 'image/avif') return '.avif';
+  if (mime === 'image/gif') return '.gif';
+  if (mime === 'image/bmp') return '.bmp';
+  return '.jpg';
+}
+
 export async function extractTextFromImage(
   input: string,
   isR2Key: boolean = false,
   options: OcrOptions = {},
 ): Promise<string> {
-  const mode: OcrMode = options.mode || 'intake';
   const extension = path.extname(input) || '.jpg';
   const mime = mimeFromExtension(extension);
-  const fileName = path.basename(input) || `document${extension}`;
 
   try {
     const originalBuffer = await readInputBuffer(input, isR2Key);
-    const isImage = mime.startsWith('image/');
-    const buffer = isImage
-      ? await normalizeImageToJpeg(originalBuffer, mime, MAX_VISION_IMAGE_EDGE)
-      : originalBuffer;
-    const processingMime = isImage ? 'image/jpeg' : mime;
-    const processingFileName = isImage ? `${path.parse(fileName).name}.jpg` : fileName;
-
-    const externalText = await extractViaExternalService(buffer, processingFileName, processingMime);
-    if (mode !== 'full' && externalText && externalText.length >= MIN_USEFUL_TEXT_CHARS) {
-      return externalText;
+    if (isOfficeMime(mime)) {
+      const { extractOfficeText } = await import('@/lib/services/office-text.service');
+      return extractOfficeText(originalBuffer, mime);
     }
-
-    if (mime === 'application/pdf' || extension.toLowerCase() === '.pdf') {
-      const pdfText = await extractPdfText(buffer, {
-        firstPageOnly: false,
-      });
-      if (mode === 'full') {
-        const visionText = await extractFullVisionText(buffer);
-        const candidates = [externalText || '', pdfText, visionText].sort((a, b) => b.length - a.length);
-        return candidates[0] || pdfText || visionText;
-      }
-      if (pdfText.length >= MIN_USEFUL_TEXT_CHARS) {
-        return pdfText;
-      }
-
-      const visionText = await extractIntakeVisionText(buffer);
-      return visionText;
-    }
-
-    const imageText = await extractFromImageBuffer(buffer, processingMime);
-    return imageText;
-  } catch {
+    return await extractTextFromBuffer(originalBuffer, mime, options);
+  } catch (error) {
+    if (error instanceof AppError) throw error;
     throw new AppError('Failed to process document with OCR', 502);
   }
 }

@@ -10,6 +10,7 @@ import {
 } from '@/lib/households/access';
 import { AppError, handleError } from '@/lib/middleware/error-handler';
 import { recordAuditEvent } from '@/lib/services/audit.service';
+import { attachDocumentToPatient } from '@/lib/services/document.service';
 
 const recordSchema = z.object({
   patientId: z.string().uuid(), recordType: z.string().min(1), data: z.record(z.string(), z.any()), tags: z.array(z.string()).optional(),
@@ -76,6 +77,7 @@ export async function POST(request: NextRequest) {
       const document = await getAccessibleDocument(user.id, data.documentId);
       if (!document) throw new AppError('Document not found', 404);
       if (!ocrText && typeof document.ocr_text === 'string') ocrText = document.ocr_text;
+      await attachDocumentToPatient(data.documentId, data.patientId);
     }
     const [record] = await sql`
       INSERT INTO health_records (patient_id, record_type, data, tags, source, doctor_name, document_date, document_id, ocr_text, hospital_system_name, hospital_identifier_type, hospital_identifier_value)
