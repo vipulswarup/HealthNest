@@ -2,9 +2,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SessionStore {
   SessionStore({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage(
-          iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
-        );
+      : _storage = storage ??
+            const FlutterSecureStorage(
+              iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+              mOptions: MacOsOptions(accessibility: KeychainAccessibility.first_unlock),
+            );
 
   static const _tokenKey = 'session_token';
   final FlutterSecureStorage _storage;

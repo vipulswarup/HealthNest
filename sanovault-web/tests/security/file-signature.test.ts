@@ -11,6 +11,15 @@ test('accepts correctly declared PDF and JPEG content', () => {
   });
 });
 
+test('accepts generic octet-stream MIME when bytes match an allowed type', () => {
+  assert.deepEqual(verifyUploadSignature(Buffer.from('%PDF-1.7'), 'application/octet-stream'), {
+    extension: 'pdf', mimeType: 'application/pdf',
+  });
+  assert.deepEqual(verifyUploadSignature(Buffer.from([0xff, 0xd8, 0xff, 0xe0]), 'application/octet-stream'), {
+    extension: 'jpg', mimeType: 'image/jpeg',
+  });
+});
+
 test('accepts common raster formats by signature', () => {
   const webp = Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WEBPVP8 ')]);
   const littleEndianTiff = Buffer.from([0x49, 0x49, 0x2a, 0x00, 0x08, 0x00, 0x00, 0x00]);

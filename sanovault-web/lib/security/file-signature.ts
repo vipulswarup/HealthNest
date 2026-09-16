@@ -22,9 +22,16 @@ function hasPrefix(buffer: Buffer, prefix: Buffer): boolean {
 }
 
 function mimeMatches(declaredMimeType: string, allowed: string[]): boolean {
-  // Some browsers leave File.type blank for HEIC and TIFF. The verified byte
-  // signature remains authoritative, while a conflicting non-empty MIME is rejected.
-  return declaredMimeType === '' || allowed.includes(declaredMimeType.toLowerCase());
+  // Some browsers leave File.type blank for HEIC and TIFF. Native multipart
+  // clients often send application/octet-stream. The verified byte signature
+  // remains authoritative; only a conflicting non-generic MIME is rejected.
+  const normalized = declaredMimeType.toLowerCase();
+  return (
+    normalized === '' ||
+    normalized === 'application/octet-stream' ||
+    normalized === 'binary/octet-stream' ||
+    allowed.includes(normalized)
+  );
 }
 
 function isoBmffBrand(buffer: Buffer): 'heif' | 'avif' | null {

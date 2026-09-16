@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:mime/mime.dart';
 import 'package:sanovault/api/api_config.dart';
 import 'package:sanovault/api/api_exception.dart';
 
@@ -52,10 +54,12 @@ class ApiClient {
       request.headers['Authorization'] = 'Bearer $token';
     }
     if (fields != null) request.fields.addAll(fields);
+    final resolvedType = lookupMimeType(filename, headerBytes: bytes) ?? contentType;
     request.files.add(http.MultipartFile.fromBytes(
       field,
       bytes,
       filename: filename,
+      contentType: MediaType.parse(resolvedType),
     ));
     try {
       final streamed = await request.send().timeout(timeout ?? const Duration(seconds: 60));

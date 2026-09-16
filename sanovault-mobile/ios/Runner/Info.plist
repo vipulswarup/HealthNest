@@ -42,7 +42,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>SanoVault uses the camera to photograph lab reports and medicine labels.</string>
+	<string>SanoVault uses the camera to scan lab reports and photograph medicine labels.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>SanoVault uses your photo library to attach lab reports and medicine labels.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

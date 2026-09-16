@@ -1,5 +1,9 @@
+import 'dart:io';
+
+import 'package:cunning_document_scanner/cunning_document_scanner.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 import 'package:sanovault/api/models.dart';
 import 'package:sanovault/session/session_scope.dart';
@@ -30,6 +34,8 @@ class _AddReportPageState extends State<AddReportPage> {
   String _status = '';
   String? _error;
   bool _saving = false;
+
+  bool get _supportsDocumentScanner => !kIsWeb && (Platform.isIOS || Platform.isAndroid);
 
   @override
   void initState() {
@@ -63,35 +69,13 @@ class _AddReportPageState extends State<AddReportPage> {
     }
   }
 
-  Future<void> _pick(ImageSource? cameraOrGallery) async {
+  Future<void> _beginPick(Future<void> Function() action) async {
     setState(() {
       _error = null;
       _status = 'Reading the file…';
     });
     try {
-      late List<int> bytes;
-      var filename = 'report.jpg';
-      if (cameraOrGallery != null) {
-        final shot = await ImagePicker().pickImage(source: cameraOrGallery, imageQuality: 85);
-        if (shot == null) {
-          setState(() => _status = '');
-          return;
-        }
-        bytes = await shot.readAsBytes();
-        filename = shot.name;
-      } else {
-        final file = await FilePicker.pickFile(
-          type: FileType.custom,
-          allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic'],
-        );
-        if (file == null) {
-          setState(() => _status = '');
-          return;
-        }
-        filename = file.name;
-        bytes = await file.readAsBytes();
-      }
-      await _process(bytes, filename);
+      await action();
     } catch (caught) {
       if (!mounted) return;
       setState(() {
@@ -99,6 +83,71 @@ class _AddReportPageState extends State<AddReportPage> {
         _status = '';
       });
     }
+  }
+
+  Future<void> _scanDocument() async {
+    await _beginPick(() async {
+      if (_supportsDocumentScanner) {
+        final paths = await CunningDocumentScanner.getPictures(asPdf: true);
+        if (paths == null || paths.isEmpty) {
+          if (mounted) setState(() => _status = '');
+          return;
+        }
+        try {
+          final path = paths.first;
+          final bytes = await File(path).readAsBytes();
+          final filename = path.toLowerCase().endsWith('.pdf') ? 'scan.pdf' : 'scan.jpg';
+          await _process(bytes, filename);
+        } finally {
+          try {
+            await CunningDocumentScanner.cleanCache();
+          } catch (_) {}
+        }
+        return;
+      }
+
+      final shot = await ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 85);
+      if (shot == null) {
+        if (mounted) setState(() => _status = '');
+        return;
+      }
+      final bytes = await shot.readAsBytes();
+      await _process(bytes, _jpegFilename(shot.name));
+    });
+  }
+
+  Future<void> _pickGallery() async {
+    await _beginPick(() async {
+      final shot = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
+      if (shot == null) {
+        if (mounted) setState(() => _status = '');
+        return;
+      }
+      final bytes = await shot.readAsBytes();
+      await _process(bytes, _jpegFilename(shot.name));
+    });
+  }
+
+  Future<void> _pickFile() async {
+    await _beginPick(() async {
+      final file = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic'],
+      );
+      if (file == null) {
+        if (mounted) setState(() => _status = '');
+        return;
+      }
+      await _process(await file.readAsBytes(), file.name);
+    });
+  }
+
+  String _jpegFilename(String name) {
+    final lower = name.toLowerCase();
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return name;
+    final dot = name.lastIndexOf('.');
+    final base = dot > 0 ? name.substring(0, dot) : name;
+    return '$base.jpg';
   }
 
   Future<void> _process(List<int> bytes, String filename) async {
@@ -194,13 +243,13 @@ class _AddReportPageState extends State<AddReportPage> {
               children: [
                 Row(
                   children: [
-                    Expanded(child: SvFilledButton(label: 'Camera', onPressed: () => _pick(ImageSource.camera))),
+                    Expanded(child: SvFilledButton(label: 'Scan', onPressed: _scanDocument)),
                     const SizedBox(width: 12),
-                    Expanded(child: SvFilledButton(label: 'Photos', onPressed: () => _pick(ImageSource.gallery))),
+                    Expanded(child: SvFilledButton(label: 'Photos', onPressed: _pickGallery)),
                   ],
                 ),
                 const SizedBox(height: 12),
-                SvFilledButton(label: 'Files', onPressed: () => _pick(null)),
+                SvFilledButton(label: 'Files', onPressed: _pickFile),
               ],
             ),
           ),

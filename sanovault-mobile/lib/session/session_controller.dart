@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:sanovault/api/api_config.dart';
 import 'package:sanovault/api/api_exception.dart';
 import 'package:sanovault/api/models.dart';
 import 'package:sanovault/api/sanovault_api.dart';
+import 'package:sanovault/session/auth_link_listener.dart';
 import 'package:sanovault/session/session_store.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
@@ -92,10 +95,12 @@ class SessionController extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      final result = await FlutterWebAuth2.authenticate(
-        url: '$apiBaseUrl/auth/signin?native=1',
-        callbackUrlScheme: nativeAuthScheme,
-      );
+      final result = !kIsWeb && Platform.isMacOS
+          ? await _authenticateMacOS()
+          : await FlutterWebAuth2.authenticate(
+              url: '$apiBaseUrl/auth/signin?native=1',
+              callbackUrlScheme: nativeAuthScheme,
+            );
       final token = Uri.parse(result).queryParameters['token'];
       if (token == null || token.isEmpty) {
         throw const ApiException('Sign-in did not return a session.');
@@ -104,11 +109,21 @@ class SessionController extends ChangeNotifier {
       await _loadAfterToken();
     } catch (caught) {
       final text = caught.toString().toLowerCase();
-      if (text.contains('cancel') || text.contains('c16')) return;
+      if (text.contains('cancel') || text.contains('c16') || text.contains('timeout')) return;
       error = caught is ApiException ? caught.message : 'Could not finish web sign-in.';
       status = SessionStatus.signedOut;
       notifyListeners();
     }
+  }
+
+  /// Brave/Chrome as the default browser often breaks ASWebAuthenticationSession
+  /// on macOS. Open Safari and accept the sanovault:// callback via AppDelegate.
+  Future<String> _authenticateMacOS() async {
+    final authUrl = '$apiBaseUrl/auth/signin?native=1';
+    final pending = AuthLinkListener.waitForScheme(nativeAuthScheme);
+    await AuthLinkListener.openSafari(authUrl);
+    final uri = await pending;
+    return uri.toString();
   }
 
   Future<void> acceptBeta() async {
