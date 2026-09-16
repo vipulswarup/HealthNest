@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:sanovault/api/models.dart';
 import 'package:sanovault/features/doctor/doctor_page.dart';
 import 'package:sanovault/features/family/edit_person_page.dart';
+import 'package:sanovault/features/family/file_passwords_page.dart';
 import 'package:sanovault/features/medicines/medicines_page.dart';
 import 'package:sanovault/features/reports/add_report_page.dart';
 import 'package:sanovault/features/reports/reports_page.dart';
@@ -106,6 +107,7 @@ class _PersonDetailPageState extends State<PersonDetailPage> {
                     _link('Height & Weight', GrowthPage(patientId: person.id)),
                     _link('Vaccinations', VaccinationsPage(patientId: person.id)),
                     _link('Visit Notes', VisitNotesPage(patientId: person.id)),
+                    _link('File passwords', FilePasswordsPage(personId: person.id, personName: person.displayName)),
                   ],
                 ),
               ],

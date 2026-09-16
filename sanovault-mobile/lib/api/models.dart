@@ -493,3 +493,17 @@ class Category {
     );
   }
 }
+
+class FilePassword {
+  const FilePassword({required this.id, required this.password, this.createdAt});
+  final String id;
+  final String password;
+  final String? createdAt;
+  factory FilePassword.fromJson(Map<String, dynamic> json) {
+    return FilePassword(
+      id: json['id'] as String? ?? '',
+      password: json['password'] as String? ?? '',
+      createdAt: json['createdAt'] as String?,
+    );
+  }
+}

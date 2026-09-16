@@ -15,13 +15,17 @@ import {
 export function DocumentPrepare({
   files,
   dateOfBirth,
+  extraPasswords = [],
   onCancel,
   onReady,
+  onUnlockedWithPassword,
 }: {
   files: File[];
   dateOfBirth?: string | Date | null;
+  extraPasswords?: string[];
   onCancel: () => void;
   onReady: (files: File[]) => void;
+  onUnlockedWithPassword?: (password: string) => void;
 }) {
   const [sources, setSources] = useState<PreparedSource[] | null>(null);
   const [pages, setPages] = useState<PreparedPage[]>([]);
@@ -32,7 +36,10 @@ export function DocumentPrepare({
   const [busy, setBusy] = useState('Reading files…');
   const [error, setError] = useState('');
 
-  const dobPasswords = useMemo(() => dobPasswordCandidates(dateOfBirth), [dateOfBirth]);
+  const dobPasswords = useMemo(
+    () => [...new Set([...extraPasswords, ...dobPasswordCandidates(dateOfBirth)])],
+    [dateOfBirth, extraPasswords],
+  );
   const locked = sources?.find((source) => source.encrypted);
 
   useEffect(() => {
@@ -81,7 +88,9 @@ export function DocumentPrepare({
       const nextPages = await buildPageList(nextSources);
       setSources(nextSources);
       setPages(nextPages);
+      const used = password.trim();
       setPassword('');
+      if (used) onUnlockedWithPassword?.(used);
     } catch (err) {
       setError(err instanceof PdfPasswordError ? 'That password did not open the PDF. Labs often use date of birth as DDMMYYYY.' : err instanceof Error ? err.message : 'Could not unlock this PDF');
     } finally {

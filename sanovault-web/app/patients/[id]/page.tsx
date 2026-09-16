@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { HealthRecordCategory } from '@/lib/types/health-record-category.types';
 import AppNav from '@/components/layout/AppNav';
+import { FilePasswordManager } from '@/components/patients/FilePasswordManager';
 
 interface EmergencyContact {
   name: string;
@@ -231,6 +232,10 @@ export default function PatientDetailPage() {
                 </div>
               )}
             </div>
+          </div>
+
+          <div className="mb-6">
+            <FilePasswordManager patientId={patientId} />
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">

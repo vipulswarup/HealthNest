@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/cupertino.dart';
 import 'package:path/path.dart' as p;
 import 'package:sanovault/api/models.dart';
+import 'package:sanovault/features/reports/pdf_password_prompt.dart';
 import 'package:sanovault/session/session_scope.dart';
 import 'package:sanovault/theme/sv_colors.dart';
 import 'package:sanovault/widgets/person_picker.dart';
@@ -76,10 +77,18 @@ class _ShareImportPageState extends State<ShareImportPage> {
         if (!mounted) return;
         setState(() => _status = widget.files.length == 1 ? 'Uploading…' : 'Uploading ${i + 1} of ${widget.files.length}…');
         final bytes = await File(file.path).readAsBytes();
-        final uploaded = await api.uploadDocument(Uint8List.fromList(bytes), file.name);
+        final uploaded = await api.uploadDocument(Uint8List.fromList(bytes), file.name, patientId: patientId);
         final documentId =
             uploaded['id'] as String? ?? uploaded['_id'] as String? ?? uploaded['documentId'] as String?;
         if (documentId == null) throw Exception('Upload did not return a document.');
+        if (file.name.toLowerCase().endsWith('.pdf')) {
+          await ocrWithPasswordPrompt(
+            context: context,
+            api: api,
+            documentId: documentId,
+            patientId: patientId,
+          );
+        }
         await api.createHealthRecord({
           'patientId': patientId,
           'recordType': 'OTHER',

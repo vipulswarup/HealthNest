@@ -134,19 +134,59 @@ class SanoVaultApi {
     return json.whereType<Map>().map((item) => Category.fromJson(Map<String, dynamic>.from(item))).toList();
   }
 
-  Future<Map<String, dynamic>> uploadDocument(List<int> bytes, String filename) async {
+  Future<Map<String, dynamic>> uploadDocument(
+    List<int> bytes,
+    String filename, {
+    String? patientId,
+    String? pdfPassword,
+  }) async {
     return await _client.postMultipart(
       path: '/api/documents/upload',
       field: 'file',
       bytes: bytes,
       filename: filename,
+      fields: {
+        if (patientId != null && patientId.isNotEmpty) 'patientId': patientId,
+        if (pdfPassword != null && pdfPassword.isNotEmpty) 'pdfPassword': pdfPassword,
+      },
     ) as Map<String, dynamic>;
   }
 
-  Future<String> ocrDocument(String documentId, {String mode = 'intake'}) async {
+  Future<bool> lookupDocumentHash({required String patientId, required String sha256}) async {
+    final json = await _client.post('/api/documents/lookup-hash', {
+      'patientId': patientId,
+      'sha256': sha256,
+    }) as Map<String, dynamic>;
+    return json['duplicate'] == true;
+  }
+
+  Future<List<FilePassword>> filePasswords(String patientId) async {
+    final json = await _client.get('/api/patients/$patientId/file-passwords') as List;
+    return json.whereType<Map>().map((item) => FilePassword.fromJson(Map<String, dynamic>.from(item))).toList();
+  }
+
+  Future<FilePassword> addFilePassword(String patientId, String password) async {
+    return FilePassword.fromJson(
+      await _client.post('/api/patients/$patientId/file-passwords', {'password': password}) as Map<String, dynamic>,
+    );
+  }
+
+  Future<void> deleteFilePassword(String patientId, String passwordId) async {
+    await _client.delete('/api/patients/$patientId/file-passwords/$passwordId');
+  }
+
+  Future<String> ocrDocument(
+    String documentId, {
+    String mode = 'intake',
+    List<String>? extraPasswords,
+  }) async {
     final json = await _client.post(
       '/api/ocr/process',
-      {'documentId': documentId, 'mode': mode},
+      {
+        'documentId': documentId,
+        'mode': mode,
+        if (extraPasswords != null && extraPasswords.isNotEmpty) 'extraPasswords': extraPasswords,
+      },
       const Duration(seconds: 120),
     ) as Map<String, dynamic>;
     return json['text'] as String? ?? '';

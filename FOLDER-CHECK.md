@@ -132,11 +132,13 @@ The backend already has helpers for common date-of-birth password formats (`lib/
 
 Product decisions above are closed.
 
-**Status:** Phase 1 implemented on 2026-09-16 (hashes, Office upload/text, encrypted per-person PDF passwords, shared unlock). Phases 2 and 3 are not started.
+**Status:** Phase 1 implemented on 2026-09-16. Phase 2 implemented on 2026-09-16 (Office pickers on web/mobile, person-profile file password manager). Phase 3 is not started.
 
 Build in this order so web/mobile gain Office + password + hash behavior before the Mac walk exists.
 
-### Already in the codebase
+### Already in the codebase (before Phase 1)
+
+Phase 1 wrote checksums, expanded the allow-list, and added encrypted file passwords. The notes below are the pre-Phase-1 baseline.
 
 - `documents.checksum_sha256` exists (`0001_initial.sql`) but is never written on upload (`document.service.ts` / `documents/upload`).
 - Health-record create already supports `processAsync` and `scheduleHealthRecordProcessing` (`health-records/route.ts`, `document-ingest.service.ts`).
@@ -163,13 +165,14 @@ Existing vault files have empty `checksum_sha256`. Without a backfill, Folder Ch
 
 ### Phase 2 — Web and iOS: same file types and password UI
 
-- `sanovault-web/components/documents/DocumentUploader.tsx` and add-report pages — allow Office extensions/MIME.
-- `sanovault-web/app/patients/[id]/page.tsx` — “File passwords” manager.
-- `sanovault-mobile/lib/features/reports/add_report_page.dart` — same allow-list.
-- `sanovault-mobile/lib/features/family/person_detail_page.dart` — password manager.
-- `sanovault-mobile/lib/api/sanovault_api.dart` — hash lookup, password CRUD, Office upload.
+Implemented on 2026-09-16.
 
-Upload, camera, and share all go through the same hash + unlock + extract pipeline.
+- Web DocumentUploader and add-report accept Office files. Office files skip PDF prepare and store the original.
+- Person profile File passwords manager on web (`FilePasswordManager`) and on iOS/Mac (`FilePasswordsPage`).
+- Mobile add-report and share import use the same allow-list, pass `patientId` on upload, and prompt on a locked PDF. A working password is saved on that person.
+- Mobile API: hash lookup, password CRUD, Office upload, OCR extra passwords.
+
+Upload, camera, and share go through the same hash + unlock + extract pipeline.
 
 ### Phase 3 — macOS Folder Check
 

@@ -6,6 +6,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 import 'package:sanovault/api/models.dart';
+import 'package:sanovault/features/reports/pdf_password_prompt.dart';
 import 'package:sanovault/session/session_scope.dart';
 import 'package:sanovault/theme/sv_colors.dart';
 import 'package:sanovault/util/dates.dart';
@@ -132,7 +133,10 @@ class _AddReportPageState extends State<AddReportPage> {
     await _beginPick(() async {
       final file = await FilePicker.pickFile(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic'],
+        allowedExtensions: [
+          'pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'tif', 'tiff', 'gif', 'bmp', 'avif',
+          'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+        ],
       );
       if (file == null) {
         if (mounted) setState(() => _status = '');
@@ -153,17 +157,32 @@ class _AddReportPageState extends State<AddReportPage> {
   Future<void> _process(List<int> bytes, String filename) async {
     final api = SessionScope.of(context).api;
     setState(() => _status = 'Uploading…');
-    final uploaded = await api.uploadDocument(bytes, filename);
+    final uploaded = await api.uploadDocument(bytes, filename, patientId: _patientId);
     final documentId = uploaded['id'] as String? ?? uploaded['_id'] as String? ?? uploaded['documentId'] as String?;
     if (documentId == null) throw Exception('Upload did not return a document.');
     setState(() {
       _documentId = documentId;
       _status = 'Reading the pages…';
     });
-    var text = await api.ocrDocument(documentId, mode: 'intake');
-    try {
-      text = await api.ocrDocument(documentId, mode: 'full');
-    } catch (_) {}
+
+    var text = await ocrWithPasswordPrompt(
+      context: context,
+      api: api,
+      documentId: documentId,
+      patientId: _patientId,
+    );
+    final isOffice = RegExp(r'\.(docx?|xlsx?|pptx?)$', caseSensitive: false).hasMatch(filename);
+    if (!isOffice) {
+      try {
+        text = await ocrWithPasswordPrompt(
+          context: context,
+          api: api,
+          documentId: documentId,
+          patientId: _patientId,
+          mode: 'full',
+        );
+      } catch (_) {}
+    }
     setState(() => _status = 'Classifying…');
     var type = 'OTHER';
     try {
