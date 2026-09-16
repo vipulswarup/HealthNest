@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show Material, Theme, ThemeData;
 import 'package:sanovault/session/session_scope.dart';
 import 'package:sanovault/theme/sv_colors.dart';
@@ -96,11 +99,13 @@ class _SignInPageState extends State<SignInPage> {
                   enabled: !_busy,
                   onPressed: _busy ? null : _submit,
                 ),
-                const SizedBox(height: 20),
-                Theme(
-                  data: ThemeData.light(),
-                  child: const Material(color: Color(0x00000000), child: _AppleButton()),
-                ),
+                if (!kIsWeb && (Platform.isIOS || Platform.isMacOS)) ...[
+                  const SizedBox(height: 20),
+                  Theme(
+                    data: ThemeData.light(),
+                    child: const Material(color: Color(0x00000000), child: _AppleButton()),
+                  ),
+                ],
                 CupertinoButton(
                   onPressed: () => session.signInWithWeb(),
                   child: const Text('Use Google or a magic link', style: TextStyle(color: SvColors.coral)),
