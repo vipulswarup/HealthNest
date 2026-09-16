@@ -68,7 +68,7 @@ class _RecordDetailPageState extends State<RecordDetailPage> {
   String _personName(String patientId) {
     for (final person in _people) {
       if (person.id == patientId) {
-        return [person.firstName, person.lastName].where((part) => part.isNotEmpty).join(' ');
+        return personName(person.firstName, person.lastName);
       }
     }
     return 'This person';
