@@ -645,6 +645,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.6.1"
+  pdfrx_coregraphics:
+    dependency: "direct main"
+    description:
+      name: pdfrx_coregraphics
+      sha256: c1dbd47186fdd0618b1e364a2b64fe0dbaf872ad9b249b788cbd7fcf3d49c0eb
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.0"
   pdfrx_engine:
     dependency: transitive
     description:
