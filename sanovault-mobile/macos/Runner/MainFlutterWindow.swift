@@ -10,6 +10,7 @@ class MainFlutterWindow: NSWindow {
 
     RegisterGeneratedPlugins(registry: flutterViewController)
     AuthLinkBridge.shared.attach(to: flutterViewController)
+    FolderCheckBridge.shared.attach(to: flutterViewController)
 
     super.awakeFromNib()
   }

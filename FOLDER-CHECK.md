@@ -132,7 +132,7 @@ The backend already has helpers for common date-of-birth password formats (`lib/
 
 Product decisions above are closed.
 
-**Status:** Phase 1 implemented on 2026-09-16. Phase 2 implemented on 2026-09-16 (Office pickers on web/mobile, person-profile file password manager). Phase 3 is not started.
+**Status:** Phase 1 implemented on 2026-09-16. Phase 2 implemented on 2026-09-16. Phase 3 implemented on 2026-09-16 (Mac Folder Check on the More tab).
 
 Build in this order so web/mobile gain Office + password + hash behavior before the Mac walk exists.
 
@@ -176,12 +176,14 @@ Upload, camera, and share go through the same hash + unlock + extract pipeline.
 
 ### Phase 3 — macOS Folder Check
 
-- `sanovault-mobile/lib/features/more/more_page.dart` — row that opens Folder Check (hidden or disabled on iOS).
-- `sanovault-mobile/lib/features/folder_check/` — **new**: pairing editor, exclusion picker, preflight, progress, summary (uploaded / skipped duplicate / skipped oversized / failed).
-- Local store: security-scoped bookmark + person id + excluded relative subfolder names. Not synced.
-- Native Mac helper (Swift, via a small plugin or existing macos runner): persist bookmark, detect online-only Google Drive placeholders (fail the whole scan), SHA-256 files, read bytes.
-- Flow: restore bookmark → walk tree → skip `.gdoc`/DICOM/excluded → if any included file is online-only, abort with zero uploads → skip >50 MB (list them) → hash → skip if vault has hash for that person → locked PDF: try cloud passwords, prompt, save on success → upload → `POST /api/health-records` with folder-name tag, date/doctor hints, `processAsync: true`, `needs_review`.
-- Interrupted run: no resume file. Next invocation is a full walk; hashes skip completed uploads.
+Implemented on 2026-09-16.
+
+- More tab row on macOS only (`more_page.dart`). Hidden on iOS.
+- `sanovault-mobile/lib/features/folder_check/` — pairing editor, exclusion picker, preflight, progress, summary (uploaded / skipped duplicate / skipped oversized / failed / online-only abort).
+- Pairing (person + security-scoped bookmark + exclusions) stored on this Mac only.
+- Native helper `FolderCheckBridge.swift`: NSOpenPanel bookmark, restore access, walk tree, detect File Provider dataless/online-only files, SHA-256, read bytes, PDF lock check.
+- Flow: restore bookmark → walk → skip `.gdoc`/DICOM/excluded → if any included file is online-only, abort with zero uploads → skip >50 MB (list them) → hash → skip if vault has hash for that person → locked PDF: try saved passwords, prompt, save on success → upload → health record with folder-name tag, date/doctor hints, `processAsync: true`, `needs_review`.
+- Interrupted run: Stop ends the current check. No resume file. Next run is a full walk; hashes skip completed uploads.
 
 ### Out of scope (later)
 

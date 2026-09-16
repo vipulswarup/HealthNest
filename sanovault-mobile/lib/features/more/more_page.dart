@@ -1,6 +1,10 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:sanovault/api/models.dart';
 import 'package:sanovault/features/doctor/doctor_page.dart';
+import 'package:sanovault/features/folder_check/folder_check_page.dart';
 import 'package:sanovault/features/households/households_page.dart';
 import 'package:sanovault/features/reports/add_report_page.dart';
 import 'package:sanovault/features/tracking/vaccinations_page.dart';
@@ -114,6 +118,13 @@ class _MorePageState extends State<MorePage> {
                   CupertinoListTile(title: const Text('Vaccinations'), trailing: const CupertinoListTileChevron(), onTap: () => _open(const VaccinationsPage())),
                   CupertinoListTile(title: const Text('Visit Notes'), trailing: const CupertinoListTileChevron(), onTap: () => _open(const VisitNotesPage())),
                   CupertinoListTile(title: const Text('Who Can See This'), trailing: const CupertinoListTileChevron(), onTap: () => _open(const HouseholdsPage())),
+                  if (!kIsWeb && Platform.isMacOS)
+                    CupertinoListTile(
+                      title: const Text('Folder Check'),
+                      subtitle: const Text('Import a folder on this Mac'),
+                      trailing: const CupertinoListTileChevron(),
+                      onTap: () => _open(const FolderCheckPage()),
+                    ),
                   CupertinoListTile(
                     title: const Text('Sign Out', style: TextStyle(color: SvColors.danger)),
                     onTap: () => session.signOut(),

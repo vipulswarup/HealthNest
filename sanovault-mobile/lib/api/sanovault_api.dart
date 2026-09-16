@@ -139,6 +139,7 @@ class SanoVaultApi {
     String filename, {
     String? patientId,
     String? pdfPassword,
+    Duration? timeout,
   }) async {
     return await _client.postMultipart(
       path: '/api/documents/upload',
@@ -149,6 +150,7 @@ class SanoVaultApi {
         if (patientId != null && patientId.isNotEmpty) 'patientId': patientId,
         if (pdfPassword != null && pdfPassword.isNotEmpty) 'pdfPassword': pdfPassword,
       },
+      timeout: timeout,
     ) as Map<String, dynamic>;
   }
 
