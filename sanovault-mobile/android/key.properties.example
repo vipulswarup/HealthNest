@@ -1,0 +1,4 @@
+storePassword=<password-from-keystore>
+keyPassword=<password-from-keystore>
+keyAlias=sanovault
+storeFile=../upload-keystore.jks

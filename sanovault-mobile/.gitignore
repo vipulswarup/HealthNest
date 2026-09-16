@@ -55,3 +55,7 @@ app.*.map.json
 *.key
 *.mobileprovision
 *.pem
+android/key.properties
+android/upload-keystore.jks
+**/upload-keystore.jks
+
