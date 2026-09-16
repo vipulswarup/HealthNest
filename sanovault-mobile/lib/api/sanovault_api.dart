@@ -176,6 +176,10 @@ class SanoVaultApi {
     return _client.getBytes('/api/documents/preview', query: {'documentId': documentId});
   }
 
+  Future<List<int>> documentFile(String documentId) {
+    return _client.getBytes('/api/documents/$documentId/file');
+  }
+
   Future<DocumentView> documentView(String documentId) async {
     return DocumentView.fromJson(
       await _client.post('/api/documents/view', {'documentId': documentId}) as Map<String, dynamic>,
