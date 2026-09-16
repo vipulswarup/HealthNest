@@ -34,6 +34,27 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>sanovault</string>
+				<string>ShareMedia-com.sanovault.app</string>
+			</array>
+		</dict>
+	</array>
+	<key>AppGroupId</key>
+	<string>$(CUSTOM_GROUP_ID)</string>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<false/>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>SanoVaultShare</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.file-url</string>
+				<string>public.image</string>
+				<string>public.data</string>
+				<string>com.adobe.pdf</string>
 			</array>
 		</dict>
 	</array>

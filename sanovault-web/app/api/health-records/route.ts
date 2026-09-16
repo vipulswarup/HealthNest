@@ -16,6 +16,7 @@ const recordSchema = z.object({
   source: z.string().optional(), doctorName: z.string().optional(), documentDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
   documentId: z.string().uuid().optional(), ocrText: z.string().optional(), hospitalSystemName: z.string().optional(),
   hospitalIdentifierType: z.string().optional(), hospitalIdentifierValue: z.string().optional(),
+  processAsync: z.boolean().optional(),
 });
 
 async function currentUser() { const user = await getCurrentUser(); if (!user) throw new AppError('Unauthorized', 401); return user; }
@@ -94,6 +95,15 @@ export async function POST(request: NextRequest) {
       body: 'A family member filed a report. Open the app to check it.',
       data: { patientId: data.patientId, recordId: String(record.id) },
     }, user.id).catch(() => undefined);
+    if (data.processAsync && data.documentId && !data.ocrText) {
+      const { scheduleHealthRecordProcessing } = await import('@/lib/services/document-ingest.service');
+      scheduleHealthRecordProcessing({
+        healthRecordId: String(record.id),
+        documentId: data.documentId,
+        sourceFallback: data.source?.trim() || 'Share',
+        keepTags: data.tags || ['needs_review'],
+      });
+    }
     return NextResponse.json(toHealthRecord(record), { status: 201 });
   } catch (error) { return handleError(error); }
 }
