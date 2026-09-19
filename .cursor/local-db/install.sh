@@ -9,7 +9,7 @@ WEB_DIR="$(cd "$CURSOR_DIR/../.." && pwd)/sanovault-web"
 
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update -qq
-sudo apt-get install -y -qq docker.io docker-compose-v2 socat postgresql-client
+sudo apt-get install -y -qq docker.io docker-compose-v2
 
 # The nested VM cannot use overlayfs; pin the vfs storage driver.
 sudo mkdir -p /etc/docker

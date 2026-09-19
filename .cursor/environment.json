@@ -1,11 +1,14 @@
 {
   "name": "SanoVault Web",
   "install": "bash .cursor/local-db/install.sh",
-  "start": "bash .cursor/local-db/start.sh",
   "terminals": [
     {
-      "name": "web-dev",
-      "command": "cd sanovault-web && NODE_EXTRA_CA_CERTS=../.cursor/local-db/neon-server.pem npm run dev"
+      "name": "docker-daemon",
+      "command": "bash .cursor/local-db/run-dockerd.sh"
+    },
+    {
+      "name": "web",
+      "command": "bash .cursor/local-db/run-web.sh"
     }
   ],
   "ports": [3001]
