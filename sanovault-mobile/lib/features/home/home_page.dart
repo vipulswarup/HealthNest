@@ -55,7 +55,9 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
       setState(() {
         _home = home;
-        _lastPatientId = home.patients.any((person) => person.id == stored) ? stored : null;
+        _lastPatientId = home.patients.any((person) => person.id == stored)
+            ? stored
+            : null;
         _loading = false;
       });
     } on ApiException catch (caught) {
@@ -83,7 +85,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _open(Widget page) async {
-    await Navigator.of(context).push(CupertinoPageRoute<void>(builder: (_) => page));
+    await Navigator.of(context)
+        .push(CupertinoPageRoute<void>(builder: (_) => page));
     if (mounted) _load();
   }
 
@@ -92,7 +95,8 @@ class _HomePageState extends State<HomePage> {
     if (householdId == null) return;
     Navigator.of(context).push(
       CupertinoPageRoute<void>(
-        builder: (_) => AddPersonPage(householdId: householdId, onCreated: _load),
+        builder: (_) =>
+            AddPersonPage(householdId: householdId, onCreated: _load),
       ),
     );
   }
@@ -125,12 +129,14 @@ class _HomePageState extends State<HomePage> {
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           CupertinoSliverNavigationBar(
-            largeTitle: Text(firstName.isEmpty ? 'Family' : 'Family, $firstName'),
+            largeTitle: Text(firstName.isEmpty ? 'Home' : 'Home, $firstName'),
             border: null,
             backgroundColor: SvColors.groupedBackground,
             trailing: CupertinoButton(
               padding: EdgeInsets.zero,
-              onPressed: _home?.householdId == null ? _openCreateHousehold : _openAddPerson,
+              onPressed: _home?.householdId == null
+                  ? _openCreateHousehold
+                  : _openAddPerson,
               child: const Text('Add'),
             ),
           ),
@@ -141,7 +147,11 @@ class _HomePageState extends State<HomePage> {
               children: [
                 const Text(
                   'Choose a Person, Add a Report, or Open What a Doctor Needs.',
-                  style: TextStyle(fontSize: 16, color: SvColors.slate, height: 1.35),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: SvColors.slate,
+                    height: 1.35,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 if (_loading)
@@ -165,7 +175,10 @@ class _HomePageState extends State<HomePage> {
   List<Widget> _body(DashboardHome home) {
     final people = [...home.patients];
     if (_lastPatientId != null) {
-      people.sort((a, b) => (b.id == _lastPatientId ? 1 : 0) - (a.id == _lastPatientId ? 1 : 0));
+      people.sort(
+        (a, b) =>
+            (b.id == _lastPatientId ? 1 : 0) - (a.id == _lastPatientId ? 1 : 0),
+      );
     }
     final recordsByPerson = <String, List<DashboardRecord>>{};
     for (final record in home.records) {
@@ -178,14 +191,24 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('No Family Folder Yet', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: SvColors.ink)),
+              const Text(
+                'No Family Folder Yet',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: SvColors.ink,
+                ),
+              ),
               const SizedBox(height: 8),
               const Text(
                 'If someone invited you, open the invite below. Otherwise create a folder for this family.',
                 style: TextStyle(fontSize: 16, color: SvColors.slate),
               ),
               const SizedBox(height: 16),
-              SvFilledButton(label: 'Create a Folder', onPressed: _openCreateHousehold),
+              SvFilledButton(
+                label: 'Create a Folder',
+                onPressed: _openCreateHousehold,
+              ),
             ],
           ),
         ),
@@ -220,7 +243,14 @@ class _HomePageState extends State<HomePage> {
         SvCard(
           child: Column(
             children: [
-              const Text('Add Someone to This Folder', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: SvColors.ink)),
+              const Text(
+                'Add Someone to This Folder',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: SvColors.ink,
+                ),
+              ),
               const SizedBox(height: 8),
               const Text(
                 'Add Dad, your daughter, or anyone whose reports you keep here.',
@@ -301,7 +331,14 @@ class _PersonCard extends StatelessWidget {
         children: [
           GestureDetector(
             onTap: onOpenPerson,
-            child: Text(name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: SvColors.ink)),
+            child: Text(
+              name,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: SvColors.ink,
+              ),
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -315,28 +352,58 @@ class _PersonCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _MiniButton(label: 'Add a Report', filled: true, onPressed: onAddReport)),
+              Expanded(
+                child: _MiniButton(
+                  label: 'Add a Report',
+                  filled: true,
+                  onPressed: onAddReport,
+                ),
+              ),
               const SizedBox(width: 8),
-              Expanded(child: _MiniButton(label: 'For the Doctor', onPressed: onDoctor)),
+              Expanded(
+                child: _MiniButton(
+                  label: 'For the Doctor',
+                  onPressed: onDoctor,
+                ),
+              ),
               const SizedBox(width: 8),
-              Expanded(child: _MiniButton(label: 'Log BP', outlined: true, onPressed: onLogBp)),
+              Expanded(
+                child: _MiniButton(
+                  label: 'Log BP',
+                  outlined: true,
+                  onPressed: onLogBp,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 20),
           Row(
             children: [
-              const Text('Recent Files', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: SvColors.slate)),
+              const Text(
+                'Recent Files',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: SvColors.slate,
+                ),
+              ),
               const Spacer(),
               CupertinoButton(
                 padding: EdgeInsets.zero,
                 minimumSize: const Size(0, 0),
                 onPressed: onViewAll,
-                child: const Text('View All', style: TextStyle(fontSize: 15, color: SvColors.coral)),
+                child: const Text(
+                  'View All',
+                  style: TextStyle(fontSize: 15, color: SvColors.coral),
+                ),
               ),
             ],
           ),
           if (recent.isEmpty)
-            const Text('None yet.', style: TextStyle(fontSize: 16, color: SvColors.slate))
+            const Text(
+              'None yet.',
+              style: TextStyle(fontSize: 16, color: SvColors.slate),
+            )
           else
             for (final record in recent)
               GestureDetector(
@@ -349,13 +416,21 @@ class _PersonCard extends StatelessWidget {
                         child: Text(
                           humanizeLabel(record.recordType),
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 17, color: SvColors.ink),
+                          style: const TextStyle(
+                            fontSize: 17,
+                            color: SvColors.ink,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        formatDisplayDate(record.documentDate ?? record.createdAt),
-                        style: const TextStyle(fontSize: 15, color: SvColors.slate),
+                        formatDisplayDate(
+                          record.documentDate ?? record.createdAt,
+                        ),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: SvColors.slate,
+                        ),
                       ),
                     ],
                   ),
@@ -395,13 +470,20 @@ class _MiniButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: background,
           borderRadius: BorderRadius.circular(10),
-          border: outlined || !filled ? Border.all(color: SvColors.silver) : null,
+          border: outlined || !filled
+              ? Border.all(color: SvColors.silver)
+              : null,
         ),
         child: Text(
           label,
           textAlign: TextAlign.center,
           maxLines: 2,
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: foreground, height: 1.15),
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: foreground,
+            height: 1.15,
+          ),
         ),
       ),
     );

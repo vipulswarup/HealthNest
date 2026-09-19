@@ -169,16 +169,25 @@ List<T> _mapList<T>(
 String? _string(Object? value) => value == null ? null : value.toString();
 
 class EmergencyContact {
-  const EmergencyContact({required this.name, required this.phone, required this.relation});
+  const EmergencyContact({
+    required this.name,
+    required this.phone,
+    required this.relation,
+  });
   final String name;
   final String phone;
   final String relation;
-  factory EmergencyContact.fromJson(Map<String, dynamic> json) => EmergencyContact(
-    name: json['name'] as String? ?? '',
-    phone: json['phone'] as String? ?? '',
-    relation: json['relation'] as String? ?? '',
-  );
-  Map<String, String> toJson() => {'name': name, 'phone': phone, 'relation': relation};
+  factory EmergencyContact.fromJson(Map<String, dynamic> json) =>
+      EmergencyContact(
+        name: json['name'] as String? ?? '',
+        phone: json['phone'] as String? ?? '',
+        relation: json['relation'] as String? ?? '',
+      );
+  Map<String, String> toJson() => {
+    'name': name,
+    'phone': phone,
+    'relation': relation,
+  };
 }
 
 class Person {
@@ -218,8 +227,13 @@ class Person {
       bloodGroup: json['bloodGroup'] as String?,
       abhaNumber: json['abhaNumber'] as String?,
       householdId: json['householdId'] as String?,
-      emails: (json['emails'] as List?)?.map((item) => item.toString()).toList() ?? const [],
-      emergencyContacts: _mapList(json['emergencyContacts'], EmergencyContact.fromJson),
+      emails:
+          (json['emails'] as List?)?.map((item) => item.toString()).toList() ??
+          const [],
+      emergencyContacts: _mapList(
+        json['emergencyContacts'],
+        EmergencyContact.fromJson,
+      ),
     );
   }
 }
@@ -261,8 +275,12 @@ class HealthRecord {
       documentDate: _string(json['documentDate']),
       documentId: json['documentId'] as String?,
       ocrText: json['ocrText'] as String?,
-      tags: (json['tags'] as List?)?.map((item) => item.toString()).toList() ?? const [],
-      data: json['data'] is Map ? Map<String, dynamic>.from(json['data'] as Map) : const {},
+      tags:
+          (json['tags'] as List?)?.map((item) => item.toString()).toList() ??
+          const [],
+      data: json['data'] is Map
+          ? Map<String, dynamic>.from(json['data'] as Map)
+          : const {},
       createdAt: _string(json['createdAt']),
     );
   }
@@ -358,7 +376,9 @@ class DoctorPacket {
 
     return DoctorPacket(
       patientName: '$first $last'.trim(),
-      age: patient['age'] is int ? patient['age'] as int : int.tryParse('${patient['age'] ?? ''}'),
+      age: patient['age'] is int
+          ? patient['age'] as int
+          : int.tryParse('${patient['age'] ?? ''}'),
       gender: patient['gender'] as String? ?? '',
       bloodGroup: patient['bloodGroup'] as String? ?? '',
       conditions: lines(json['conditions']),
@@ -376,16 +396,63 @@ class DoctorPacket {
   }
 }
 
+class BloodPressureReading {
+  const BloodPressureReading({
+    required this.id,
+    required this.patientId,
+    required this.recordedAt,
+    required this.systolic,
+    required this.diastolic,
+    this.pulse,
+    this.period,
+    this.source,
+  });
+
+  final String id;
+  final String patientId;
+  final DateTime? recordedAt;
+  final int systolic;
+  final int diastolic;
+  final int? pulse;
+  final String? period;
+  final String? source;
+
+  factory BloodPressureReading.fromJson(Map<String, dynamic> json) {
+    final systolic = int.tryParse('${json['systolic'] ?? ''}') ?? 0;
+    final diastolic = int.tryParse('${json['diastolic'] ?? ''}') ?? 0;
+    final pulseValue = json['pulse'];
+    return BloodPressureReading(
+      id: '${json['id'] ?? ''}',
+      patientId: '${json['patientId'] ?? json['patient_id'] ?? ''}',
+      recordedAt: DateTime.tryParse(
+        '${json['recordedAt'] ?? json['recorded_at'] ?? ''}',
+      )?.toLocal(),
+      systolic: systolic,
+      diastolic: diastolic,
+      pulse: pulseValue == null ? null : int.tryParse('$pulseValue'),
+      period: json['period']?.toString(),
+      source: json['source']?.toString(),
+    );
+  }
+}
+
 class BloodPressureWeek {
   const BloodPressureWeek({required this.lines, required this.readings});
   final List<String> lines;
-  final List<Map<String, dynamic>> readings;
+  final List<BloodPressureReading> readings;
   factory BloodPressureWeek.fromJson(Map<String, dynamic> json) {
     return BloodPressureWeek(
-      lines: (json['lines'] as List?)?.map((item) => item.toString()).toList() ?? const [],
-      readings: (json['readings'] as List?)
+      lines:
+          (json['lines'] as List?)?.map((item) => item.toString()).toList() ??
+          const [],
+      readings:
+          (json['readings'] as List?)
               ?.whereType<Map>()
-              .map((item) => Map<String, dynamic>.from(item))
+              .map(
+                (item) => BloodPressureReading.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
               .toList() ??
           const [],
     );
@@ -393,16 +460,26 @@ class BloodPressureWeek {
 }
 
 class GrowthHistory {
-  const GrowthHistory({required this.lines, required this.measurements, this.latestHeight, this.latestWeight});
+  const GrowthHistory({
+    required this.lines,
+    required this.measurements,
+    this.latestHeight,
+    this.latestWeight,
+  });
   final List<String> lines;
   final List<Map<String, dynamic>> measurements;
   final num? latestHeight;
   final num? latestWeight;
   factory GrowthHistory.fromJson(Map<String, dynamic> json) {
-    final latest = json['latest'] is Map ? Map<String, dynamic>.from(json['latest'] as Map) : const <String, dynamic>{};
+    final latest = json['latest'] is Map
+        ? Map<String, dynamic>.from(json['latest'] as Map)
+        : const <String, dynamic>{};
     return GrowthHistory(
-      lines: (json['lines'] as List?)?.map((item) => item.toString()).toList() ?? const [],
-      measurements: (json['measurements'] as List?)
+      lines:
+          (json['lines'] as List?)?.map((item) => item.toString()).toList() ??
+          const [],
+      measurements:
+          (json['measurements'] as List?)
               ?.whereType<Map>()
               .map((item) => Map<String, dynamic>.from(item))
               .toList() ??
@@ -419,12 +496,14 @@ class VaccinationList {
   final List<Map<String, dynamic>> upcoming;
   factory VaccinationList.fromJson(Map<String, dynamic> json) {
     return VaccinationList(
-      items: (json['vaccinations'] as List?)
+      items:
+          (json['vaccinations'] as List?)
               ?.whereType<Map>()
               .map((item) => Map<String, dynamic>.from(item))
               .toList() ??
           const [],
-      upcoming: (json['upcoming'] as List?)
+      upcoming:
+          (json['upcoming'] as List?)
               ?.whereType<Map>()
               .map((item) => Map<String, dynamic>.from(item))
               .toList() ??
@@ -439,7 +518,8 @@ class VisitNoteList {
   final String? nextAppointment;
   factory VisitNoteList.fromJson(Map<String, dynamic> json) {
     return VisitNoteList(
-      notes: (json['notes'] as List?)
+      notes:
+          (json['notes'] as List?)
               ?.whereType<Map>()
               .map((item) => Map<String, dynamic>.from(item))
               .toList() ??
@@ -450,12 +530,19 @@ class VisitNoteList {
 }
 
 class HouseholdMember {
-  const HouseholdMember({required this.userId, this.email, this.firstName, this.lastName});
+  const HouseholdMember({
+    required this.userId,
+    this.email,
+    this.firstName,
+    this.lastName,
+  });
   final String userId;
   final String? email;
   final String? firstName;
   final String? lastName;
-  String get label => '${firstName ?? ''} ${lastName ?? ''}'.trim().isEmpty ? (email ?? userId) : '${firstName ?? ''} ${lastName ?? ''}'.trim();
+  String get label => '${firstName ?? ''} ${lastName ?? ''}'.trim().isEmpty
+      ? (email ?? userId)
+      : '${firstName ?? ''} ${lastName ?? ''}'.trim();
   factory HouseholdMember.fromJson(Map<String, dynamic> json) {
     return HouseholdMember(
       userId: json['userId'] as String,
@@ -467,7 +554,12 @@ class HouseholdMember {
 }
 
 class DocumentView {
-  const DocumentView({required this.url, this.downloadUrl, this.fileName, this.fileType});
+  const DocumentView({
+    required this.url,
+    this.downloadUrl,
+    this.fileName,
+    this.fileType,
+  });
   final String url;
   final String? downloadUrl;
   final String? fileName;
@@ -488,14 +580,20 @@ class Category {
   final String displayName;
   factory Category.fromJson(Map<String, dynamic> json) {
     return Category(
-      code: json['code'] as String? ?? json['displayName'] as String? ?? 'OTHER',
-      displayName: json['displayName'] as String? ?? json['code'] as String? ?? 'Other',
+      code:
+          json['code'] as String? ?? json['displayName'] as String? ?? 'OTHER',
+      displayName:
+          json['displayName'] as String? ?? json['code'] as String? ?? 'Other',
     );
   }
 }
 
 class FilePassword {
-  const FilePassword({required this.id, required this.password, this.createdAt});
+  const FilePassword({
+    required this.id,
+    required this.password,
+    this.createdAt,
+  });
   final String id;
   final String password;
   final String? createdAt;

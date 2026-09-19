@@ -41,7 +41,9 @@ class _FamilyPageState extends State<FamilyPage> {
     });
     try {
       final home = await session.api.dashboard();
-      final people = home.householdId == null ? <Person>[] : await session.api.patients();
+      final people = home.householdId == null
+          ? <Person>[]
+          : await session.api.patients();
       if (!mounted) return;
       setState(() {
         _householdId = home.householdId;
@@ -61,7 +63,9 @@ class _FamilyPageState extends State<FamilyPage> {
   Widget build(BuildContext context) {
     final filtered = _people.where((person) {
       if (_query.trim().isEmpty) return true;
-      return person.displayName.toLowerCase().contains(_query.trim().toLowerCase());
+      return person.displayName.toLowerCase().contains(
+        _query.trim().toLowerCase(),
+      );
     }).toList();
     return SvLargePage(
       title: 'Family',
@@ -74,14 +78,20 @@ class _FamilyPageState extends State<FamilyPage> {
               onPressed: () {
                 Navigator.of(context).push(
                   CupertinoPageRoute<void>(
-                    builder: (_) => AddPersonPage(householdId: _householdId!, onCreated: _load),
+                    builder: (_) => AddPersonPage(
+                      householdId: _householdId!,
+                      onCreated: _load,
+                    ),
                   ),
                 );
               },
               child: const Text('Add'),
             ),
       child: _loading
-          ? const Padding(padding: EdgeInsets.only(top: 48), child: Center(child: CupertinoActivityIndicator()))
+          ? const Padding(
+              padding: EdgeInsets.only(top: 48),
+              child: Center(child: CupertinoActivityIndicator()),
+            )
           : Column(
               children: [
                 Padding(
@@ -93,7 +103,10 @@ class _FamilyPageState extends State<FamilyPage> {
                 if (filtered.isEmpty)
                   const Padding(
                     padding: EdgeInsets.all(24),
-                    child: Text('No people in this folder yet.', style: TextStyle(color: SvColors.slate)),
+                    child: Text(
+                      'No matching people.',
+                      style: TextStyle(color: SvColors.slate),
+                    ),
                   )
                 else
                   CupertinoListSection.insetGrouped(
@@ -101,11 +114,20 @@ class _FamilyPageState extends State<FamilyPage> {
                       for (final person in filtered)
                         CupertinoListTile(
                           title: Text(person.displayName),
-                          subtitle: Text([person.gender, person.bloodGroup].where((item) => item != null && item.isNotEmpty).join(' · ')),
+                          subtitle: Text(
+                            [person.gender, person.bloodGroup]
+                                .where(
+                                  (item) => item != null && item.isNotEmpty,
+                                )
+                                .join(' · '),
+                          ),
                           trailing: const CupertinoListTileChevron(),
                           onTap: () async {
                             await Navigator.of(context).push(
-                              CupertinoPageRoute<void>(builder: (_) => PersonDetailPage(personId: person.id)),
+                              CupertinoPageRoute<void>(
+                                builder: (_) =>
+                                    PersonDetailPage(personId: person.id),
+                              ),
                             );
                             _load();
                           },

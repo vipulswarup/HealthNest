@@ -16,8 +16,8 @@ class SvFilledButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CupertinoButton(
-      color: SvColors.coral,
-      disabledColor: SvColors.coral.withValues(alpha: 0.4),
+      color: SvColors.primaryButton,
+      disabledColor: SvColors.primaryButton.withValues(alpha: 0.4),
       borderRadius: BorderRadius.circular(12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       onPressed: enabled ? onPressed : null,

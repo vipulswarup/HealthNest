@@ -34,11 +34,26 @@ class _TabShellState extends State<TabShell> {
         activeColor: SvColors.coral,
         inactiveColor: SvColors.slate,
         items: const [
-          BottomNavigationBarItem(icon: Icon(CupertinoIcons.house), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(CupertinoIcons.person_2), label: 'Family'),
-          BottomNavigationBarItem(icon: Icon(CupertinoIcons.doc_text), label: 'Reports'),
-          BottomNavigationBarItem(icon: Icon(CupertinoIcons.heart), label: 'Medicines'),
-          BottomNavigationBarItem(icon: Icon(CupertinoIcons.ellipsis), label: 'More'),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.house),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.person_2),
+            label: 'Family',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.doc_text),
+            label: 'Reports',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.capsule),
+            label: 'Medicines',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.ellipsis),
+            label: 'More',
+          ),
         ],
       ),
       tabBuilder: (context, index) {
