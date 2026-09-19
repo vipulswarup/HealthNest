@@ -10,8 +10,11 @@ if [ ! -f /etc/docker/daemon.json ]; then
 fi
 
 if sudo docker info >/dev/null 2>&1; then
-  exec sudo tail -F /tmp/dockerd.log
+  echo "Docker daemon already running."
+  exec sleep infinity
 fi
 
-sudo rm -f /var/run/docker.pid 2>/dev/null || true
+# Clear stale daemon state that a snapshot may have captured.
+sudo rm -f /var/run/docker.pid /run/docker.pid 2>/dev/null || true
+
 exec sudo dockerd

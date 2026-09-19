@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-time bootstrap for the SanoVault web development environment.
-# Installs system packages, prepares the local Neon-compatible database stack,
-# and installs Node dependencies. Safe to run repeatedly.
+# Installs system packages and Node dependencies. The Docker daemon and the
+# database stack are started per-boot by the terminals, not here.
 set -euo pipefail
 
 CURSOR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -20,10 +20,6 @@ echo '{"storage-driver":"vfs","features":{"containerd-snapshotter":false}}' | su
 if ! grep -q "db.localtest.me" /etc/hosts; then
   echo "127.0.0.1 db.localtest.me api.localtest.me auth.localtest.me" | sudo tee -a /etc/hosts >/dev/null
 fi
-
-# Pre-pull database images so they are captured in the environment snapshot.
-"$CURSOR_DIR/dockerd-up.sh"
-sudo docker compose -f "$CURSOR_DIR/docker-compose.yml" pull
 
 cd "$WEB_DIR"
 npm ci
