@@ -61,25 +61,27 @@ export async function POST(request: NextRequest) {
     }
 
     const pdfPassword = String(formData.get('pdfPassword') || '').trim();
-    if (patientId && verifiedFile.mimeType === 'application/pdf' && pdfPassword) {
-      await unlockPdfForPatient({
+    let storedBytes: Buffer | Uint8Array = bytes;
+    if (patientId && verifiedFile.mimeType === 'application/pdf') {
+      const unlocked = await unlockPdfForPatient({
         bytes,
         patientId,
-        extraPasswords: [pdfPassword],
+        extraPasswords: pdfPassword ? [pdfPassword] : [],
         saveExtraPasswords: true,
         actorUserId: user.id,
       });
+      if (!unlocked.locked) storedBytes = Buffer.from(unlocked.bytes);
     }
 
     const storageKey = `${user.id}/${randomUUID()}.${verifiedFile.extension}`;
     r2Key = storageKey;
-    await uploadToR2(storageKey, bytes, verifiedFile.mimeType);
+    await uploadToR2(storageKey, storedBytes, verifiedFile.mimeType);
 
     const document = await createDocument({
       userId: user.id,
       patientId,
       fileName: file.name,
-      fileSize: file.size,
+      fileSize: storedBytes.byteLength,
       fileType: verifiedFile.mimeType,
       r2Key: storageKey,
       checksumSha256: checksum,

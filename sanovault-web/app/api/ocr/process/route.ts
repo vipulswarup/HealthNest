@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
             `;
             const patientId = linked?.patient_id ? String(linked.patient_id) : undefined;
             const extraPasswords = Array.isArray(body.extraPasswords)
-              ? body.extraPasswords.map((value: unknown) => String(value || '').trim()).filter(Boolean).slice(0, 8)
+              ? body.extraPasswords.map((value: unknown) => String(value || '').trim()).filter(Boolean).slice(0, 24)
               : [];
             const text = await extractDocumentText({
               r2Key: document.r2Key,

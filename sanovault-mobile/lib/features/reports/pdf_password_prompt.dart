@@ -45,6 +45,26 @@ Future<String?> askPdfPassword(BuildContext context, {String? fileName}) async {
   return password;
 }
 
+Future<List<String>> savedPdfPasswords(SanoVaultApi api, String? patientId) async {
+  if (patientId == null || patientId.isEmpty) return const [];
+  try {
+    return (await api.filePasswords(patientId))
+        .map((row) => row.password.trim())
+        .where((password) => password.isNotEmpty)
+        .toList();
+  } catch (_) {
+    return const [];
+  }
+}
+
+Future<void> rememberPdfPassword(SanoVaultApi api, String? patientId, String password) async {
+  final trimmed = password.trim();
+  if (patientId == null || patientId.isEmpty || trimmed.isEmpty) return;
+  try {
+    await api.addFilePassword(patientId, trimmed);
+  } catch (_) {}
+}
+
 Future<String> ocrWithPasswordPrompt({
   required BuildContext context,
   required SanoVaultApi api,
@@ -52,8 +72,13 @@ Future<String> ocrWithPasswordPrompt({
   String? patientId,
   String mode = 'intake',
 }) async {
+  final extras = await savedPdfPasswords(api, patientId);
   try {
-    return await api.ocrDocument(documentId, mode: mode);
+    return await api.ocrDocument(
+      documentId,
+      mode: mode,
+      extraPasswords: extras.isEmpty ? null : extras,
+    );
   } on ApiException catch (caught) {
     if (caught.code != 'PDF_PASSWORD_REQUIRED' || patientId == null) rethrow;
   }
@@ -64,7 +89,9 @@ Future<String> ocrWithPasswordPrompt({
       throw const ApiException('This PDF needs a password.', statusCode: 409, code: 'PDF_PASSWORD_REQUIRED');
     }
     try {
-      return await api.ocrDocument(documentId, mode: mode, extraPasswords: [password]);
+      final text = await api.ocrDocument(documentId, mode: mode, extraPasswords: [password, ...extras]);
+      await rememberPdfPassword(api, patientId, password);
+      return text;
     } on ApiException catch (caught) {
       if (caught.code != 'PDF_PASSWORD_REQUIRED') rethrow;
     }

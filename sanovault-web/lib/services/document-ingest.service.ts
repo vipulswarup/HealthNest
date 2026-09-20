@@ -5,6 +5,7 @@ import { extractDocumentText } from '@/lib/services/document-text.service';
 import { analyzeDocument } from '@/lib/services/ai.service';
 import { getAllCategories } from '@/lib/services/category.service';
 import { notifyPatientHousehold } from '@/lib/services/device-push.service';
+import { isUsefulOcrText } from '@/lib/services/ocr.service';
 
 function uniqueTags(tags: string[]): string[] {
   return Array.from(new Set(tags.map((t) => t.trim().toLowerCase().replace(/\s+/g, '_')).filter(Boolean)));
@@ -59,8 +60,8 @@ export async function processHealthRecordDocument(opts: {
     });
     await updateDocumentStatus(documentId, { ocrStatus: 'COMPLETED', ocrText });
 
-    const analysisInput = ocrText.trim() || 'Untitled shared report';
-    const analysis = analysisInput.length < 12
+    const analysisInput = ocrText.trim();
+    const analysis = !isUsefulOcrText(analysisInput)
       ? {
           classification: 'Other',
           confidence: 0,

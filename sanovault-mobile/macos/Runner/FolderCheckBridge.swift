@@ -260,13 +260,19 @@ final class FolderCheckBridgeImpl {
     guard let probe = PDFDocument(url: url) else {
       return ["locked": false]
     }
-    if !probe.isEncrypted && !probe.isLocked {
+    if !probe.isLocked {
+      return ["locked": false]
+    }
+    if probe.unlock(withPassword: "") {
       return ["locked": false]
     }
     for password in passwords {
       let trimmed = password.trimmingCharacters(in: .whitespacesAndNewlines)
       if trimmed.isEmpty { continue }
       guard let document = PDFDocument(url: url) else { continue }
+      if !document.isLocked {
+        return ["locked": false]
+      }
       if document.unlock(withPassword: trimmed) {
         return ["locked": true, "password": trimmed]
       }

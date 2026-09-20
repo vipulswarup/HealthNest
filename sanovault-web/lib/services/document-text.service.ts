@@ -1,5 +1,5 @@
 import { AppError } from '@/lib/middleware/error-handler';
-import { getR2Object } from '@/lib/r2';
+import { getR2Object, uploadToR2 } from '@/lib/r2';
 import { extractOfficeText, isOfficeMime } from '@/lib/services/office-text.service';
 import { extractTextFromBuffer } from '@/lib/services/ocr.service';
 import { unlockPdfForPatient } from '@/lib/services/pdf-unlock.service';
@@ -22,11 +22,13 @@ export async function extractDocumentText(options: {
     return extractOfficeText(bytes, mime);
   }
 
-  if (mime === 'application/pdf' && options.patientId) {
+  let password: string | undefined;
+  const extras = options.extraPasswords || [];
+  if (mime === 'application/pdf' && (options.patientId || extras.length > 0)) {
     const unlocked = await unlockPdfForPatient({
       bytes,
       patientId: options.patientId,
-      extraPasswords: options.extraPasswords,
+      extraPasswords: extras,
       saveExtraPasswords: Boolean(options.actorUserId),
       actorUserId: options.actorUserId,
     });
@@ -34,7 +36,11 @@ export async function extractDocumentText(options: {
       throw new AppError('This PDF is password protected', 409, 'PDF_PASSWORD_REQUIRED');
     }
     bytes = Buffer.from(unlocked.bytes);
+    password = unlocked.password;
+    if (unlocked.changed) {
+      await uploadToR2(options.r2Key, bytes, 'application/pdf');
+    }
   }
 
-  return extractTextFromBuffer(bytes, mime, { mode: options.mode || 'intake' });
+  return extractTextFromBuffer(bytes, mime, { mode: options.mode || 'intake', password });
 }

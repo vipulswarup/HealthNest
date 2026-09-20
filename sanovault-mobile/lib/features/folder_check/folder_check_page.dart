@@ -224,7 +224,7 @@ class _FolderCheckPageState extends State<FolderCheckPage> {
           }
           String? pdfPassword;
           if (file.kind == 'pdf') {
-            pdfPassword = await _unlockPdf(file, savedPasswords);
+            pdfPassword = await _unlockPdf(file, savedPasswords, patientId);
             if (pdfPassword == null) {
               summary.failed.add('${file.relativePath} (password needed)');
               continue;
@@ -283,7 +283,7 @@ class _FolderCheckPageState extends State<FolderCheckPage> {
     }
   }
 
-  Future<String?> _unlockPdf(FolderCheckFile file, List<String> savedPasswords) async {
+  Future<String?> _unlockPdf(FolderCheckFile file, List<String> savedPasswords, String patientId) async {
     var status = await _channel.pdfWorkingPassword(file.path, savedPasswords);
     if (status != null && status.isEmpty) return '';
     if (status != null && status.isNotEmpty) return status;
@@ -293,6 +293,9 @@ class _FolderCheckPageState extends State<FolderCheckPage> {
       status = await _channel.pdfWorkingPassword(file.path, [entered]);
       if (status != null && status.isNotEmpty) {
         if (!savedPasswords.contains(status)) savedPasswords.add(status);
+        try {
+          await SessionScope.of(context).api.addFilePassword(patientId, status);
+        } catch (_) {}
         return status;
       }
     }

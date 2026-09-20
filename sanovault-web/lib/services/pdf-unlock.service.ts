@@ -1,12 +1,15 @@
 import { sql } from '@/lib/db/neon';
 import { dobPasswordCandidates } from '@/lib/pdf/passwords';
-import { loadPdf, PdfPasswordError, tryUnlockPdf } from '@/lib/pdf/ops';
+import { copyPdfBytes, isPdfJsPasswordError, tryUnlockPdf } from '@/lib/pdf/ops';
 import { addPatientFilePassword, listPatientFilePasswords } from '@/lib/services/file-password.service';
+import { getDocumentProxy } from 'unpdf';
 
 export type PdfUnlockResult = {
   bytes: Uint8Array;
   locked: boolean;
   passwordSaved: boolean;
+  password?: string;
+  changed: boolean;
 };
 
 function uniquePasswords(values: Array<string | null | undefined>): string[] {
@@ -26,17 +29,32 @@ async function patientDob(patientId: string): Promise<string | null> {
     SELECT date_of_birth FROM patients WHERE id = ${patientId}::uuid LIMIT 1
   `;
   if (!row?.date_of_birth) return null;
+  if (typeof row.date_of_birth === 'string') return row.date_of_birth.slice(0, 10);
   if (row.date_of_birth instanceof Date) return row.date_of_birth.toISOString().slice(0, 10);
   return String(row.date_of_birth).slice(0, 10);
 }
 
-export async function isPdfLocked(bytes: Uint8Array): Promise<boolean> {
+async function pdfJsOpens(bytes: Uint8Array, password?: string): Promise<boolean> {
+  const data = copyPdfBytes(bytes);
   try {
-    await loadPdf(bytes);
-    return false;
+    const pdf = await getDocumentProxy(data, password ? { password } : {});
+    await pdf.destroy().catch(() => undefined);
+    return true;
   } catch (error) {
-    if (error instanceof PdfPasswordError) return true;
-    throw error;
+    if (isPdfJsPasswordError(error)) return false;
+    return !password;
+  }
+}
+
+export async function isPdfLocked(bytes: Uint8Array): Promise<boolean> {
+  return !(await pdfJsOpens(bytes));
+}
+
+async function decryptWithPdfLib(bytes: Uint8Array, passwords: string[]): Promise<Uint8Array | null> {
+  try {
+    return await tryUnlockPdf(bytes, passwords);
+  } catch {
+    return null;
   }
 }
 
@@ -46,47 +64,62 @@ export async function isPdfLocked(bytes: Uint8Array): Promise<boolean> {
  */
 export async function unlockPdfForPatient(options: {
   bytes: Uint8Array;
-  patientId: string;
+  patientId?: string;
   extraPasswords?: string[];
   saveExtraPasswords?: boolean;
   actorUserId?: string;
 }): Promise<PdfUnlockResult> {
-  const { bytes, patientId } = options;
+  const bytes = copyPdfBytes(options.bytes);
+  const { patientId } = options;
   if (!(await isPdfLocked(bytes))) {
-    return { bytes, locked: false, passwordSaved: false };
+    return { bytes, locked: false, passwordSaved: false, changed: false };
   }
 
-  const saved = await listPatientFilePasswords(patientId);
-  const dob = dobPasswordCandidates(await patientDob(patientId));
+  const saved = patientId ? await listPatientFilePasswords(patientId).catch(() => []) : [];
+  const dob = patientId ? dobPasswordCandidates(await patientDob(patientId)) : [];
   const extras = (options.extraPasswords || []).map((value) => value.trim()).filter(Boolean);
   const candidates = uniquePasswords([...saved.map((row) => row.password), ...dob, ...extras]);
 
-  try {
-    const unlocked = await tryUnlockPdf(bytes, candidates);
-    let passwordSaved = false;
-    if (options.saveExtraPasswords && options.actorUserId) {
-      const savedSet = new Set(saved.map((row) => row.password));
-      for (const extra of extras) {
-        if (savedSet.has(extra)) continue;
-        try {
-          await tryUnlockPdf(bytes, [extra]);
-          await addPatientFilePassword({
-            patientId,
-            userId: options.actorUserId,
-            password: extra,
-          });
-          passwordSaved = true;
-          break;
-        } catch (error) {
-          if (!(error instanceof PdfPasswordError)) throw error;
-        }
-      }
+  let workingPassword: string | undefined;
+  for (const password of candidates) {
+    if (await pdfJsOpens(bytes, password)) {
+      workingPassword = password;
+      break;
     }
-    return { bytes: unlocked, locked: false, passwordSaved };
-  } catch (error) {
-    if (error instanceof PdfPasswordError) {
-      return { bytes, locked: true, passwordSaved: false };
-    }
-    throw error;
   }
+  if (!workingPassword) {
+    return { bytes, locked: true, passwordSaved: false, changed: false };
+  }
+
+  let passwordSaved = false;
+  if (patientId && options.saveExtraPasswords && options.actorUserId) {
+    const savedSet = new Set(saved.map((row) => row.password));
+    if (!savedSet.has(workingPassword) && extras.includes(workingPassword)) {
+      await addPatientFilePassword({
+        patientId,
+        userId: options.actorUserId,
+        password: workingPassword,
+      });
+      passwordSaved = true;
+    }
+  }
+
+  const decrypted = await decryptWithPdfLib(bytes, [workingPassword, ...candidates]);
+  if (decrypted) {
+    return {
+      bytes: decrypted,
+      locked: false,
+      passwordSaved,
+      password: workingPassword,
+      changed: true,
+    };
+  }
+
+  return {
+    bytes,
+    locked: false,
+    passwordSaved,
+    password: workingPassword,
+    changed: false,
+  };
 }
