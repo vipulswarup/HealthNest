@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { AppError } from '@/lib/middleware/error-handler';
-import { copyPdfBytes, isPdfJsPasswordError } from '@/lib/pdf/ops';
+import { closePdfJsDocument, copyPdfBytes, isPdfJsPasswordError } from '@/lib/pdf/ops';
 import path from 'path';
 import { PNG } from 'pngjs';
 import { extractImages, extractText, getDocumentProxy, renderPageAsImage } from 'unpdf';
@@ -411,7 +411,7 @@ async function extractRenderedVisionText(
       if (text.trim()) chunks.push(`--- Page ${page} ---\n${text.trim()}`);
     }
   } finally {
-    await pdf.destroy().catch(() => undefined);
+    await closePdfJsDocument(pdf);
   }
   if (!chunks.length) throw new Error('PDF page rendering produced no text');
   return chunks.join('\n\n');

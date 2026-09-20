@@ -1,6 +1,6 @@
 import { sql } from '@/lib/db/neon';
 import { dobPasswordCandidates } from '@/lib/pdf/passwords';
-import { copyPdfBytes, isPdfJsPasswordError, tryUnlockPdf } from '@/lib/pdf/ops';
+import { closePdfJsDocument, copyPdfBytes, isPdfJsPasswordError, tryUnlockPdf } from '@/lib/pdf/ops';
 import { addPatientFilePassword, listPatientFilePasswords } from '@/lib/services/file-password.service';
 import { getDocumentProxy } from 'unpdf';
 
@@ -38,7 +38,7 @@ async function pdfJsOpens(bytes: Uint8Array, password?: string): Promise<boolean
   const data = copyPdfBytes(bytes);
   try {
     const pdf = await getDocumentProxy(data, password ? { password } : {});
-    await pdf.destroy().catch(() => undefined);
+    await closePdfJsDocument(pdf);
     return true;
   } catch (error) {
     if (isPdfJsPasswordError(error)) return false;

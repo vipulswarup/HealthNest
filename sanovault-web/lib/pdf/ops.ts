@@ -26,6 +26,16 @@ export function toPdfBytes(data: ArrayBuffer | Uint8Array): Uint8Array {
   return data instanceof Uint8Array ? copyPdfBytes(data) : new Uint8Array(data);
 }
 
+export async function closePdfJsDocument(pdf: unknown): Promise<void> {
+  const doc = pdf as { destroy?: () => unknown; cleanup?: () => unknown };
+  try {
+    if (typeof doc.destroy === 'function') await doc.destroy();
+    else if (typeof doc.cleanup === 'function') await doc.cleanup();
+  } catch {
+    // PDF.js versions differ on destroy vs cleanup.
+  }
+}
+
 export function isPdfJsPasswordError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const name = 'name' in error ? String(error.name) : '';
