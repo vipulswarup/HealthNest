@@ -15,6 +15,7 @@ export interface HealthRecord {
   hospitalSystemName?: string;
   hospitalIdentifierType?: string;
   hospitalIdentifierValue?: string;
+  title?: string;
 }
 
 export interface CreateHealthRecordInput {

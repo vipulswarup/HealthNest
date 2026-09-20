@@ -1,4 +1,5 @@
 import { sql } from '@/lib/db/neon';
+import { reportFileName } from '@/lib/reports/report-title';
 import { CreateDocumentInput, DocumentMetadata } from '@/lib/types/document.types';
 import { getActiveHouseholdId, listAccessibleDocuments } from '@/lib/households/access';
 
@@ -204,6 +205,44 @@ export async function updateDocumentStorage(
       updated_at = NOW()
     WHERE id = ${id}::uuid
   `;
+}
+
+export async function updateDocumentFileName(id: string, fileName: string): Promise<void> {
+  const name = fileName.trim();
+  if (!name) return;
+  await sql`
+    UPDATE documents SET file_name = ${name}, updated_at = NOW() WHERE id = ${id}::uuid
+  `;
+}
+
+export async function getDocumentDownloadName(documentId: string): Promise<string> {
+  const [row] = await sql`
+    SELECT d.file_name, d.file_type, hr.record_type, hr.tags, hr.data, hr.document_date, hr.created_at
+    FROM documents d
+    LEFT JOIN health_records hr ON hr.document_id = d.id
+    WHERE d.id = ${documentId}::uuid
+    LIMIT 1
+  `;
+  if (!row) return 'document';
+  const stored = String(row.file_name || 'document');
+  if (!row.record_type) return stored;
+  const name = reportFileName({
+    documentDate: row.document_date,
+    createdAt: row.created_at,
+    recordType: String(row.record_type || 'OTHER'),
+    tags: row.tags,
+    data: row.data && typeof row.data === 'object' ? row.data as Record<string, unknown> : {},
+    originalFileName: stored,
+    mimeType: String(row.file_type || ''),
+  });
+  if (name && name !== stored) {
+    await updateDocumentFileName(documentId, name);
+  }
+  return name;
+}
+
+export async function syncDocumentFileName(documentId: string): Promise<void> {
+  await getDocumentDownloadName(documentId);
 }
 
 export async function deleteDocument(id: string): Promise<void> {

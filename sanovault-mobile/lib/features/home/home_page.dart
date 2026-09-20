@@ -414,7 +414,7 @@ class _PersonCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          humanizeLabel(record.recordType),
+                          record.displayTitle,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 17,

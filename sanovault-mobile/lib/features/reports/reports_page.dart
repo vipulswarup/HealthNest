@@ -7,7 +7,6 @@ import 'package:sanovault/features/reports/record_detail_page.dart';
 import 'package:sanovault/session/session_scope.dart';
 import 'package:sanovault/theme/sv_colors.dart';
 import 'package:sanovault/util/dates.dart';
-import 'package:sanovault/util/labels.dart';
 import 'package:sanovault/widgets/person_picker.dart';
 import 'package:sanovault/widgets/sv_controls.dart';
 import 'package:sanovault/widgets/sv_page.dart';
@@ -170,7 +169,7 @@ class _ReportsPageState extends State<ReportsPage> {
                   CupertinoListTile(
                     title: Row(
                       children: [
-                        Expanded(child: Text(humanizeLabel(record.recordType))),
+                        Expanded(child: Text(record.displayTitle)),
                         if (record.tags.contains('needs_review'))
                           Container(
                             margin: const EdgeInsets.only(left: 8),

@@ -17,6 +17,8 @@ export interface AnalysisResult {
     documentDate: string | null;
     idType: string | null;
     expiryDate: string | null;
+    testType: string | null;
+    bodyPart: string | null;
     tags: string[];
 }
 
@@ -92,6 +94,10 @@ export async function analyzeDocument(text: string): Promise<AnalysisResult> {
             .filter((tag: string, index: number, arr: string[]) => tag && arr.indexOf(tag) === index);
 
         const isIdDocument = classification.toLowerCase() === 'id document';
+        const textField = (value: unknown) => {
+            const text = typeof value === 'string' ? value.trim() : '';
+            return text || null;
+        };
         return {
             classification,
             confidence: typeof result.confidence === 'number' ? result.confidence : 0,
@@ -100,6 +106,8 @@ export async function analyzeDocument(text: string): Promise<AnalysisResult> {
             documentDate: result.documentDate || null,
             idType: isIdDocument ? (result.idType || null) : null,
             expiryDate: isIdDocument ? (result.expiryDate || null) : null,
+            testType: isIdDocument ? null : textField(result.testType),
+            bodyPart: isIdDocument ? null : textField(result.bodyPart),
             tags: normalizedTags
         };
     } catch {
@@ -111,6 +119,8 @@ export async function analyzeDocument(text: string): Promise<AnalysisResult> {
             documentDate: null,
             idType: null,
             expiryDate: null,
+            testType: null,
+            bodyPart: null,
             tags: []
         };
     }

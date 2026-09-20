@@ -26,6 +26,7 @@ interface HealthRecord {
   hospitalSystemName?: string;
   hospitalIdentifierType?: string;
   hospitalIdentifierValue?: string;
+  title?: string;
 }
 
 interface Patient {
@@ -359,7 +360,7 @@ export default function HealthRecordDetailPage() {
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  {getRecordTypeLabel(record.recordType)}
+                  {record.title || getRecordTypeLabel(record.recordType)}
                 </h2>
                 {patient && (
                   <Link

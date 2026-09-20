@@ -105,6 +105,7 @@ class DashboardRecord {
     required this.source,
     this.documentDate,
     required this.createdAt,
+    this.title,
   });
 
   final String id;
@@ -113,6 +114,13 @@ class DashboardRecord {
   final String source;
   final String? documentDate;
   final String createdAt;
+  final String? title;
+
+  String get displayTitle {
+    final value = title?.trim();
+    if (value != null && value.isNotEmpty) return value;
+    return recordType.replaceAll('_', ' ');
+  }
 
   factory DashboardRecord.fromJson(Map<String, dynamic> json) {
     return DashboardRecord(
@@ -122,6 +130,7 @@ class DashboardRecord {
       source: json['source'] as String? ?? '',
       documentDate: json['documentDate'] as String?,
       createdAt: json['createdAt'] as String? ?? '',
+      title: json['title'] as String?,
     );
   }
 }
@@ -251,6 +260,7 @@ class HealthRecord {
     this.tags = const [],
     this.data = const {},
     this.createdAt,
+    this.title,
   });
 
   final String id;
@@ -264,6 +274,13 @@ class HealthRecord {
   final List<String> tags;
   final Map<String, dynamic> data;
   final String? createdAt;
+  final String? title;
+
+  String get displayTitle {
+    final value = title?.trim();
+    if (value != null && value.isNotEmpty) return value;
+    return recordType.replaceAll('_', ' ');
+  }
 
   factory HealthRecord.fromJson(Map<String, dynamic> json) {
     return HealthRecord(
@@ -282,6 +299,7 @@ class HealthRecord {
           ? Map<String, dynamic>.from(json['data'] as Map)
           : const {},
       createdAt: _string(json['createdAt']),
+      title: json['title'] as String?,
     );
   }
 }

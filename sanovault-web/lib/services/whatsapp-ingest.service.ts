@@ -1,5 +1,5 @@
 import { sql } from '@/lib/db/neon';
-import { getDocumentById, updateDocumentStatus } from '@/lib/services/document.service';
+import { getDocumentById, updateDocumentStatus, syncDocumentFileName } from '@/lib/services/document.service';
 import { extractDocumentText } from '@/lib/services/document-text.service';
 import { analyzeDocument } from '@/lib/services/ai.service';
 import { getAllCategories } from '@/lib/services/category.service';
@@ -74,6 +74,8 @@ export async function processWhatsAppIngest(inboundId: string): Promise<void> {
           documentDate: null as string | null,
           idType: null as string | null,
           expiryDate: null as string | null,
+          testType: null as string | null,
+          bodyPart: null as string | null,
           tags: [] as string[],
         }
       : await analyzeDocument(analysisInput);
@@ -86,6 +88,8 @@ export async function processWhatsAppIngest(inboundId: string): Promise<void> {
     ]);
 
     const data: Record<string, unknown> = {};
+    if (analysis.testType) data.testType = analysis.testType;
+    if (analysis.bodyPart) data.bodyPart = analysis.bodyPart;
     if (recordType === 'ID_DOCUMENT') {
       if (analysis.idType) data.idType = analysis.idType;
       if (analysis.expiryDate) data.expiryDate = analysis.expiryDate;
@@ -120,6 +124,7 @@ export async function processWhatsAppIngest(inboundId: string): Promise<void> {
         isApproved: false,
         status: 'COMPLETED',
       });
+      await syncDocumentFileName(documentId).catch(() => undefined);
     }
 
     await sql`

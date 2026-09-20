@@ -108,6 +108,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       `;
     }
 
+    if (record.document_id) {
+      const { syncDocumentFileName } = await import('@/lib/services/document.service');
+      await syncDocumentFileName(String(record.document_id)).catch(() => undefined);
+    }
+
     await recordAuditEvent({
       actorId: user.id,
       patientId: record.patient_id,

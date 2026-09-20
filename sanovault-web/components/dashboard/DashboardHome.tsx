@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import AppNav from '@/components/layout/AppNav';
 import { PersonCardActions } from '@/components/dashboard/PersonCardActions';
 import { useHouseholdContext } from '@/components/households/useHouseholdContext';
-import { humanizeLabel } from '@/lib/constants/labels';
 import type { DashboardHome } from '@/lib/dashboard/load-home';
 import { getLastPatientId, setLastPatientId } from '@/lib/patients/last-used';
 import { svBtnOutline, svBtnPrimary } from '@/lib/ui/buttons';
@@ -182,7 +181,7 @@ export function DashboardHome({
                               prefetch={false}
                               className="flex min-h-12 items-center justify-between gap-3 py-2 text-base text-ink hover:text-coral"
                             >
-                              <span className="truncate">{humanizeLabel(record.recordType)}</span>
+                              <span className="truncate">{record.title || record.source}</span>
                               <time className="shrink-0 text-sm text-gray-500">{formatDate(record.documentDate || record.createdAt)}</time>
                             </Link>
                           </li>

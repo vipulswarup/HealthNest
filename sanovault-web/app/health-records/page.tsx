@@ -24,6 +24,7 @@ interface HealthRecord {
   createdAt: string;
   tags: string[];
   documentId?: string;
+  title?: string;
 }
 
 interface Patient {
@@ -613,7 +614,7 @@ function HealthRecordsContent() {
                       <li key={record.id} className="flex items-start gap-3 px-4 py-3">
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-medium text-gray-950">
-                            {getRecordTypeLabel(record.recordType)}
+                            {record.title || getRecordTypeLabel(record.recordType)}
                             {record.documentId ? (
                               <span className="ml-2 text-xs font-normal text-coral">File</span>
                             ) : null}

@@ -3,7 +3,6 @@ import 'package:sanovault/api/models.dart';
 import 'package:sanovault/features/reports/document_view_page.dart';
 import 'package:sanovault/session/session_scope.dart';
 import 'package:sanovault/util/dates.dart';
-import 'package:sanovault/util/labels.dart';
 import 'package:sanovault/widgets/sv_page.dart';
 
 class RecordDetailPage extends StatefulWidget {
@@ -79,7 +78,7 @@ class _RecordDetailPageState extends State<RecordDetailPage> {
     final record = _record;
     final needsReview = record?.tags.contains('needs_review') ?? false;
     return SvLargePage(
-      title: record == null ? 'Report' : humanizeLabel(record.recordType),
+      title: record == null ? 'Report' : record.displayTitle,
       error: _error,
       child: record == null
           ? const Padding(padding: EdgeInsets.only(top: 48), child: Center(child: CupertinoActivityIndicator()))
@@ -138,7 +137,7 @@ class _RecordDetailPageState extends State<RecordDetailPage> {
                         trailing: const CupertinoListTileChevron(),
                         onTap: () => Navigator.of(context).push(
                           CupertinoPageRoute<void>(
-                            builder: (_) => DocumentViewPage(documentId: record.documentId!, title: humanizeLabel(record.recordType)),
+                            builder: (_) => DocumentViewPage(documentId: record.documentId!, title: record.displayTitle),
                           ),
                         ),
                       ),

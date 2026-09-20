@@ -105,6 +105,9 @@ export async function POST(request: NextRequest) {
         sourceFallback: data.source?.trim() || 'Share',
         keepTags: data.tags || ['needs_review'],
       });
+    } else if (data.documentId) {
+      const { syncDocumentFileName } = await import('@/lib/services/document.service');
+      await syncDocumentFileName(data.documentId).catch(() => undefined);
     }
     return NextResponse.json(toHealthRecord(record), { status: 201 });
   } catch (error) { return handleError(error); }

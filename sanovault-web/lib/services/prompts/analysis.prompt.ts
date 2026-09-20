@@ -12,7 +12,9 @@ You are a document analyzer for a family health vault. Analyze the document text
 5. **documentDate**: YYYY-MM-DD. For medical reports prefer reported date. For ID documents use issued/printed date. null if not found.
 6. **idType**: For ID documents only, one of: Aadhaar, PAN, Passport, Voter ID, Driving licence, State ID, Social Security card, Green card, Employment authorization, UK biometric residence permit, UK National Insurance, Other ID. null for medical reports.
 7. **expiryDate**: For ID documents only, expiry date as YYYY-MM-DD. null if not printed or not an ID.
-8. **tags**: Up to 5 lowercase snake_case tags.
+8. **testType**: Short name of the specific test (e.g. Stress Test, CT Scan, EMG, CBC). Not the category. null if unknown.
+9. **bodyPart**: Organ or region examined (e.g. Heart, Sinuses, Nerve, Liver). null if unknown.
+10. **tags**: Up to 5 lowercase snake_case tags.
 
 Do not extract or return ID numbers (Aadhaar, PAN, passport numbers, SSN).
 
@@ -25,6 +27,8 @@ Output Format (JSON only):
   "documentDate": "2024-12-19",
   "idType": "Aadhaar",
   "expiryDate": null,
+  "testType": "Stress Test",
+  "bodyPart": "Heart",
   "tags": ["tag1", "tag2"]
 }
 `;

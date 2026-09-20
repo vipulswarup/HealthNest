@@ -28,6 +28,7 @@ interface HealthRecord {
   hospitalSystemName?: string;
   hospitalIdentifierType?: string;
   hospitalIdentifierValue?: string;
+  title?: string;
 }
 
 interface Patient {
@@ -179,7 +180,7 @@ export default function DocumentPreviewPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h1 className="text-lg font-semibold text-gray-900">
-                  {getRecordTypeLabel(record.recordType)} - {record.source}
+                  {record.title || getRecordTypeLabel(record.recordType)}{record.source ? ` - ${record.source}` : ''}
                 </h1>
                 {patient && (
                   <p className="text-sm text-gray-600 mt-1">
@@ -191,7 +192,7 @@ export default function DocumentPreviewPage() {
                 {record.documentId ? (
                   <DocumentSharePanel
                     documentId={record.documentId}
-                    documentLabel={getRecordTypeLabel(record.recordType)}
+                    documentLabel={record.title || getRecordTypeLabel(record.recordType)}
                     senderName={session.user?.name || session.user?.email || 'A family member'}
                   />
                 ) : null}
@@ -245,7 +246,7 @@ export default function DocumentPreviewPage() {
               <div className="p-4">
                 <Image
                   src={signedUrl}
-                  alt={`${getRecordTypeLabel(record.recordType)} document`}
+                  alt={`${record.title || getRecordTypeLabel(record.recordType)} document`}
                   width={1200}
                   height={1600}
                   unoptimized

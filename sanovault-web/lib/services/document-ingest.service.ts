@@ -1,6 +1,6 @@
 import { after } from 'next/server';
 import { sql } from '@/lib/db/neon';
-import { getDocumentById, updateDocumentStatus } from '@/lib/services/document.service';
+import { getDocumentById, updateDocumentStatus, syncDocumentFileName } from '@/lib/services/document.service';
 import { extractDocumentText } from '@/lib/services/document-text.service';
 import { analyzeDocument } from '@/lib/services/ai.service';
 import { getAllCategories } from '@/lib/services/category.service';
@@ -40,7 +40,7 @@ export async function processHealthRecordDocument(opts: {
   const { healthRecordId, documentId, sourceFallback = 'Share', keepTags = ['needs_review'] } = opts;
 
   const [record] = await sql`
-    SELECT id, patient_id, tags FROM health_records WHERE id = ${healthRecordId}::uuid LIMIT 1
+    SELECT id, patient_id, tags, data FROM health_records WHERE id = ${healthRecordId}::uuid LIMIT 1
   `;
   if (!record) return;
 
@@ -70,6 +70,8 @@ export async function processHealthRecordDocument(opts: {
           documentDate: null as string | null,
           idType: null as string | null,
           expiryDate: null as string | null,
+          testType: null as string | null,
+          bodyPart: null as string | null,
           tags: [] as string[],
         }
       : await analyzeDocument(analysisInput);
@@ -81,7 +83,12 @@ export async function processHealthRecordDocument(opts: {
       ...(analysis.tags || []),
     ]);
 
-    const data: Record<string, unknown> = {};
+    const existingData = record.data && typeof record.data === 'object' && !Array.isArray(record.data)
+      ? record.data as Record<string, unknown>
+      : {};
+    const data: Record<string, unknown> = { ...existingData };
+    if (analysis.testType) data.testType = analysis.testType;
+    if (analysis.bodyPart) data.bodyPart = analysis.bodyPart;
     if (recordType === 'ID_DOCUMENT') {
       if (analysis.idType) data.idType = analysis.idType;
       if (analysis.expiryDate) data.expiryDate = analysis.expiryDate;
@@ -115,6 +122,8 @@ export async function processHealthRecordDocument(opts: {
       isApproved: false,
       status: 'COMPLETED',
     });
+
+    await syncDocumentFileName(documentId).catch(() => undefined);
 
     const name = await patientDisplayName(patientId);
     await notifyPatientHousehold(patientId, {
