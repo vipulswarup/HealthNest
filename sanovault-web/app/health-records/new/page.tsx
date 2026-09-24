@@ -463,6 +463,14 @@ function NewHealthRecordContent() {
       
       const ocrPayload = await ocrRes.json().catch(() => ({}));
       if (!ocrRes.ok) {
+        if (ocrPayload.code === 'GROQ_AI_DISABLED') {
+          setOcrStatus('COMPLETED');
+          setAiStatus('COMPLETED');
+          setOcrText('');
+          setAiResults(null);
+          setOcrError('AI processing is off. You can continue and enter the record details manually.');
+          return;
+        }
         setOcrStatus('FAILED');
         if (ocrPayload.code === 'PDF_PASSWORD_REQUIRED') {
           setNeedsPdfPassword(true);
@@ -926,6 +934,10 @@ function NewHealthRecordContent() {
               />
             </div>
           ) : null}
+
+          {ocrError.includes('AI processing is off') && (
+            <p className="rounded-lg border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-900">AI processing is off for your account. This file stays in SanoVault; enter its details manually or enable Groq AI in <a className="underline" href="/settings/ai">Settings</a>.</p>
+          )}
 
           {currentQueueItem?.status === 'failed' && (
             <div className="flex flex-wrap gap-3 pt-2">

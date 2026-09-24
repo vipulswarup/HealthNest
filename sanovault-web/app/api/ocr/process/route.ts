@@ -8,6 +8,7 @@ import { handleError, AppError } from '@/lib/middleware/error-handler';
 import { enforceHourlyRateLimit } from '@/lib/security/rate-limit';
 import { sql } from '@/lib/db/neon';
 import { isOfficeMime } from '@/lib/services/office-text.service';
+import { requireGroqAiConsent } from '@/lib/legal/groq-consent';
 
 export const runtime = 'nodejs';
 /** Full multi-page OCR can exceed 60s on long scanned labs. */
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest) {
         if (document.userId !== user.id) {
             throw new AppError('Forbidden', 403);
         }
+        await requireGroqAiConsent(user.id);
 
         await updateDocumentStatus(documentId, { ocrStatus: 'PROCESSING' });
 

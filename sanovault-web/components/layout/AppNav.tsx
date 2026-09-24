@@ -20,6 +20,9 @@ const defaultLinks = [
   { href: "/health-records", label: "Reports" },
   { href: "/medications", label: "Medicines" },
   { href: "/households", label: "Who Can See This" },
+  { href: "/privacy", label: "Privacy" },
+  { href: "/settings/ai", label: "AI processing settings" },
+  { href: "/delete-account", label: "Delete account" },
 ];
 
 const bottomLinks = [

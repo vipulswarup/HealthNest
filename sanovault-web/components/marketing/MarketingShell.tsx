@@ -95,7 +95,8 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
             <Link href="/pricing" className="hover:text-ink">
               Pricing
             </Link>
-            <Link href="/privacy" className="hover:text-ink">
+            <Link href="/delete-account" className="hover:underline">Delete account</Link>
+          <Link href="/privacy" className="hover:text-ink">
               Privacy
             </Link>
             <Link href="/auth/signin" className="hover:text-ink">

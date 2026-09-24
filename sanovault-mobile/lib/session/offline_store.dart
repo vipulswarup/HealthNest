@@ -202,33 +202,20 @@ class OfflineStore {
   Future<void> _writePending(List<Map<String, dynamic>> operations) =>
       _storage.write(key: _pendingKey, value: jsonEncode(operations));
 
-  Future<void> clear() async {
-    final existingPending = await pending();
+  Future<void> clearCachedData() async {
     for (final key in await _knownStorageKeys()) {
       await _storage.delete(key: key);
     }
     await _storage.delete(key: _knownKeys);
+    final directory = await _documentsDirectory();
+    if (await directory.exists()) await directory.delete(recursive: true);
+  }
+
+  Future<void> clear() async {
+    await clearCachedData();
     await _storage.delete(key: _pendingKey);
     await _storage.delete(key: _lastOnlineKey);
-    if (existingPending.any(
-      (operation) => operation['attachmentPath'] != null,
-    )) {
-      final directory = await _attachmentsDirectory();
-      if (await directory.exists()) {
-        await for (final entity in directory.list()) {
-          if (entity is File) await entity.delete();
-        }
-      }
-    }
-    try {
-      final directory = await _documentsDirectory();
-      if (await directory.exists()) {
-        await for (final entity in directory.list()) {
-          if (entity is File) await entity.delete();
-        }
-      }
-    } catch (_) {
-      // The headless test harness has no path_provider implementation.
-    }
+    final attachments = await _attachmentsDirectory();
+    if (await attachments.exists()) await attachments.delete(recursive: true);
   }
 }

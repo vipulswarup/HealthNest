@@ -208,24 +208,35 @@ class _AddReportPageState extends State<AddReportPage> {
         uploaded['id'] as String? ??
         uploaded['_id'] as String? ??
         uploaded['documentId'] as String?;
-    if (documentId == null)
+    if (documentId == null) {
       throw Exception('Upload did not return a document.');
+    }
     setState(() {
       _documentId = documentId;
       _status = 'Reading the pages…';
     });
 
-    var text = await ocrWithPasswordPrompt(
-      context: context,
-      api: api,
-      documentId: documentId,
-      patientId: _patientId,
-    );
+    var aiEnabled = true;
+    try {
+      aiEnabled = (await api.betaStatus()).groqAiEnabled;
+    } catch (_) {
+      aiEnabled = false;
+    }
+    if (!mounted) return;
+    var text = '';
+    if (aiEnabled) {
+      text = await ocrWithPasswordPrompt(
+        context: context,
+        api: api,
+        documentId: documentId,
+        patientId: _patientId,
+      );
+    }
     final isOffice = RegExp(
       r'\.(docx?|xlsx?|pptx?)$',
       caseSensitive: false,
     ).hasMatch(filename);
-    if (!isOffice) {
+    if (aiEnabled && !isOffice) {
       try {
         text = await ocrWithPasswordPrompt(
           context: context,
@@ -236,12 +247,18 @@ class _AddReportPageState extends State<AddReportPage> {
         );
       } catch (_) {}
     }
-    setState(() => _status = 'Classifying…');
+    setState(
+      () => _status = aiEnabled
+          ? 'Classifying…'
+          : 'AI processing is off. Enter details manually.',
+    );
     var type = 'OTHER';
     try {
+      if (!aiEnabled) throw StateError('AI processing is disabled');
       type = await api.classifyDocument(documentId, text);
     } catch (_) {}
     try {
+      if (!aiEnabled) throw StateError('AI processing is disabled');
       await api.suggestTags(documentId, text);
     } catch (_) {}
     if (!mounted) return;

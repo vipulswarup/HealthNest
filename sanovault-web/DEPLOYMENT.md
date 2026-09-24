@@ -355,3 +355,15 @@ The #1 cause is missing `NEXTAUTH_SECRET`. Set it in Vercel environment variable
 5. Automatic CI/CD
 6. Preview deployments
 7. Easy environment variable management
+
+## Account deletion setup
+
+The app queues physical Cloudflare R2 file erasure and identity-provider cleanup after the database deletion commits. The protected daily Vercel Cron at `/api/internal/deletions` retries failed jobs; it uses the existing `CRON_SECRET`.
+
+Configure these production secrets before publishing deletion controls:
+
+- `NEON_API_KEY`, `NEON_PROJECT_ID`, and `NEON_BRANCH_ID` for deleting Neon Auth users. The project and branch must match the production `NEON_AUTH_BASE_URL`.
+- `APPLE_TEAM_ID`, `APPLE_KEY_ID`, and `APPLE_PRIVATE_KEY` for revoking Sign in with Apple credentials. Keep the private key in the hosting provider’s encrypted secret store. Existing Apple sign-ins without a stored revocation token require a fresh Apple authorization in the iOS app.
+- Existing `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, and `R2_BUCKET_NAME` for erasing uploaded files.
+
+Migration `0019_deletion.sql` adds the deletion queue and the database-side lifecycle rules. The normal `npm run build` runs migrations first; deploy the web application only after the migration succeeds. Check the protected deletion cron and pending jobs after the first production rollout.

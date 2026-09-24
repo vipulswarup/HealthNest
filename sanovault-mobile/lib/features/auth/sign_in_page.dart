@@ -1,3 +1,5 @@
+import 'package:sanovault/features/legal/privacy_page.dart';
+
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
@@ -124,6 +126,14 @@ class _SignInPageState extends State<SignInPage> {
                     'Use Google or a magic link',
                     style: TextStyle(color: SvColors.ink),
                   ),
+                ),
+                CupertinoButton(
+                  onPressed: () => Navigator.of(context).push(
+                    CupertinoPageRoute<void>(
+                      builder: (_) => const PrivacyPage(),
+                    ),
+                  ),
+                  child: const Text('Privacy policy'),
                 ),
                 const Text(
                   'Records stay in your SanoVault account. This app uses the same family folder as the website.',

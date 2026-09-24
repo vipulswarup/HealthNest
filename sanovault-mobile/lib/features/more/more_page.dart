@@ -1,3 +1,7 @@
+import 'package:sanovault/features/legal/privacy_page.dart';
+import 'package:sanovault/features/account/delete_account_page.dart';
+import 'package:sanovault/features/legal/groq_ai_settings_page.dart';
+
 import 'dart:io' show Platform;
 
 import 'package:flutter/cupertino.dart';
@@ -207,6 +211,26 @@ class _MorePageState extends State<MorePage> {
                       trailing: const CupertinoListTileChevron(),
                       onTap: () => _open(const FolderCheckPage()),
                     ),
+                  CupertinoListTile(
+                    title: const Text('Privacy policy'),
+                    trailing: const CupertinoListTileChevron(),
+                    onTap: () => _open(const PrivacyPage()),
+                  ),
+                  CupertinoListTile(
+                    title: const Text('AI document processing'),
+                    subtitle: const Text(
+                      'Choose whether Groq AI processes uploads',
+                    ),
+                    trailing: const CupertinoListTileChevron(),
+                    onTap: () => _open(const GroqAiSettingsPage()),
+                  ),
+                  CupertinoListTile(
+                    title: const Text(
+                      'Delete account',
+                      style: TextStyle(color: SvColors.danger),
+                    ),
+                    onTap: () => _open(const DeleteAccountPage()),
+                  ),
                   CupertinoListTile(
                     title: const Text(
                       'Sign Out',

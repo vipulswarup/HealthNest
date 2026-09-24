@@ -5,6 +5,7 @@ import { analyzeDocument } from '@/lib/services/ai.service';
 import { getAllCategories } from '@/lib/services/category.service';
 import { notifyPatientHousehold } from '@/lib/services/device-push.service';
 import { sendWhatsAppText } from '@/lib/whatsapp/cloud-api';
+import { hasGroqAiConsent } from '@/lib/legal/groq-consent';
 
 function uniqueTags(tags: string[]): string[] {
   return Array.from(new Set(tags.map((t) => t.trim().toLowerCase().replace(/\s+/g, '_')).filter(Boolean)));
@@ -45,6 +46,17 @@ export async function processWhatsAppIngest(inboundId: string): Promise<void> {
   const healthRecordId = String(inbound.health_record_id);
   const documentId = inbound.document_id ? String(inbound.document_id) : null;
   const textBody = typeof inbound.text_body === 'string' ? inbound.text_body : null;
+
+  const [familyOwner] = await sql`
+    SELECT h.created_by, COALESCE(d.owner_id, h.created_by) AS consent_owner
+    FROM households h
+    LEFT JOIN documents d ON d.id = ${documentId}::uuid
+    WHERE h.id = ${String(inbound.household_id)}::uuid LIMIT 1
+  `;
+  if (!familyOwner?.consent_owner || !await hasGroqAiConsent(String(familyOwner.consent_owner))) {
+    await sql`UPDATE whatsapp_inbound_messages SET status = 'filed', updated_at = NOW() WHERE id = ${inboundId}::uuid`;
+    return;
+  }
 
   try {
     let ocrText = textBody?.trim() || '';

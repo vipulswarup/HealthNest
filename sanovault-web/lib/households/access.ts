@@ -137,13 +137,10 @@ export async function listHouseholdPatients(
 
 export async function linkPatientToHousehold(
   householdId: string,
-  patientId: string
+  patientId: string,
+  userId: string,
 ): Promise<void> {
-  await sql`
-    INSERT INTO household_patients (household_id, patient_id)
-    VALUES (${householdId}::uuid, ${patientId}::uuid)
-    ON CONFLICT DO NOTHING
-  `;
+  await sql`SELECT link_patient_to_family(${userId}, ${householdId}::uuid, ${patientId}::uuid)`;
 }
 
 export async function unlinkPatientFromHousehold(
@@ -194,7 +191,7 @@ export async function canAccessDocument(userId: string, documentId: string): Pro
     LEFT JOIN health_records hr ON hr.document_id = d.id
     WHERE d.id = ${documentId}::uuid
       AND (
-        d.owner_id = ${userId}
+        (d.owner_id = ${userId} AND d.patient_id IS NULL AND NOT EXISTS (SELECT 1 FROM health_records owned_record WHERE owned_record.document_id = d.id))
         OR (
           p.id IS NOT NULL
           AND EXISTS (
@@ -232,7 +229,7 @@ export async function getAccessibleDocument(
     LEFT JOIN health_records hr ON hr.document_id = d.id
     WHERE d.id = ${documentId}::uuid
       AND (
-        d.owner_id = ${userId}
+        (d.owner_id = ${userId} AND d.patient_id IS NULL AND NOT EXISTS (SELECT 1 FROM health_records owned_record WHERE owned_record.document_id = d.id))
         OR (
           p.id IS NOT NULL
           AND EXISTS (

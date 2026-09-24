@@ -14,6 +14,7 @@ function splitName(name: string) {
 
 /** Create or refresh the local profile. Call from sign-up / acknowledgement writes, not from GET handlers. */
 export async function ensureProfile(user: CurrentUser) {
+  if (await isDeletedAccount(user.id)) throw new Error('This account has been deleted');
   const { firstName, lastName } = splitName(user.name);
   await sql`
     INSERT INTO profiles (user_id, first_name, last_name, email)
@@ -22,6 +23,11 @@ export async function ensureProfile(user: CurrentUser) {
       email = COALESCE(EXCLUDED.email, profiles.email),
       updated_at = NOW()
   `;
+}
+
+export async function isDeletedAccount(userId: string) {
+  const [row] = await sql`SELECT 1 FROM deleted_accounts WHERE user_id_hash = encode(digest(${userId}, 'sha256'), 'hex')`;
+  return Boolean(row);
 }
 
 async function resolveAuthenticatedUser(): Promise<CurrentUser | null> {
@@ -34,6 +40,8 @@ async function resolveAuthenticatedUser(): Promise<CurrentUser | null> {
   const { data: session } = await auth.getSession();
   const user = session?.user;
   if (!user) return null;
+
+  if (await isDeletedAccount(user.id)) return null;
 
   const email = user.email?.trim().toLowerCase() || '';
   const name = user.name?.trim() || email || 'User';

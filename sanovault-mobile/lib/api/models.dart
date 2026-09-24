@@ -1,13 +1,19 @@
 class BetaStatus {
-  const BetaStatus({required this.acknowledged, required this.version});
+  const BetaStatus({
+    required this.acknowledged,
+    required this.version,
+    this.groqAiEnabled = false,
+  });
 
   final bool acknowledged;
   final String version;
+  final bool groqAiEnabled;
 
   factory BetaStatus.fromJson(Map<String, dynamic> json) {
     return BetaStatus(
       acknowledged: json['acknowledged'] == true,
       version: json['version'] as String? ?? '',
+      groqAiEnabled: json['groqAiEnabled'] == true,
     );
   }
 }
@@ -41,7 +47,8 @@ class Profile {
 }
 
 class Household {
-  const Household({required this.id, required this.name});
+  final String? createdBy;
+  const Household({required this.id, required this.name, this.createdBy});
 
   final String id;
   final String name;
@@ -50,6 +57,7 @@ class Household {
     return Household(
       id: json['id'] as String,
       name: json['name'] as String? ?? '',
+      createdBy: json['createdBy'] as String?,
     );
   }
 }

@@ -17,11 +17,13 @@ class SanoVaultApi {
 
   Future<String> signInWithApple({
     required String identityToken,
+    String? authorizationCode,
     String? fullName,
     String? email,
   }) async {
     final json = await _client.post('/api/auth/mobile/apple', {
       'identityToken': identityToken,
+      'authorizationCode': ?authorizationCode,
       if (fullName != null && fullName.isNotEmpty) 'fullName': fullName,
       if (email != null && email.isNotEmpty) 'email': email,
     }) as Map<String, dynamic>;
@@ -39,6 +41,38 @@ class SanoVaultApi {
     return _requireToken(json);
   }
 
+  Future<Map<String, dynamic>> accountDeletionPreview() async =>
+      Map<String, dynamic>.from(
+        await _client.get('/api/users/me/deletion') as Map,
+      );
+
+  Future<void> deleteAccount({String? appleAuthorizationCode}) async {
+    await _client.post('/api/users/me/deletion', {
+      'confirmation': 'DELETE',
+      'appleAuthorizationCode': ?appleAuthorizationCode,
+    });
+  }
+
+  Future<void> removeFamilyPatient(String familyId, String patientId) async {
+    await _requireSyncedBeforeDeletion();
+    await _client.delete('/api/households/$familyId/patients/$patientId');
+    await _offline?.clear();
+  }
+
+  Future<void> deleteFamily(String familyId) async {
+    await _requireSyncedBeforeDeletion();
+    await _client.delete('/api/households/$familyId');
+    await _offline?.clear();
+  }
+
+  Future<void> _requireSyncedBeforeDeletion() async {
+    if (await pendingOperationCount() > 0) {
+      throw const ApiException(
+        'Sync your pending offline changes before removing a patient or family.',
+      );
+    }
+  }
+
   Future<void> revokeSession() async {
     await _client.delete('/api/auth/mobile/session');
   }
@@ -52,7 +86,11 @@ class SanoVaultApi {
       await _offline?.markOnline();
       usedOfflineData = false;
       return BetaStatus.fromJson(json);
-    } catch (_) {
+    } catch (error) {
+      if (error is ApiException && [401, 403, 404].contains(error.statusCode)) {
+        await _offline?.clearCachedData();
+        rethrow;
+      }
       usedOfflineData = true;
       final cached = await _offline?.readJson('beta');
       if (cached is Map)
@@ -61,10 +99,18 @@ class SanoVaultApi {
     }
   }
 
-  Future<void> acceptBeta() async {
+  Future<void> acceptBeta({required bool groqAiEnabled}) async {
     await _client.post('/api/users/beta-acknowledgement', {
       'version': betaAcknowledgementVersion,
+      'groqAiEnabled': groqAiEnabled,
     });
+  }
+
+  Future<bool> setGroqAiEnabled(bool enabled) async {
+    final json = await _client.patch('/api/users/groq-ai-consent', {
+      'enabled': enabled,
+    }) as Map<String, dynamic>;
+    return json['enabled'] == true;
   }
 
   Future<Profile> me() async {
@@ -74,7 +120,11 @@ class SanoVaultApi {
       await _offline?.markOnline();
       usedOfflineData = false;
       return Profile.fromJson(json);
-    } catch (_) {
+    } catch (error) {
+      if (error is ApiException && [401, 403, 404].contains(error.statusCode)) {
+        await _offline?.clearCachedData();
+        rethrow;
+      }
       usedOfflineData = true;
       final cached = await _offline?.readJson('profile');
       if (cached is Map)
@@ -102,7 +152,11 @@ class SanoVaultApi {
       await _offline?.markOnline();
       usedOfflineData = false;
       return DashboardHome.fromJson(json);
-    } catch (_) {
+    } catch (error) {
+      if (error is ApiException && [401, 403, 404].contains(error.statusCode)) {
+        await _offline?.clearCachedData();
+        rethrow;
+      }
       usedOfflineData = true;
       final cached = await _offline?.readJson('dashboard');
       if (cached is Map)
@@ -183,7 +237,11 @@ class SanoVaultApi {
       await _offline?.markOnline();
       usedOfflineData = false;
       return _peopleFromJson(json);
-    } catch (_) {
+    } catch (error) {
+      if (error is ApiException && [401, 403, 404].contains(error.statusCode)) {
+        await _offline?.clearCachedData();
+        rethrow;
+      }
       usedOfflineData = true;
       final cached = await _offline?.readJson('patients');
       if (cached is List) return _peopleFromJson(cached);
@@ -231,7 +289,11 @@ class SanoVaultApi {
       final records = _recordsFromJson(json);
       unawaited(_cacheRecentDocuments(records));
       return records;
-    } catch (_) {
+    } catch (error) {
+      if (error is ApiException && [401, 403, 404].contains(error.statusCode)) {
+        await _offline?.clearCachedData();
+        rethrow;
+      }
       usedOfflineData = true;
       final cached = await _offline?.readJson(key);
       if (cached is List) return _recordsFromJson(cached);
@@ -452,7 +514,11 @@ class SanoVaultApi {
       await _offline?.markOnline();
       usedOfflineData = false;
       return BloodPressureWeek.fromJson(json);
-    } catch (_) {
+    } catch (error) {
+      if (error is ApiException && [401, 403, 404].contains(error.statusCode)) {
+        await _offline?.clearCachedData();
+        rethrow;
+      }
       usedOfflineData = true;
       final cached = await _offline?.readJson(key);
       if (cached is Map)
@@ -481,7 +547,11 @@ class SanoVaultApi {
       await _offline?.writeJson('bp.$patientId', json);
       await _offline?.markOnline();
       return BloodPressureWeek.fromJson(json);
-    } catch (_) {
+    } catch (error) {
+      if (error is ApiException &&
+          error.statusCode >= 400 &&
+          error.statusCode < 500)
+        rethrow;
       if (_offline == null) rethrow;
       await _offline.addPending({
         'type': 'blood_pressure',
@@ -564,7 +634,11 @@ class SanoVaultApi {
       await _offline?.markOnline();
       usedOfflineData = false;
       return VisitNoteList.fromJson(json);
-    } catch (_) {
+    } catch (error) {
+      if (error is ApiException && [401, 403, 404].contains(error.statusCode)) {
+        await _offline?.clearCachedData();
+        rethrow;
+      }
       usedOfflineData = true;
       final cached = await _offline?.readJson(key);
       if (cached is Map)
@@ -591,7 +665,11 @@ class SanoVaultApi {
       await _offline?.writeJson('notes.$patientId', json);
       await _offline?.markOnline();
       return VisitNoteList.fromJson(json);
-    } catch (_) {
+    } catch (error) {
+      if (error is ApiException &&
+          error.statusCode >= 400 &&
+          error.statusCode < 500)
+        rethrow;
       if (_offline == null) rethrow;
       await _offline.addPending({
         'type': 'visit_note',

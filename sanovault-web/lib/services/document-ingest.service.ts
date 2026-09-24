@@ -6,6 +6,7 @@ import { analyzeDocument } from '@/lib/services/ai.service';
 import { getAllCategories } from '@/lib/services/category.service';
 import { notifyPatientHousehold } from '@/lib/services/device-push.service';
 import { isUsefulOcrText } from '@/lib/services/ocr.service';
+import { hasGroqAiConsent } from '@/lib/legal/groq-consent';
 
 function uniqueTags(tags: string[]): string[] {
   return Array.from(new Set(tags.map((t) => t.trim().toLowerCase().replace(/\s+/g, '_')).filter(Boolean)));
@@ -51,12 +52,23 @@ export async function processHealthRecordDocument(opts: {
     const document = await getDocumentById(documentId);
     if (!document?.r2Key) throw new Error('Document missing storage key');
 
+    const [owner] = await sql`
+      SELECT COALESCE(d.owner_id, p.owner_id) AS consent_owner
+      FROM documents d LEFT JOIN patients p ON p.id = d.patient_id
+      WHERE d.id = ${documentId}::uuid LIMIT 1
+    `;
+    const consentOwner = String(owner?.consent_owner || '');
+    if (!consentOwner || !await hasGroqAiConsent(consentOwner)) {
+      return;
+    }
+
     await updateDocumentStatus(documentId, { ocrStatus: 'PROCESSING', aiStatus: 'PROCESSING' });
     const ocrText = await extractDocumentText({
       r2Key: document.r2Key,
       fileType: document.fileType,
       fileName: document.fileName,
       patientId,
+      actorUserId: consentOwner,
     });
     await updateDocumentStatus(documentId, { ocrStatus: 'COMPLETED', ocrText });
 

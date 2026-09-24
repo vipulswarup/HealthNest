@@ -1,3 +1,4 @@
+import 'package:sanovault/widgets/confirm_deletion.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:sanovault/api/models.dart';
 import 'package:sanovault/session/session_scope.dart';
@@ -17,6 +18,7 @@ class _HouseholdsPageState extends State<HouseholdsPage> {
   DashboardHome? _home;
   List<HouseholdMember> _members = const [];
   String? _error;
+  bool _deleting = false;
   final _email = TextEditingController();
 
   @override
@@ -72,9 +74,38 @@ class _HouseholdsPageState extends State<HouseholdsPage> {
   Future<void> _leave() async {
     final householdId = _home?.householdId;
     if (householdId == null) return;
-    await SessionScope.of(context).api.leaveHousehold(householdId);
-    await _load();
-    if (mounted) SessionScope.of(context).invalidateData();
+    try {
+      final session = SessionScope.of(context);
+      await session.api.leaveHousehold(householdId);
+      session.invalidateData();
+      await _load();
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    }
+  }
+
+  Future<void> _deleteFamily() async {
+    final session = SessionScope.of(context);
+    final familyId = _home?.householdId;
+    if (familyId == null) return;
+    final family = _home!.households.firstWhere((h) => h.id == familyId);
+    final confirmed = await confirmDeletion(
+      context,
+      title: 'Delete ${family.name}?',
+      message: 'This permanently deletes the family for everyone, its invitations and WhatsApp links. Patients and records belonging only to it are deleted. Patients linked to another family remain there. Login accounts are not deleted.',
+      action: 'Delete family',
+    );
+    if (!confirmed || !mounted) return;
+    setState(() => _deleting = true);
+    try {
+      await session.api.deleteFamily(familyId);
+      session.invalidateData();
+      await _load();
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _deleting = false);
+    }
   }
 
   @override
@@ -131,8 +162,21 @@ class _HouseholdsPageState extends State<HouseholdsPage> {
                 ),
                 const SizedBox(height: 12),
                 SvFilledButton(label: 'Send invite', onPressed: _invite),
+                if (_home?.households.any(
+                      (h) =>
+                          h.id == _home?.householdId &&
+                          h.createdBy == session.profile?.id,
+                    ) ==
+                    true)
+                  CupertinoButton(
+                    onPressed: _deleting ? null : _deleteFamily,
+                    child: Text(
+                      _deleting ? 'Deleting…' : 'Delete this family',
+                      style: const TextStyle(color: SvColors.danger),
+                    ),
+                  ),
                 CupertinoButton(
-                  onPressed: _leave,
+                  onPressed: _deleting ? null : _leave,
                   child: const Text(
                     'Leave this folder',
                     style: TextStyle(color: SvColors.danger),

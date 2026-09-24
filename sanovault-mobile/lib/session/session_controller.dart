@@ -85,6 +85,7 @@ class SessionController extends ChangeNotifier {
       ].where((part) => part != null && part.trim().isNotEmpty).join(' ');
       final token = await api.signInWithApple(
         identityToken: identityToken,
+        authorizationCode: credential.authorizationCode,
         fullName: fullName,
         email: credential.email,
       );
@@ -142,11 +143,11 @@ class SessionController extends ChangeNotifier {
     return uri.toString();
   }
 
-  Future<void> acceptBeta() async {
+  Future<void> acceptBeta({required bool groqAiEnabled}) async {
     error = null;
     notifyListeners();
     try {
-      await api.acceptBeta();
+      await api.acceptBeta(groqAiEnabled: groqAiEnabled);
       profile = await api.me();
       status = SessionStatus.ready;
       notifyListeners();
@@ -202,6 +203,7 @@ class SessionController extends ChangeNotifier {
     } on ApiException catch (caught) {
       if (caught.isUnauthorized) {
         await store.clear();
+        await offline.clear();
         profile = null;
         status = SessionStatus.signedOut;
         error = null;
