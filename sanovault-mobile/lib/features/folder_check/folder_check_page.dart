@@ -97,7 +97,10 @@ class _FolderCheckPageState extends State<FolderCheckPage> {
       setState(() => _pairing = next);
     } on PlatformException catch (caught) {
       if (!mounted) return;
-      setState(() => _error = caught.message ?? 'Could not open the saved folder. Pick it again.');
+      setState(
+        () => _error =
+            caught.message ?? 'Could not open the saved folder. Pick it again.',
+      );
     }
   }
 
@@ -144,10 +147,8 @@ class _FolderCheckPageState extends State<FolderCheckPage> {
       if (!mounted) return;
       final updated = await Navigator.of(context).push<List<String>>(
         CupertinoPageRoute(
-          builder: (_) => _ExclusionPage(
-            folders: folders,
-            selected: pairing.exclusions,
-          ),
+          builder: (_) =>
+              _ExclusionPage(folders: folders, selected: pairing.exclusions),
         ),
       );
       if (updated == null || !mounted) return;
@@ -200,14 +201,30 @@ class _FolderCheckPageState extends State<FolderCheckPage> {
       }
 
       final oversized = files.where((file) => file.size > _maxBytes).toList();
-      summary.oversized.addAll(oversized.map((file) => '${file.relativePath} (${_mb(file.size)})'));
-      for (final file in files.where((file) => file.size <= _maxBytes && (file.sha256 == null || file.sha256!.isEmpty))) {
+      summary.oversized.addAll(
+        oversized.map((file) => '${file.relativePath} (${_mb(file.size)})'),
+      );
+      for (final file in files.where(
+        (file) =>
+            file.size <= _maxBytes &&
+            (file.sha256 == null || file.sha256!.isEmpty),
+      )) {
         summary.failed.add('${file.relativePath} (could not hash)');
       }
-      final ready = files.where((file) => file.size <= _maxBytes && file.sha256 != null && file.sha256!.isNotEmpty).toList();
+      final ready = files
+          .where(
+            (file) =>
+                file.size <= _maxBytes &&
+                file.sha256 != null &&
+                file.sha256!.isNotEmpty,
+          )
+          .toList();
 
       final api = SessionScope.of(context).api;
-      final savedPasswords = (await api.filePasswords(patientId)).map((row) => row.password).where((item) => item.isNotEmpty).toList();
+      final savedPasswords = (await api.filePasswords(patientId))
+          .map((row) => row.password)
+          .where((item) => item.isNotEmpty)
+          .toList();
       var index = 0;
       for (final file in ready) {
         if (_cancelled || !mounted) {
@@ -215,9 +232,15 @@ class _FolderCheckPageState extends State<FolderCheckPage> {
           break;
         }
         index += 1;
-        setState(() => _status = 'File $index of ${ready.length}: ${file.relativePath}');
+        setState(
+          () =>
+              _status = 'File $index of ${ready.length}: ${file.relativePath}',
+        );
         try {
-          final duplicate = await api.lookupDocumentHash(patientId: patientId, sha256: file.sha256!);
+          final duplicate = await api.lookupDocumentHash(
+            patientId: patientId,
+            sha256: file.sha256!,
+          );
           if (duplicate) {
             summary.duplicates += 1;
             continue;
@@ -235,12 +258,17 @@ class _FolderCheckPageState extends State<FolderCheckPage> {
             bytes,
             file.name,
             patientId: patientId,
-            pdfPassword: pdfPassword != null && pdfPassword.isNotEmpty ? pdfPassword : null,
+            pdfPassword: pdfPassword != null && pdfPassword.isNotEmpty
+                ? pdfPassword
+                : null,
             timeout: const Duration(minutes: 5),
           );
           final documentId =
-              uploaded['id'] as String? ?? uploaded['_id'] as String? ?? uploaded['documentId'] as String?;
-          if (documentId == null) throw Exception('Upload did not return a document.');
+              uploaded['id'] as String? ??
+              uploaded['_id'] as String? ??
+              uploaded['documentId'] as String?;
+          if (documentId == null)
+            throw Exception('Upload did not return a document.');
           if (uploaded['duplicate'] == true) {
             summary.duplicates += 1;
             continue;
@@ -250,7 +278,8 @@ class _FolderCheckPageState extends State<FolderCheckPage> {
             'patientId': patientId,
             'recordType': 'OTHER',
             'data': <String, dynamic>{
-              if (file.relativePath.isNotEmpty) 'folderRelativePath': file.relativePath,
+              if (file.relativePath.isNotEmpty)
+                'folderRelativePath': file.relativePath,
             },
             'source': 'Folder Check',
             if (hints.doctorName != null) 'doctorName': hints.doctorName,
@@ -283,12 +312,19 @@ class _FolderCheckPageState extends State<FolderCheckPage> {
     }
   }
 
-  Future<String?> _unlockPdf(FolderCheckFile file, List<String> savedPasswords, String patientId) async {
+  Future<String?> _unlockPdf(
+    FolderCheckFile file,
+    List<String> savedPasswords,
+    String patientId,
+  ) async {
     var status = await _channel.pdfWorkingPassword(file.path, savedPasswords);
     if (status != null && status.isEmpty) return '';
     if (status != null && status.isNotEmpty) return status;
     while (mounted && !_cancelled) {
-      final entered = await askPdfPassword(context, fileName: file.relativePath);
+      final entered = await askPdfPassword(
+        context,
+        fileName: file.relativePath,
+      );
       if (entered == null) return null;
       status = await _channel.pdfWorkingPassword(file.path, [entered]);
       if (status != null && status.isNotEmpty) {
@@ -319,7 +355,10 @@ class _FolderCheckPageState extends State<FolderCheckPage> {
             )
           : null,
       child: _loading
-          ? const Padding(padding: EdgeInsets.only(top: 48), child: Center(child: CupertinoActivityIndicator()))
+          ? const Padding(
+              padding: EdgeInsets.only(top: 48),
+              child: Center(child: CupertinoActivityIndicator()),
+            )
           : Column(
               children: [
                 Padding(
@@ -329,13 +368,19 @@ class _FolderCheckPageState extends State<FolderCheckPage> {
                     style: const TextStyle(color: SvColors.slate, height: 1.4),
                   ),
                 ),
-                PersonPicker(people: _people, selectedId: _patientId, onSelected: _selectPerson),
+                PersonPicker(
+                  people: _people,
+                  selectedId: _patientId,
+                  onSelected: _selectPerson,
+                ),
                 CupertinoListSection.insetGrouped(
                   header: const Text('Folder on this Mac'),
                   children: [
                     CupertinoListTile(
                       title: Text(pairing?.displayPath ?? 'No folder chosen'),
-                      subtitle: pairing == null ? const Text('Pick the person’s health folder') : null,
+                      subtitle: pairing == null
+                          ? const Text('Pick the person’s health folder')
+                          : null,
                       trailing: const CupertinoListTileChevron(),
                       onTap: _running ? null : _pickFolder,
                     ),
@@ -347,7 +392,9 @@ class _FolderCheckPageState extends State<FolderCheckPage> {
                             : '${pairing.exclusions.length}',
                       ),
                       trailing: const CupertinoListTileChevron(),
-                      onTap: _running || pairing == null ? null : _editExclusions,
+                      onTap: _running || pairing == null
+                          ? null
+                          : _editExclusions,
                     ),
                   ],
                 ),
@@ -362,7 +409,10 @@ class _FolderCheckPageState extends State<FolderCheckPage> {
                 if (_status.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-                    child: Text(_status, style: const TextStyle(color: SvColors.slate)),
+                    child: Text(
+                      _status,
+                      style: const TextStyle(color: SvColors.slate),
+                    ),
                   ),
                 if (summary != null) _summarySection(summary),
               ],
@@ -373,9 +423,13 @@ class _FolderCheckPageState extends State<FolderCheckPage> {
   Widget _summarySection(_FolderCheckSummary summary) {
     final lines = <String>[];
     if (summary.aborted) {
-      lines.add('Stopped before uploading. One or more files are online-only. Make the folder available offline, then run Folder Check again.');
+      lines.add(
+        'Stopped before uploading. One or more files are online-only. Make the folder available offline, then run Folder Check again.',
+      );
     } else if (summary.cancelled) {
-      lines.add('Stopped. Files that already reached the vault will be skipped next time.');
+      lines.add(
+        'Stopped. Files that already reached the vault will be skipped next time.',
+      );
     }
     if (!summary.aborted) {
       lines.add('Uploaded ${summary.uploaded}');
@@ -394,11 +448,20 @@ class _FolderCheckPageState extends State<FolderCheckPage> {
               child: Text(line, style: const TextStyle(height: 1.4)),
             ),
           for (final row in summary.onlineOnly.take(40))
-            Text(row, style: const TextStyle(color: SvColors.slate, fontSize: 13)),
+            Text(
+              row,
+              style: const TextStyle(color: SvColors.slate, fontSize: 13),
+            ),
           for (final row in summary.oversized.take(40))
-            Text(row, style: const TextStyle(color: SvColors.slate, fontSize: 13)),
+            Text(
+              row,
+              style: const TextStyle(color: SvColors.slate, fontSize: 13),
+            ),
           for (final row in summary.failed.take(40))
-            Text(row, style: const TextStyle(color: SvColors.danger, fontSize: 13)),
+            Text(
+              row,
+              style: const TextStyle(color: SvColors.danger, fontSize: 13),
+            ),
         ],
       ),
     );
@@ -435,17 +498,26 @@ class _ExclusionPageState extends State<_ExclusionPage> {
       child: widget.folders.isEmpty
           ? const Padding(
               padding: EdgeInsets.all(20),
-              child: Text('This folder has no subfolders.', style: TextStyle(color: SvColors.slate)),
+              child: Text(
+                'This folder has no subfolders.',
+                style: TextStyle(color: SvColors.slate),
+              ),
             )
           : CupertinoListSection.insetGrouped(
-              header: const Text('Skip these subfolders and everything inside them'),
+              header: const Text(
+                'Skip these subfolders and everything inside them',
+              ),
               children: [
                 for (final folder in widget.folders)
                   CupertinoListTile(
                     title: Text(folder),
                     trailing: Icon(
-                      _selected.contains(folder) ? CupertinoIcons.check_mark_circled_solid : CupertinoIcons.circle,
-                      color: _selected.contains(folder) ? SvColors.coral : SvColors.silver,
+                      _selected.contains(folder)
+                          ? CupertinoIcons.check_mark_circled_solid
+                          : CupertinoIcons.circle,
+                      color: _selected.contains(folder)
+                          ? SvColors.sage
+                          : SvColors.silver,
                     ),
                     onTap: () {
                       setState(() {

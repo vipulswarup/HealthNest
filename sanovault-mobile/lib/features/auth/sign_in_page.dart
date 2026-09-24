@@ -39,7 +39,8 @@ class _SignInPageState extends State<SignInPage> {
 
   Future<void> _submit() async {
     setState(() => _busy = true);
-    await SessionScope.of(context).signInWithPassword(_email.text, _password.text);
+    await SessionScope.of(context)
+        .signInWithPassword(_email.text, _password.text);
     if (mounted) setState(() => _busy = false);
   }
 
@@ -58,14 +59,22 @@ class _SignInPageState extends State<SignInPage> {
                 Center(
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(22),
-                    child: Image.asset('assets/logo.png', width: 72, height: 72),
+                    child: Image.asset(
+                      'assets/logo.png',
+                      width: 72,
+                      height: 72,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 const Text(
                   'SanoVault',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: SvColors.ink),
+                  style: TextStyle(
+                    fontSize: 34,
+                    fontWeight: FontWeight.bold,
+                    color: SvColors.ink,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 const Text(
@@ -103,17 +112,27 @@ class _SignInPageState extends State<SignInPage> {
                   const SizedBox(height: 20),
                   Theme(
                     data: ThemeData.light(),
-                    child: const Material(color: Color(0x00000000), child: _AppleButton()),
+                    child: const Material(
+                      color: Color(0x00000000),
+                      child: _AppleButton(),
+                    ),
                   ),
                 ],
                 CupertinoButton(
                   onPressed: () => session.signInWithWeb(),
-                  child: const Text('Use Google or a magic link', style: TextStyle(color: SvColors.coral)),
+                  child: const Text(
+                    'Use Google or a magic link',
+                    style: TextStyle(color: SvColors.ink),
+                  ),
                 ),
                 const Text(
                   'Records stay in your SanoVault account. This app uses the same family folder as the website.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: SvColors.slate, height: 1.4),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: SvColors.slate,
+                    height: 1.4,
+                  ),
                 ),
               ],
             );

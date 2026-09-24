@@ -4,7 +4,7 @@ import 'package:sanovault/theme/sv_colors.dart';
 CupertinoThemeData buildSvTheme() {
   return const CupertinoThemeData(
     brightness: Brightness.light,
-    primaryColor: SvColors.coral,
+    primaryColor: SvColors.ink,
     barBackgroundColor: SvColors.surface,
     scaffoldBackgroundColor: SvColors.groupedBackground,
     textTheme: CupertinoTextThemeData(
@@ -25,14 +25,8 @@ CupertinoThemeData buildSvTheme() {
         fontWeight: FontWeight.bold,
         letterSpacing: 0.37,
       ),
-      navActionTextStyle: TextStyle(
-        color: SvColors.coral,
-        fontSize: 17,
-      ),
-      tabLabelTextStyle: TextStyle(
-        fontSize: 10,
-        letterSpacing: 0.1,
-      ),
+      navActionTextStyle: TextStyle(color: SvColors.ink, fontSize: 17),
+      tabLabelTextStyle: TextStyle(fontSize: 10, letterSpacing: 0.1),
     ),
   );
 }

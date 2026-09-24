@@ -103,7 +103,10 @@ class _MorePageState extends State<MorePage> {
                       CupertinoListTile(
                         title: Text(household.name),
                         trailing: household.id == _activeId
-                            ? const Icon(CupertinoIcons.check_mark, color: SvColors.coral)
+                            ? const Icon(
+                                CupertinoIcons.check_mark,
+                                color: SvColors.sage,
+                              )
                             : null,
                         onTap: () => _switchHousehold(household.id),
                       ),
@@ -111,13 +114,41 @@ class _MorePageState extends State<MorePage> {
                 ),
               CupertinoListSection.insetGrouped(
                 children: [
-                  CupertinoListTile(title: const Text('Add a Report'), trailing: const CupertinoListTileChevron(), onTap: () => _open(const AddReportPage())),
-                  CupertinoListTile(title: const Text('For the Doctor'), trailing: const CupertinoListTileChevron(), onTap: () => _open(const DoctorPage())),
-                  CupertinoListTile(title: const Text('Blood Pressure'), trailing: const CupertinoListTileChevron(), onTap: () => _open(const BpPage())),
-                  CupertinoListTile(title: const Text('Height & Weight'), trailing: const CupertinoListTileChevron(), onTap: () => _open(const GrowthPage())),
-                  CupertinoListTile(title: const Text('Vaccinations'), trailing: const CupertinoListTileChevron(), onTap: () => _open(const VaccinationsPage())),
-                  CupertinoListTile(title: const Text('Visit Notes'), trailing: const CupertinoListTileChevron(), onTap: () => _open(const VisitNotesPage())),
-                  CupertinoListTile(title: const Text('Who Can See This'), trailing: const CupertinoListTileChevron(), onTap: () => _open(const HouseholdsPage())),
+                  CupertinoListTile(
+                    title: const Text('Add a Report'),
+                    trailing: const CupertinoListTileChevron(),
+                    onTap: () => _open(const AddReportPage()),
+                  ),
+                  CupertinoListTile(
+                    title: const Text('For the Doctor'),
+                    trailing: const CupertinoListTileChevron(),
+                    onTap: () => _open(const DoctorPage()),
+                  ),
+                  CupertinoListTile(
+                    title: const Text('Blood Pressure'),
+                    trailing: const CupertinoListTileChevron(),
+                    onTap: () => _open(const BpPage()),
+                  ),
+                  CupertinoListTile(
+                    title: const Text('Height & Weight'),
+                    trailing: const CupertinoListTileChevron(),
+                    onTap: () => _open(const GrowthPage()),
+                  ),
+                  CupertinoListTile(
+                    title: const Text('Vaccinations'),
+                    trailing: const CupertinoListTileChevron(),
+                    onTap: () => _open(const VaccinationsPage()),
+                  ),
+                  CupertinoListTile(
+                    title: const Text('Visit Notes'),
+                    trailing: const CupertinoListTileChevron(),
+                    onTap: () => _open(const VisitNotesPage()),
+                  ),
+                  CupertinoListTile(
+                    title: const Text('Who Can See This'),
+                    trailing: const CupertinoListTileChevron(),
+                    onTap: () => _open(const HouseholdsPage()),
+                  ),
                   if (!kIsWeb && Platform.isMacOS)
                     CupertinoListTile(
                       title: const Text('Folder Check'),
@@ -126,7 +157,10 @@ class _MorePageState extends State<MorePage> {
                       onTap: () => _open(const FolderCheckPage()),
                     ),
                   CupertinoListTile(
-                    title: const Text('Sign Out', style: TextStyle(color: SvColors.danger)),
+                    title: const Text(
+                      'Sign Out',
+                      style: TextStyle(color: SvColors.danger),
+                    ),
                     onTap: () => session.signOut(),
                   ),
                 ],

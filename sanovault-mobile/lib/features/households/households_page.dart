@@ -35,7 +35,9 @@ class _HouseholdsPageState extends State<HouseholdsPage> {
     final api = SessionScope.of(context).api;
     try {
       final home = await api.dashboard();
-      final members = home.householdId == null ? <HouseholdMember>[] : await api.householdMembers(home.householdId!);
+      final members = home.householdId == null
+          ? <HouseholdMember>[]
+          : await api.householdMembers(home.householdId!);
       if (!mounted) return;
       setState(() {
         _home = home;
@@ -52,11 +54,14 @@ class _HouseholdsPageState extends State<HouseholdsPage> {
     final householdId = _home?.householdId;
     if (householdId == null || _email.text.trim().isEmpty) return;
     try {
-      final url = await SessionScope.of(context).api.inviteToHousehold(householdId, _email.text.trim());
+      final url = await SessionScope.of(context).api
+          .inviteToHousehold(householdId, _email.text.trim());
       _email.clear();
       await _load();
       if (url.isNotEmpty) {
-        await SharePlus.instance.share(ShareParams(text: 'Join our SanoVault family folder: $url'));
+        await SharePlus.instance.share(
+          ShareParams(text: 'Join our SanoVault family folder: $url'),
+        );
       }
     } catch (caught) {
       if (!mounted) return;
@@ -89,7 +94,10 @@ class _HouseholdsPageState extends State<HouseholdsPage> {
                   CupertinoListTile(
                     title: Text(household.name),
                     trailing: household.id == _home!.householdId
-                        ? const Icon(CupertinoIcons.check_mark, color: SvColors.coral)
+                        ? const Icon(
+                            CupertinoIcons.check_mark,
+                            color: SvColors.sage,
+                          )
                         : null,
                     onTap: () async {
                       await session.api.setActiveHousehold(household.id);
@@ -105,17 +113,31 @@ class _HouseholdsPageState extends State<HouseholdsPage> {
               if (_members.isEmpty)
                 const CupertinoListTile(title: Text('No folder yet.'))
               else
-                for (final member in _members) CupertinoListTile(title: Text(member.label), subtitle: Text(member.email ?? '')),
+                for (final member in _members)
+                  CupertinoListTile(
+                    title: Text(member.label),
+                    subtitle: Text(member.email ?? ''),
+                  ),
             ],
           ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                CupertinoTextField(controller: _email, placeholder: 'Invite by email', keyboardType: TextInputType.emailAddress),
+                CupertinoTextField(
+                  controller: _email,
+                  placeholder: 'Invite by email',
+                  keyboardType: TextInputType.emailAddress,
+                ),
                 const SizedBox(height: 12),
                 SvFilledButton(label: 'Send invite', onPressed: _invite),
-                CupertinoButton(onPressed: _leave, child: const Text('Leave this folder', style: TextStyle(color: SvColors.danger))),
+                CupertinoButton(
+                  onPressed: _leave,
+                  child: const Text(
+                    'Leave this folder',
+                    style: TextStyle(color: SvColors.danger),
+                  ),
+                ),
               ],
             ),
           ),

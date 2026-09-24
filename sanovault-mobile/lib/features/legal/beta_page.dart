@@ -34,12 +34,18 @@ class _BetaPageState extends State<BetaPage> {
                 children: [
                   Text(
                     betaAcknowledgementTitle,
-                    style: CupertinoTheme.of(context).textTheme.navLargeTitleTextStyle,
+                    style: CupertinoTheme.of(context)
+                        .textTheme
+                        .navLargeTitleTextStyle,
                   ),
                   const SizedBox(height: 16),
                   Text(
                     betaAcknowledgementText,
-                    style: const TextStyle(fontSize: 17, height: 1.45, color: SvColors.ink),
+                    style: const TextStyle(
+                      fontSize: 17,
+                      height: 1.45,
+                      color: SvColors.ink,
+                    ),
                   ),
                   const Spacer(),
                   if (session.error != null) ...[
@@ -51,8 +57,10 @@ class _BetaPageState extends State<BetaPage> {
                     child: Row(
                       children: [
                         Icon(
-                          _agreed ? CupertinoIcons.check_mark_circled_solid : CupertinoIcons.circle,
-                          color: _agreed ? SvColors.coral : SvColors.slate,
+                          _agreed
+                              ? CupertinoIcons.check_mark_circled_solid
+                              : CupertinoIcons.circle,
+                          color: _agreed ? SvColors.sage : SvColors.slate,
                           size: 28,
                         ),
                         const SizedBox(width: 12),

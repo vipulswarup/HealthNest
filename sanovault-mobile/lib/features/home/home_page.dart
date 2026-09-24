@@ -346,7 +346,7 @@ class _PersonCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: lastUsed ? SvColors.coral : const Color(0x00000000),
+              color: lastUsed ? SvColors.slate : const Color(0x00000000),
             ),
           ),
           const SizedBox(height: 12),
@@ -394,7 +394,7 @@ class _PersonCard extends StatelessWidget {
                 onPressed: onViewAll,
                 child: const Text(
                   'View All',
-                  style: TextStyle(fontSize: 15, color: SvColors.coral),
+                  style: TextStyle(fontSize: 15, color: SvColors.ink),
                 ),
               ),
             ],
@@ -457,8 +457,8 @@ class _MiniButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final background = filled ? SvColors.coral : SvColors.surface;
-    final foreground = filled ? CupertinoColors.white : SvColors.ink;
+    final background = filled ? SvColors.ink : SvColors.surface;
+    final foreground = filled ? SvColors.cream : SvColors.ink;
     return CupertinoButton(
       padding: EdgeInsets.zero,
       minimumSize: const Size(0, 44),

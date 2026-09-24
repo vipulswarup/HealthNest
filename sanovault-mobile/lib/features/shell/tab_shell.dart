@@ -31,7 +31,7 @@ class _TabShellState extends State<TabShell> {
       backgroundColor: SvColors.groupedBackground,
       tabBar: CupertinoTabBar(
         backgroundColor: SvColors.surface,
-        activeColor: SvColors.coral,
+        activeColor: SvColors.ink,
         inactiveColor: SvColors.slate,
         items: const [
           BottomNavigationBarItem(

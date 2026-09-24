@@ -3,6 +3,7 @@ import 'package:sanovault/api/models.dart';
 import 'package:sanovault/features/reports/document_view_page.dart';
 import 'package:sanovault/session/session_scope.dart';
 import 'package:sanovault/util/dates.dart';
+import 'package:sanovault/util/labels.dart';
 import 'package:sanovault/widgets/sv_page.dart';
 
 class RecordDetailPage extends StatefulWidget {
