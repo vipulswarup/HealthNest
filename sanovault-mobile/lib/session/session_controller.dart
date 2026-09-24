@@ -8,15 +8,21 @@ import 'package:sanovault/api/models.dart';
 import 'package:sanovault/api/sanovault_api.dart';
 import 'package:sanovault/session/auth_link_listener.dart';
 import 'package:sanovault/session/session_store.dart';
+import 'package:sanovault/session/offline_store.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 enum SessionStatus { restoring, signedOut, needsAcknowledgement, ready }
 
 class SessionController extends ChangeNotifier {
-  SessionController({required this.api, required this.store});
+  SessionController({
+    required this.api,
+    required this.store,
+    required this.offline,
+  });
 
   final SanoVaultApi api;
   final SessionStore store;
+  final OfflineStore offline;
 
   SessionStatus status = SessionStatus.restoring;
   Profile? profile;
@@ -44,11 +50,16 @@ class SessionController extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      final token = await api.signInWithPassword(email: email, password: password);
+      final token = await api.signInWithPassword(
+        email: email,
+        password: password,
+      );
       await store.writeToken(token);
       await _loadAfterToken();
     } catch (caught) {
-      error = caught is ApiException ? caught.message : 'Could not sign in with email.';
+      error = caught is ApiException
+          ? caught.message
+          : 'Could not sign in with email.';
       status = SessionStatus.signedOut;
       notifyListeners();
     }
@@ -109,8 +120,13 @@ class SessionController extends ChangeNotifier {
       await _loadAfterToken();
     } catch (caught) {
       final text = caught.toString().toLowerCase();
-      if (text.contains('cancel') || text.contains('c16') || text.contains('timeout')) return;
-      error = caught is ApiException ? caught.message : 'Could not finish web sign-in.';
+      if (text.contains('cancel') ||
+          text.contains('c16') ||
+          text.contains('timeout'))
+        return;
+      error = caught is ApiException
+          ? caught.message
+          : 'Could not finish web sign-in.';
       status = SessionStatus.signedOut;
       notifyListeners();
     }
@@ -135,7 +151,9 @@ class SessionController extends ChangeNotifier {
       status = SessionStatus.ready;
       notifyListeners();
     } catch (caught) {
-      error = caught is ApiException ? caught.message : 'Could not save your acknowledgement.';
+      error = caught is ApiException
+          ? caught.message
+          : 'Could not save your acknowledgement.';
       notifyListeners();
     }
   }
@@ -145,6 +163,7 @@ class SessionController extends ChangeNotifier {
       await api.revokeSession();
     } catch (_) {}
     await store.clear();
+    await offline.clear();
     profile = null;
     error = null;
     status = SessionStatus.signedOut;
@@ -161,7 +180,24 @@ class SessionController extends ChangeNotifier {
         return;
       }
       profile = await api.me();
+      if (api.usedOfflineData) {
+        final lastOnline = await offline.lastOnline();
+        final withinOfflineWindow =
+            lastOnline != null &&
+            DateTime.now().toUtc().difference(lastOnline.toUtc()) <=
+                const Duration(days: 30);
+        if (!withinOfflineWindow) {
+          status = SessionStatus.signedOut;
+          error = 'Reconnect to verify your session before using offline data.';
+          notifyListeners();
+          return;
+        }
+      }
       status = SessionStatus.ready;
+      if (!api.usedOfflineData) await offline.markOnline();
+      // A successful session restore is the safest time to retry additions
+      // recorded while the phone was offline.
+      await api.flushPendingOperations();
       notifyListeners();
     } on ApiException catch (caught) {
       if (caught.isUnauthorized) {

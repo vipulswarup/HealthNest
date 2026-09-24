@@ -25,6 +25,7 @@ class _MorePageState extends State<MorePage> {
   List<Household> _households = const [];
   String? _activeId;
   bool _loading = true;
+  int _pendingCount = 0;
   int _epoch = -1;
 
   @override
@@ -42,11 +43,14 @@ class _MorePageState extends State<MorePage> {
   Future<void> _load() async {
     try {
       final home = await SessionScope.of(context).api.dashboard();
+      final pending = await SessionScope.of(context).api
+          .pendingOperationCount();
       if (!mounted) return;
       setState(() {
         _households = home.households;
         _activeId = home.householdId;
         _loading = false;
+        _pendingCount = pending;
       });
     } catch (_) {
       if (!mounted) return;
@@ -64,6 +68,40 @@ class _MorePageState extends State<MorePage> {
 
   void _open(Widget page) {
     Navigator.of(context).push(CupertinoPageRoute<void>(builder: (_) => page));
+  }
+
+  Future<void> _signOut() async {
+    final session = SessionScope.of(context);
+    final pending = await session.api.pendingOperationCount();
+    if (!mounted) return;
+    if (pending > 0) {
+      await showCupertinoDialog<void>(
+        context: context,
+        builder: (dialogContext) => CupertinoAlertDialog(
+          title: const Text('Uploads waiting'),
+          content: Text(
+            '$pending item${pending == 1 ? '' : 's'} still need to sync. Connect to the internet before signing out so they are not lost.',
+          ),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text('Sync now'),
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await session.api.flushPendingOperations();
+                if (mounted) await _load();
+              },
+            ),
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              child: const Text('Cancel'),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    await session.signOut();
   }
 
   @override
@@ -114,6 +152,19 @@ class _MorePageState extends State<MorePage> {
                 ),
               CupertinoListSection.insetGrouped(
                 children: [
+                  if (_pendingCount > 0)
+                    CupertinoListTile(
+                      title: const Text('Waiting to sync'),
+                      subtitle: Text(
+                        '$_pendingCount saved offline item${_pendingCount == 1 ? '' : 's'}',
+                      ),
+                      trailing: const Icon(CupertinoIcons.cloud_upload),
+                      onTap: () async {
+                        await SessionScope.of(context).api
+                            .flushPendingOperations();
+                        if (mounted) await _load();
+                      },
+                    ),
                   CupertinoListTile(
                     title: const Text('Add a Report'),
                     trailing: const CupertinoListTileChevron(),
@@ -161,7 +212,7 @@ class _MorePageState extends State<MorePage> {
                       'Sign Out',
                       style: TextStyle(color: SvColors.danger),
                     ),
-                    onTap: () => session.signOut(),
+                    onTap: _signOut,
                   ),
                 ],
               ),

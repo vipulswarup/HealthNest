@@ -6,6 +6,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 import 'package:sanovault/api/models.dart';
+import 'package:sanovault/api/api_exception.dart';
 import 'package:sanovault/features/reports/pdf_password_prompt.dart';
 import 'package:sanovault/session/session_scope.dart';
 import 'package:sanovault/theme/sv_colors.dart';
@@ -27,6 +28,8 @@ class _AddReportPageState extends State<AddReportPage> {
   List<Category> _categories = const [];
   String? _patientId;
   String? _documentId;
+  List<int>? _offlineBytes;
+  String? _offlineFilename;
   String _ocrText = '';
   String _recordType = 'LAB_REPORT';
   final _source = TextEditingController();
@@ -36,7 +39,8 @@ class _AddReportPageState extends State<AddReportPage> {
   String? _error;
   bool _saving = false;
 
-  bool get _supportsDocumentScanner => !kIsWeb && (Platform.isIOS || Platform.isAndroid);
+  bool get _supportsDocumentScanner =>
+      !kIsWeb && (Platform.isIOS || Platform.isAndroid);
 
   @override
   void initState() {
@@ -97,7 +101,9 @@ class _AddReportPageState extends State<AddReportPage> {
         try {
           final path = paths.first;
           final bytes = await File(path).readAsBytes();
-          final filename = path.toLowerCase().endsWith('.pdf') ? 'scan.pdf' : 'scan.jpg';
+          final filename = path.toLowerCase().endsWith('.pdf')
+              ? 'scan.pdf'
+              : 'scan.jpg';
           await _process(bytes, filename);
         } finally {
           try {
@@ -107,7 +113,10 @@ class _AddReportPageState extends State<AddReportPage> {
         return;
       }
 
-      final shot = await ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 85);
+      final shot = await ImagePicker().pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+      );
       if (shot == null) {
         if (mounted) setState(() => _status = '');
         return;
@@ -119,7 +128,10 @@ class _AddReportPageState extends State<AddReportPage> {
 
   Future<void> _pickGallery() async {
     await _beginPick(() async {
-      final shot = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
+      final shot = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
       if (shot == null) {
         if (mounted) setState(() => _status = '');
         return;
@@ -134,8 +146,23 @@ class _AddReportPageState extends State<AddReportPage> {
       final file = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: [
-          'pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'tif', 'tiff', 'gif', 'bmp', 'avif',
-          'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+          'pdf',
+          'jpg',
+          'jpeg',
+          'png',
+          'webp',
+          'heic',
+          'tif',
+          'tiff',
+          'gif',
+          'bmp',
+          'avif',
+          'doc',
+          'docx',
+          'xls',
+          'xlsx',
+          'ppt',
+          'pptx',
         ],
       );
       if (file == null) {
@@ -157,9 +184,32 @@ class _AddReportPageState extends State<AddReportPage> {
   Future<void> _process(List<int> bytes, String filename) async {
     final api = SessionScope.of(context).api;
     setState(() => _status = 'Uploading…');
-    final uploaded = await api.uploadDocument(bytes, filename, patientId: _patientId);
-    final documentId = uploaded['id'] as String? ?? uploaded['_id'] as String? ?? uploaded['documentId'] as String?;
-    if (documentId == null) throw Exception('Upload did not return a document.');
+    Map<String, dynamic> uploaded;
+    try {
+      uploaded = await api.uploadDocument(
+        bytes,
+        filename,
+        patientId: _patientId,
+      );
+    } catch (caught) {
+      if (caught is ApiException && caught.statusCode >= 400) rethrow;
+      // The attachment is retained in the durable offline queue. OCR and
+      // classification will happen after the upload succeeds.
+      if (!mounted) return;
+      setState(() {
+        _offlineBytes = bytes;
+        _offlineFilename = filename;
+        _documentId = 'offline-pending';
+        _status = 'Saved on this phone. It will upload when you are online.';
+      });
+      return;
+    }
+    final documentId =
+        uploaded['id'] as String? ??
+        uploaded['_id'] as String? ??
+        uploaded['documentId'] as String?;
+    if (documentId == null)
+      throw Exception('Upload did not return a document.');
     setState(() {
       _documentId = documentId;
       _status = 'Reading the pages…';
@@ -171,7 +221,10 @@ class _AddReportPageState extends State<AddReportPage> {
       documentId: documentId,
       patientId: _patientId,
     );
-    final isOffice = RegExp(r'\.(docx?|xlsx?|pptx?)$', caseSensitive: false).hasMatch(filename);
+    final isOffice = RegExp(
+      r'\.(docx?|xlsx?|pptx?)$',
+      caseSensitive: false,
+    ).hasMatch(filename);
     if (!isOffice) {
       try {
         text = await ocrWithPasswordPrompt(
@@ -221,6 +274,20 @@ class _AddReportPageState extends State<AddReportPage> {
           doctor = await SessionScope.of(context).api.matchDoctor(doctor);
         } catch (_) {}
       }
+      if (_offlineBytes != null && _offlineFilename != null) {
+        await SessionScope.of(context).api.queueOfflineReport(
+          bytes: _offlineBytes!,
+          filename: _offlineFilename!,
+          patientId: _patientId!,
+          recordType: _recordType,
+          source: source.isEmpty ? 'Not specified' : source,
+          doctorName: doctor,
+          documentDate: formatIsoDate(_date),
+          ocrText: _ocrText,
+        );
+        if (mounted) Navigator.of(context).pop();
+        return;
+      }
       await SessionScope.of(context).api.createHealthRecord({
         'patientId': _patientId,
         'recordType': _recordType,
@@ -248,7 +315,11 @@ class _AddReportPageState extends State<AddReportPage> {
       error: _error,
       trailing: _saving
           ? const CupertinoActivityIndicator()
-          : CupertinoButton(padding: EdgeInsets.zero, onPressed: _save, child: const Text('Save')),
+          : CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: _save,
+              child: const Text('Save'),
+            ),
       child: Column(
         children: [
           PersonPicker(
@@ -262,9 +333,19 @@ class _AddReportPageState extends State<AddReportPage> {
               children: [
                 Row(
                   children: [
-                    Expanded(child: SvFilledButton(label: 'Scan', onPressed: _scanDocument)),
+                    Expanded(
+                      child: SvFilledButton(
+                        label: 'Scan',
+                        onPressed: _scanDocument,
+                      ),
+                    ),
                     const SizedBox(width: 12),
-                    Expanded(child: SvFilledButton(label: 'Photos', onPressed: _pickGallery)),
+                    Expanded(
+                      child: SvFilledButton(
+                        label: 'Photos',
+                        onPressed: _pickGallery,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -275,7 +356,10 @@ class _AddReportPageState extends State<AddReportPage> {
           if (_status.isNotEmpty)
             Padding(
               padding: const EdgeInsets.all(16),
-              child: Text(_status, style: const TextStyle(color: SvColors.slate)),
+              child: Text(
+                _status,
+                style: const TextStyle(color: SvColors.slate),
+              ),
             ),
           CupertinoFormSection.insetGrouped(
             children: [
@@ -293,7 +377,9 @@ class _AddReportPageState extends State<AddReportPage> {
                                 for (final category in _categories)
                                   CupertinoActionSheetAction(
                                     onPressed: () {
-                                      setState(() => _recordType = category.code);
+                                      setState(
+                                        () => _recordType = category.code,
+                                      );
                                       Navigator.pop(context);
                                     },
                                     child: Text(category.displayName),
@@ -309,8 +395,16 @@ class _AddReportPageState extends State<AddReportPage> {
                   child: Text(_recordType.replaceAll('_', ' ')),
                 ),
               ),
-              CupertinoTextFormFieldRow(controller: _source, prefix: const Text('Source'), placeholder: 'Lab or hospital'),
-              CupertinoTextFormFieldRow(controller: _doctor, prefix: const Text('Doctor'), placeholder: 'Optional'),
+              CupertinoTextFormFieldRow(
+                controller: _source,
+                prefix: const Text('Source'),
+                placeholder: 'Lab or hospital',
+              ),
+              CupertinoTextFormFieldRow(
+                controller: _doctor,
+                prefix: const Text('Doctor'),
+                placeholder: 'Optional',
+              ),
             ],
           ),
         ],

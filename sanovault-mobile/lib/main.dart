@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -9,6 +10,7 @@ import 'package:sanovault/api/sanovault_api.dart';
 import 'package:sanovault/app.dart';
 import 'package:sanovault/session/session_controller.dart';
 import 'package:sanovault/session/session_store.dart';
+import 'package:sanovault/session/offline_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,8 +21,14 @@ Future<void> main() async {
   }
   pdfrxFlutterInitialize();
   final store = SessionStore();
-  final api = SanoVaultApi(ApiClient(readToken: store.readToken));
-  final session = SessionController(api: api, store: store);
-  await session.restore();
+  final offline = OfflineStore();
+  final api = SanoVaultApi(
+    ApiClient(readToken: store.readToken),
+    offlineStore: offline,
+  );
+  final session = SessionController(api: api, store: store, offline: offline);
   runApp(SanoVaultApp(session: session));
+  // Render the shell immediately. Session restore can use the offline cache,
+  // and the first frame no longer waits on a hospital's network connection.
+  unawaited(session.restore());
 }
