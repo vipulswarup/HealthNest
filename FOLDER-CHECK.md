@@ -2,7 +2,7 @@
 
 Decisions for importing a local health-file tree into SanoVault from the macOS Flutter app, then re-checking that folder on demand.
 
-This file is the working spec. Update it whenever a decision changes.
+This file is the working spec. Update it whenever a decision changes. Status: all three phases are implemented (see Implementation plan). Build and run instructions are in [sanovault-mobile/README.md](./sanovault-mobile/README.md); the backend it uses is described in [sanovault-web/README.md](./sanovault-web/README.md).
 
 Client: `sanovault-mobile` on macOS. Backend: existing `sanovault-web` APIs. SanoVault remains the source of truth after files are in the vault.
 

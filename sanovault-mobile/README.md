@@ -1,12 +1,16 @@
 # SanoVault Mobile
 
-Flutter client for the SanoVault family folder. Product plan: [PLAN.md](./PLAN.md).
+Flutter client for the SanoVault family folder: a Cupertino app for iOS, Android and macOS that talks to the API in [`../sanovault-web`](../sanovault-web) (default `https://www.sanovault.com`).
 
-Cupertino app for iOS, Android, and macOS against `https://www.sanovault.com`.
+Scope, architecture and open work: [PLAN.md](./PLAN.md). Shared design rules (palette, tabs, ordering): [../DESIGN.md](../DESIGN.md). Mac folder import: [../FOLDER-CHECK.md](../FOLDER-CHECK.md).
+
+## What the app does
+
+Home with one card per person; Reports (sorted by document date); a Log tab for symptoms and notes, blood pressure, height and weight, medicines and reports; medicines with photo scan; doctor packet; vaccinations; family sharing; offline cache and queue; share-sheet import from other apps (such as WhatsApp); Folder Check on macOS.
 
 ## Version
 
-Current store release in `pubspec.yaml`: **0.0.1+1** (version name `0.0.1`, build number `1`).
+Current store release in `pubspec.yaml`: **0.0.2+200** (version name `0.0.2`, build number `200`). This sets iOS/macOS bundle version and Android version name/code through Flutter's build configuration.
 
 ## Run (debug)
 
@@ -17,12 +21,30 @@ flutter run                 # pick device
 flutter run -d macos
 ```
 
-Sign in with an existing SanoVault account. Email / Google / magic link opens the website inside a system auth session, then returns here. Sign in with Apple needs the `com.sanovault.app` App ID and capability on the Apple Developer team.
+Requires Flutter 3.47+ (Dart 3.13+). Sign in with an existing SanoVault account. Email / Google / magic link opens the website inside a system auth session, then returns here. Sign in with Apple needs the `com.sanovault.app` App ID and capability on the Apple Developer team.
 
 To point at a local API:
 
 ```bash
 flutter run --dart-define=API_URL=http://localhost:3001
+```
+
+## Test and analyze
+
+```bash
+flutter analyze
+flutter test
+```
+
+## Source layout
+
+```
+lib/api/        HTTP client, models, endpoint wrappers (with the offline cache fallbacks)
+lib/session/    Sign-in state, shared people list (PeopleStore), offline store and queue, preferences
+lib/theme/      Palette tokens (SvColors) and Cupertino theme
+lib/features/   One folder per area: home, reports, log, vitals, tracking, medicines, family, doctor, more, ...
+lib/widgets/    Shared controls: person picker, page scaffold, date picker, PeopleAware mixin
+ios/ShareExtension/   iOS share-sheet extension
 ```
 
 ## Store release builds

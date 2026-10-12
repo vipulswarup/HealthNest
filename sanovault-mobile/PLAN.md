@@ -1,216 +1,65 @@
-# SanoVault Flutter App Plan
+# SanoVault Mobile: scope, architecture and status
 
-A native iOS-first Flutter client with the same product surface as `sanovault-web`. The web app remains the API and the desktop experience. This app is the phone and iPad experience.
+The phone, iPad and Mac experience of SanoVault. The website in `../sanovault-web` is both the desktop experience and the API. This file is the status and roadmap; how to build and release is in [README.md](./README.md); visual and interaction rules are in [../DESIGN.md](../DESIGN.md).
 
-## Assumptions
+## Principles
 
-These are explicit so later phases do not reopen settled decisions.
-
-1. **iOS first.** The family is on Apple devices. Android is scaffolded by Flutter but not polished until the iOS app covers the web product.
-2. **Same backend.** The app talks to the existing Next.js API. Default base URL is `https://www.sanovault.com`. Local development can override with `--dart-define=API_URL=http://localhost:3001`.
-3. **No new backend for Phase 1.** Mobile session, Sign in with Apple, bearer auth, dashboard, households, patients, and beta acknowledgement already exist.
-4. **Auth model.** The native app never relies on web cookies. It stores a bearer token from `POST /api/auth/mobile/apple` or from the web native-bridge (`sanovault://auth?token=`).
-5. **Bundle ID** stays `com.sanovault.app`. That is already the Apple token audience on the server.
-6. **Apple look.** Cupertino widgets, large titles, grouped lists, system navigation, tab bar. SanoVault coral (`#EF8354`) is the accent. Typography is San Francisco (system). Light mode first.
-7. **API is source of truth.** No local health-record database. Secure storage holds the session token only. Last-used person is a local preference.
-8. **Parity means product flows, not pixel copies of the website.** Labels, data, and actions match the web. Layout follows iOS Human Interface Guidelines.
-9. **HealthKit, share extension, and push wait.** The previous React Native attempt mixed too many native extras into v1. Those return after core flows work.
-10. **Beta acknowledgement is mandatory** before any health-data API, matching `getCurrentUser()` on the server.
-
-## Product surface to match
-
-| Web route | What it does |
-|---|---|
-| `/auth/signin`, `/auth/signup` | Email, password, magic link, Google. Native also has Sign in with Apple. |
-| `/beta-acknowledgement` | Required legal gate |
-| `/dashboard` | Family home: people, recent files, invites, empty states |
-| `/patients` | Family member profiles |
-| `/health-records` | Reports list, detail, document view |
-| `/health-records/new` | Capture, OCR, classify, save |
-| `/medications` | Active and past medicines, photo extract, printable report |
-| `/for-the-doctor` | One-screen doctor packet and share |
-| `/bp`, `/growth` | Blood pressure and height/weight |
-| `/vaccinations`, `/visit-notes` | Tracking lists |
-| `/households` | Who can see this: create, invite, switch |
-| `/reports/blood-summary` | Lab comparison |
+1. **Same backend.** No separate mobile service. Base URL defaults to `https://www.sanovault.com`; override with `--dart-define=API_URL=...`.
+2. **Bearer-token auth.** The app never uses web cookies. A token comes from Sign in with Apple (`POST /api/auth/mobile/apple`), email and password (`/api/auth/mobile/password`) or the web bridge (`sanovault://auth?token=`). It is kept in secure storage and revoked on sign-out.
+3. **Beta acknowledgement first.** No health data is requested before the current terms are accepted.
+4. **The server is the source of truth, with an on-device cache.** Lightweight JSON (people, dashboard, records, readings, notes) is cached in secure storage so screens open instantly and work offline for up to 30 days since the last online check. Additions made offline (readings, notes, reports) are queued and sent when the connection returns. The cache and queue are wiped on sign-out.
+5. **Parity of flows, not pixels.** Labels and data match the website; layout follows iOS conventions.
+6. **Bundle ID** `com.sanovault.app`, share extension `com.sanovault.app.ShareExtension`, App Group `group.com.sanovault.app`.
 
 ## Architecture
 
-```
-sanovault-mobile/
-  lib/
-    api/           HTTP client, models, endpoint wrappers
-    session/       Token storage and auth state
-    theme/         Cupertino colors, text, buttons
-    features/      One folder per product area
-    widgets/       Shared Cupertino controls
-```
-
 - Flutter 3.47, Dart 3.13, `CupertinoApp`.
-- `http` for API calls with `Authorization: Bearer`.
-- `flutter_secure_storage` for the session token.
-- `sign_in_with_apple` for native Apple sign-in.
-- `flutter_web_auth_2` for email / Google / magic-link via `/auth/signin?native=1`.
-- URL scheme `sanovault://` (already used by `app/auth/native-bridge`).
+- `http` client with bearer auth; `flutter_secure_storage` for the token and the cache; `shared_preferences` for the last-used person.
+- `SessionController` holds sign-in state and owns the shared **`PeopleStore`**. Every screen reads the people list from it (memory, then cache, then network) through the `PeopleAware` mixin, so pickers never wait on a fetch.
+- Per-person lists (reports, readings, notes) follow *cache first, refresh in the background*, with a generation counter so a slow response for a previous person is ignored.
+- Share sheet: `share_handler` plus the iOS extension open the import screen, which uploads and creates a "needs review" record; the server reads the document in the background.
+- Reports can be scanned (`cunning_document_scanner`), picked from photos or files, and viewed with `pdfrx` (PDFKit on Apple platforms).
 
-Tab bar (five items, iOS standard):
+## Tabs
 
-1. Home
-2. Family
-3. Reports
-4. Medicines
-5. More (For the Doctor, Who Can See This, account)
+Home · Reports · Log · Medicines · More. See [../DESIGN.md](../DESIGN.md#navigation) for what each contains and the rules behind it.
 
-Primary capture ("Add a Report") is a Home / person-card action, not a fifth competing tab. That matches the web home, not the web's cramped bottom bar.
+## Status
 
----
+| Area | Status |
+| --- | --- |
+| Sign-in (Apple, email, web bridge), beta gate, session restore, sign-out | Done |
+| Home, households, invites, add person, person profile and edit | Done |
+| Reports: list by document date with month headers, search, needs-review filter, detail, document viewer, offline copies | Done |
+| Add a report: scan, photos, files; OCR, classify, tag; password-protected PDFs; offline queue | Done |
+| Share-sheet import (iOS/Android) | Done; PDFs are unlocked on the server with the person's saved passwords |
+| Medicines: list, scan a label, review before saving, mark as stopped | Done |
+| Log tab; Symptoms & Notes (edit, delete, backdate, grouped by date); Blood pressure (edit, delete, 7/30/90-day history, average); Height and weight; Vaccinations | Done |
+| Doctor packet | Done |
+| Privacy controls: AI processing consent, account deletion, privacy policy | Done |
+| macOS Folder Check | Done; see [../FOLDER-CHECK.md](../FOLDER-CHECK.md) |
+| Teal palette and new navigation | Done, awaiting on-device visual review |
+| Apple Health / Health Connect blood-pressure sync (server endpoint exists) | Not started in the app |
+| Push notifications (device registration endpoint exists) | Not started in the app |
 
-## Phase 1 — Foundation and Family Home
+## Open work
 
-**Status: implemented. Ready to test on the iOS Simulator or a device.**
+Ordered by value.
 
-**Goal:** A signed-in family member can open the iOS app, pass the beta gate, and see the same family home the website shows.
+1. **On-device review** of the new palette, Log tab, Reports and Symptoms & Notes screens; time the BP and share flows before and after the speed work.
+2. **Needs-review inbox**: a count badge on the Reports tab and quick clearing of imported items.
+3. **Medicine reminders**: local notifications for doses and refills.
+4. **Blood-pressure trends**: chart, plus Apple Health / Health Connect sync.
+5. **Editing offline items**: allow changing a note or reading that has not synced yet (today the app asks the person to wait).
+6. **Accessibility pass**: explicit screen-reader labels, large-text layouts, contrast audit of every screen.
+7. **Dirty-form guard** when switching person mid-entry; consistent loading, empty and error states across the remaining screens.
+8. **Consolidate the cache**: it currently uses secure storage for all JSON; a lighter store may be faster for large lists.
+9. **Tests**: ordering and models are covered; add widget tests for the Log, Reports and Symptoms screens.
+10. **Dependency upgrades**: many packages have newer versions.
 
-**In this phase**
+## Decisions on record
 
-- Flutter project, bundle ID `com.sanovault.app`, Cupertino theme
-- Sign in with Apple
-- Email / Google / magic link through the existing web native-bridge
-- Secure token storage, restore session on launch, sign out (revoke token)
-- Beta acknowledgement screen
-- Home: households empty state, pending invites, person cards, recent files
-- Create a household, accept an invite, add a person (minimum fields)
-- Household switcher
-- Tab shell with later tabs as honest placeholders
-
-**Out of this phase**
-
-- Report capture / OCR / document viewer
-- Medicines, doctor packet, BP, growth, vaccines, visit notes
-- HealthKit, push, share extension
-- Android visual polish
-
-**Test**
-
-Install on the iOS Simulator or a device, sign in with an existing SanoVault account, confirm Home matches the website for that household, add a person, sign out, sign back in.
-
----
-
-## Phase 2 — Family profiles
-
-**Goal:** Full person records, not just the home cards.
-
-- Family tab: list, search, person detail
-- Edit person (name, DOB, gender, blood group, ABHA, contacts, hospital IDs)
-- Last-used person preference shared with Home
-- Empty and error states in the same Cupertino language as Home
-
-APIs: `GET/POST /api/patients`, `GET/PUT/DELETE /api/patients/:id`
-
----
-
-## Phase 3 — Reports browse
-
-**Goal:** Read the vault the way the website does.
-
-- Reports tab: filter by person, type, keyword, date
-- Record detail (type, source, doctor, tags, extracted data)
-- Document preview and download via existing file/preview routes
-- Deep link from Home recent files
-
-APIs: `GET /api/health-records`, `GET /api/health-records/:id`, document view/file/preview routes
-
----
-
-## Phase 4 — Add a Report
-
-**Goal:** The capture path that makes the app worth installing.
-
-- Camera, photo library, and files
-- Upload to `POST /api/documents/upload`
-- OCR (`/api/ocr/process`) and AI classify / tag / source match
-- Review screen, then `POST /api/health-records`
-- Multi-file queue, matching the web add-report flow
-- Page-limit and file-type rules enforced client-side before upload
-
-This is the largest product phase. Keep it on iOS until the flow is boringly reliable.
-
----
-
-## Phase 5 — Medicines
-
-**Goal:** Active list, add/edit, photo-from-label, printable report.
-
-- Medicines tab scoped to a person
-- Add / edit / stop, composition lookup via catalogue search
-- Photo extract (`POST /api/medications/extract-from-photo`)
-- Share / print medication report
-
-APIs: `/api/medications`, `/api/medication-catalog/search`, `/api/reports/medications`
-
----
-
-## Phase 6 — For the Doctor
-
-**Goal:** One screen a family member can hand to a clinician.
-
-- Person picker
-- Packet from `GET /api/reports/doctor-packet`
-- Native share sheet (and WhatsApp when installed)
-- Blood-summary route as a secondary lab view
-
----
-
-## Phase 7 — Vitals
-
-**Goal:** BP and growth without leaving the app.
-
-- Log BP, week view
-- Height and weight history
-- Bidirectional Apple Health in a follow-up slice inside this phase, after manual logging works
-- Vault wins on conflicts (same rule as the earlier native plan)
-
-APIs: `/api/vitals/blood-pressure`, `/api/vitals/blood-pressure/sync`, `/api/vitals/growth`
-
----
-
-## Phase 8 — Tracking and household admin
-
-**Goal:** Close remaining web parity.
-
-- Vaccinations
-- Visit notes
-- Who Can See This: members, invites, leave, switch
-- Invite create/share from the phone
-
----
-
-## Phase 9 — Native extras and store
-
-**Goal:** Behave like an iOS app, not a website in a wrapper.
-
-- APNs via existing `POST /api/devices`
-- iOS Share Extension into Add a Report
-- HealthKit (if not finished in Phase 7)
-- App Store assets, TestFlight, Android visual pass
-- Offline-tolerant queues only if capture still fails on poor networks
-
----
-
-## Phase 1 implementation notes
-
-Auth sequence:
-
-1. Launch. If a token exists, `GET /api/users/beta-acknowledgement`.
-2. 401: clear token, show Sign In.
-3. Not acknowledged: beta screen, then `POST /api/users/beta-acknowledgement`.
-4. Acknowledged: `GET /api/dashboard` and `GET /api/users/me`.
-
-Sign in:
-
-- Apple: identity token to `POST /api/auth/mobile/apple`.
-- Other methods: `ASWebAuthenticationSession` to `/auth/signin?native=1`, callback `sanovault://auth?token=`.
-
-Home data comes only from `GET /api/dashboard`. Switching household uses `PATCH /api/me/active-household`, then reload dashboard.
-
-Minimum add-person fields match the website: first name, last name, date of birth, gender, household id.
+- Family tab removed; people management lives under More → People and on Home.
+- Pinned notes removed; strictly newest first.
+- "Add a report" exists only under Reports (and via the share sheet and the Log tab).
+- Palette: calm clinical teal (cream and coral retired).
