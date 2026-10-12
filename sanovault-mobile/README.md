@@ -10,7 +10,7 @@ Home with one card per person; Reports (sorted by document date); a Log tab for 
 
 ## Version
 
-Current store release in `pubspec.yaml`: **0.0.2+200** (version name `0.0.2`, build number `200`). This sets iOS/macOS bundle version and Android version name/code through Flutter's build configuration.
+Current store release in `pubspec.yaml`: **0.0.3+201** (version name `0.0.3`, build number `201`). This sets iOS/macOS bundle version and Android version name/code through Flutter's build configuration.
 
 ## Run (debug)
 
