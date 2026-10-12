@@ -147,7 +147,7 @@ class SanoVaultApi {
             .map((item) => item['id']?.toString())
             .whereType<String>()
             .toList();
-        unawaited(_prefetchRecentForPatients(patientIds));
+        _schedulePrefetch(patientIds);
       }
       await _offline?.markOnline();
       usedOfflineData = false;
@@ -249,6 +249,37 @@ class SanoVaultApi {
     }
   }
 
+  /// Forget the cached people list, e.g. after switching family folder.
+  Future<void> forgetPeopleCache() async =>
+      _offline?.removeJson('patients');
+
+  /// People from the on-device cache only; null when nothing is cached yet.
+  Future<List<Person>?> cachedPatients() async {
+    final cached = await _offline?.readJson('patients');
+    return cached is List ? _peopleFromJson(cached) : null;
+  }
+
+  Future<BloodPressureWeek?> cachedBloodPressure(String patientId) async {
+    final cached = await _offline?.readJson('bp.$patientId');
+    return cached is Map
+        ? BloodPressureWeek.fromJson(Map<String, dynamic>.from(cached))
+        : null;
+  }
+
+  Future<VisitNoteList?> cachedVisitNotes(String patientId) async {
+    final cached = await _offline?.readJson('notes.$patientId');
+    return cached is Map
+        ? VisitNoteList.fromJson(Map<String, dynamic>.from(cached))
+        : null;
+  }
+
+  Future<List<HealthRecord>?> cachedHealthRecords({String? patientId}) async {
+    final cached = await _offline?.readJson(
+      _recordsCacheKey(patientId: patientId),
+    );
+    return cached is List ? _recordsFromJson(cached) : null;
+  }
+
   Future<Person> patient(String id) async {
     return Person.fromJson(
       await _client.get('/api/patients/$id') as Map<String, dynamic>,
@@ -287,7 +318,7 @@ class SanoVaultApi {
       await _offline?.markOnline();
       usedOfflineData = false;
       final records = _recordsFromJson(json);
-      unawaited(_cacheRecentDocuments(records));
+      _scheduleDocumentCaching(records);
       return records;
     } catch (error) {
       if (error is ApiException && [401, 403, 404].contains(error.statusCode)) {
@@ -503,14 +534,21 @@ class SanoVaultApi {
     );
   }
 
-  Future<BloodPressureWeek> bloodPressure(String patientId) async {
+  Future<BloodPressureWeek> bloodPressure(
+    String patientId, {
+    int? days,
+  }) async {
     final key = 'bp.$patientId';
     try {
       final json = await _client.get(
         '/api/vitals/blood-pressure',
-        query: {'patientId': patientId},
+        query: {
+          'patientId': patientId,
+          if (days != null) 'days': '$days',
+        },
       ) as Map<String, dynamic>;
-      await _offline?.writeJson(key, json);
+      // Only the default window is cached so offline view stays consistent.
+      if (days == null) await _offline?.writeJson(key, json);
       await _offline?.markOnline();
       usedOfflineData = false;
       return BloodPressureWeek.fromJson(json);
@@ -579,6 +617,32 @@ class SanoVaultApi {
       await _offline.writeJson('bp.$patientId', json);
       return BloodPressureWeek.fromJson(json);
     }
+  }
+
+  Future<BloodPressureWeek> updateBloodPressure({
+    required String readingId,
+    required String patientId,
+    required int systolic,
+    required int diastolic,
+    int? pulse,
+  }) async {
+    final json = await _client.put('/api/vitals/blood-pressure/$readingId', {
+      'systolic': systolic,
+      'diastolic': diastolic,
+      'pulse': pulse,
+    }) as Map<String, dynamic>;
+    await _offline?.writeJson('bp.$patientId', json);
+    return BloodPressureWeek.fromJson(json);
+  }
+
+  Future<BloodPressureWeek> deleteBloodPressure({
+    required String readingId,
+    required String patientId,
+  }) async {
+    final json = await _client.delete('/api/vitals/blood-pressure/$readingId')
+        as Map<String, dynamic>;
+    await _offline?.writeJson('bp.$patientId', json);
+    return BloodPressureWeek.fromJson(json);
   }
 
   Future<GrowthHistory> growth(String patientId) async {
@@ -691,6 +755,37 @@ class SanoVaultApi {
       json['notes'] = notes;
       await _offline.writeJson('notes.$patientId', json);
       return VisitNoteList.fromJson(json);
+    }
+  }
+
+  Future<VisitNoteList> updateVisitNote({
+    required String noteId,
+    required String patientId,
+    required String noteDate,
+    required String observed,
+    required String askDoctor,
+  }) async {
+    final json = await _client.patch('/api/visit-notes/$noteId', {
+      'noteDate': noteDate,
+      'observed': observed,
+      'askDoctor': askDoctor,
+    }) as Map<String, dynamic>;
+    await _offline?.writeJson('notes.$patientId', json);
+    return VisitNoteList.fromJson(json);
+  }
+
+  Future<void> deleteVisitNote({
+    required String noteId,
+    required String patientId,
+  }) async {
+    await _client.delete('/api/visit-notes/$noteId');
+    final cached = await _offline?.readJson('notes.$patientId');
+    if (cached is Map && cached['notes'] is List) {
+      final json = Map<String, dynamic>.from(cached);
+      json['notes'] = (cached['notes'] as List)
+          .where((item) => item is! Map || '${item['id']}' != noteId)
+          .toList();
+      await _offline?.writeJson('notes.$patientId', json);
     }
   }
 
@@ -858,6 +953,34 @@ class SanoVaultApi {
         // A background download must never prevent the report index loading.
       }
     }
+  }
+
+  DateTime? _lastPrefetch;
+
+  /// Background caching must never compete with what the person just tapped,
+  /// so it waits until the app has been quiet for a while, at most every 10 minutes.
+  void _schedulePrefetch(List<String> patientIds) {
+    final last = _lastPrefetch;
+    if (last != null &&
+        DateTime.now().difference(last) < const Duration(minutes: 10)) {
+      return;
+    }
+    _lastPrefetch = DateTime.now();
+    unawaited(
+      Future<void>.delayed(
+        const Duration(seconds: 20),
+        () => _prefetchRecentForPatients(patientIds),
+      ),
+    );
+  }
+
+  void _scheduleDocumentCaching(List<HealthRecord> records) {
+    unawaited(
+      Future<void>.delayed(
+        const Duration(seconds: 15),
+        () => _cacheRecentDocuments(records),
+      ),
+    );
   }
 
   Future<void> _prefetchRecentForPatients(List<String> patientIds) async {

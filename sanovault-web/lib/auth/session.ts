@@ -5,7 +5,7 @@ import { getUserFromMobileToken, parseBearerToken } from '@/lib/auth/mobile-sess
 import { sql } from '@/lib/db/neon';
 import { BETA_ACKNOWLEDGEMENT_VERSION } from '@/lib/legal/beta-acknowledgement';
 
-export type CurrentUser = { id: string; email: string; name: string };
+export type CurrentUser = { id: string; email: string; name: string; acknowledged?: boolean };
 
 function splitName(name: string) {
   const [firstName, ...rest] = name.trim().split(/\s+/);
@@ -58,6 +58,8 @@ export const getAuthenticatedUser = cache(resolveAuthenticatedUser);
 async function resolveCurrentUser(): Promise<CurrentUser | null> {
   const user = await getAuthenticatedUser();
   if (!user) return null;
+  // Mobile tokens resolve the acknowledgement in the same query as the session.
+  if (user.acknowledged !== undefined) return user.acknowledged ? user : null;
 
   const [acknowledgement] = await sql`
     SELECT 1

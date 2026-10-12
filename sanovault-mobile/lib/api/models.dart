@@ -432,6 +432,7 @@ class BloodPressureReading {
     this.pulse,
     this.period,
     this.source,
+    this.vaultOwned = true,
   });
 
   final String id;
@@ -442,6 +443,11 @@ class BloodPressureReading {
   final int? pulse;
   final String? period;
   final String? source;
+
+  /// Device-synced readings that were never edited cannot be deleted here.
+  final bool vaultOwned;
+
+  bool get isPending => id.startsWith('pending-');
 
   factory BloodPressureReading.fromJson(Map<String, dynamic> json) {
     final systolic = int.tryParse('${json['systolic'] ?? ''}') ?? 0;
@@ -458,6 +464,7 @@ class BloodPressureReading {
       pulse: pulseValue == null ? null : int.tryParse('$pulseValue'),
       period: json['period']?.toString(),
       source: json['source']?.toString(),
+      vaultOwned: json['vaultOwned'] != false,
     );
   }
 }
@@ -467,20 +474,31 @@ class BloodPressureWeek {
   final List<String> lines;
   final List<BloodPressureReading> readings;
   factory BloodPressureWeek.fromJson(Map<String, dynamic> json) {
+    final readings =
+        (json['readings'] as List?)
+            ?.whereType<Map>()
+            .map(
+              (item) => BloodPressureReading.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
+            .toList() ??
+        <BloodPressureReading>[];
+    // Newest first, with a deterministic tie-breaker; unreadable times last.
+    readings.sort((a, b) {
+      final aDate = a.recordedAt;
+      final bDate = b.recordedAt;
+      if (aDate == null && bDate == null) return b.id.compareTo(a.id);
+      if (aDate == null) return 1;
+      if (bDate == null) return -1;
+      final byDate = bDate.compareTo(aDate);
+      return byDate == 0 ? b.id.compareTo(a.id) : byDate;
+    });
     return BloodPressureWeek(
       lines:
           (json['lines'] as List?)?.map((item) => item.toString()).toList() ??
           const [],
-      readings:
-          (json['readings'] as List?)
-              ?.whereType<Map>()
-              .map(
-                (item) => BloodPressureReading.fromJson(
-                  Map<String, dynamic>.from(item),
-                ),
-              )
-              .toList() ??
-          const [],
+      readings: readings,
     );
   }
 }
@@ -538,18 +556,62 @@ class VaccinationList {
   }
 }
 
+class VisitNote {
+  const VisitNote({
+    required this.id,
+    required this.patientId,
+    required this.noteDate,
+    this.observed = '',
+    this.askDoctor = '',
+    this.createdAt,
+  });
+
+  final String id;
+  final String patientId;
+  final String noteDate;
+  final String observed;
+  final String askDoctor;
+  final DateTime? createdAt;
+
+  /// Added on this device and not yet accepted by the server.
+  bool get isPending => id.startsWith('pending-');
+
+  factory VisitNote.fromJson(Map<String, dynamic> json) {
+    return VisitNote(
+      id: '${json['id'] ?? ''}',
+      patientId: '${json['patientId'] ?? ''}',
+      noteDate: _string(json['noteDate']) ?? '',
+      observed: '${json['observed'] ?? ''}',
+      askDoctor: '${json['askDoctor'] ?? ''}',
+      createdAt: DateTime.tryParse('${json['createdAt'] ?? ''}'),
+    );
+  }
+}
+
 class VisitNoteList {
   const VisitNoteList({required this.notes, this.nextAppointment});
-  final List<Map<String, dynamic>> notes;
+
+  /// Newest note first: by the date the note is about, then by when it was added.
+  final List<VisitNote> notes;
   final String? nextAppointment;
+
   factory VisitNoteList.fromJson(Map<String, dynamic> json) {
+    final notes =
+        (json['notes'] as List?)
+            ?.whereType<Map>()
+            .map((item) => VisitNote.fromJson(Map<String, dynamic>.from(item)))
+            .toList() ??
+        <VisitNote>[];
+    notes.sort((a, b) {
+      final byDate = b.noteDate.compareTo(a.noteDate);
+      if (byDate != 0) return byDate;
+      final aAdded = a.createdAt;
+      final bAdded = b.createdAt;
+      if (aAdded != null && bAdded != null) return bAdded.compareTo(aAdded);
+      return b.id.compareTo(a.id);
+    });
     return VisitNoteList(
-      notes:
-          (json['notes'] as List?)
-              ?.whereType<Map>()
-              .map((item) => Map<String, dynamic>.from(item))
-              .toList() ??
-          const [],
+      notes: notes,
       nextAppointment: json['nextAppointment'] as String?,
     );
   }

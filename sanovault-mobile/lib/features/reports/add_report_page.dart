@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cunning_document_scanner/cunning_document_scanner.dart';
@@ -8,7 +9,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:sanovault/api/models.dart';
 import 'package:sanovault/api/api_exception.dart';
 import 'package:sanovault/features/reports/pdf_password_prompt.dart';
+import 'package:sanovault/session/app_preferences.dart';
 import 'package:sanovault/session/session_scope.dart';
+import 'package:sanovault/widgets/people_aware.dart';
 import 'package:sanovault/theme/sv_colors.dart';
 import 'package:sanovault/util/dates.dart';
 import 'package:sanovault/widgets/person_picker.dart';
@@ -23,8 +26,8 @@ class AddReportPage extends StatefulWidget {
   State<AddReportPage> createState() => _AddReportPageState();
 }
 
-class _AddReportPageState extends State<AddReportPage> {
-  List<Person> _people = const [];
+class _AddReportPageState extends State<AddReportPage>
+    with PeopleAware<AddReportPage> {
   List<Category> _categories = const [];
   String? _patientId;
   String? _documentId;
@@ -58,16 +61,18 @@ class _AddReportPageState extends State<AddReportPage> {
 
   Future<void> _bootstrap() async {
     final api = SessionScope.of(context).api;
+    // Categories only matter for the Type picker, so they must not hold up
+    // the screen; load them alongside the people.
+    unawaited(
+      api.categories().then((categories) {
+        if (mounted) setState(() => _categories = categories);
+      }).catchError((Object _) {}),
+    );
     try {
-      final people = await api.patients();
-      final categories = await api.categories();
-      final selected = _patientId ?? await loadInitialPersonId(people);
+      final list = await ensurePeople();
+      final lastUsed = await AppPreferences().lastPatientId();
       if (!mounted) return;
-      setState(() {
-        _people = people;
-        _categories = categories;
-        _patientId = selected;
-      });
+      setState(() => _patientId = initialPersonFrom(list, _patientId, lastUsed));
     } catch (caught) {
       if (!mounted) return;
       setState(() => _error = caught.toString());
@@ -253,14 +258,19 @@ class _AddReportPageState extends State<AddReportPage> {
           : 'AI processing is off. Enter details manually.',
     );
     var type = 'OTHER';
-    try {
-      if (!aiEnabled) throw StateError('AI processing is disabled');
-      type = await api.classifyDocument(documentId, text);
-    } catch (_) {}
-    try {
-      if (!aiEnabled) throw StateError('AI processing is disabled');
-      await api.suggestTags(documentId, text);
-    } catch (_) {}
+    if (aiEnabled) {
+      // Classification and tagging are independent, so run them together.
+      await Future.wait([
+        api
+            .classifyDocument(documentId, text)
+            .then((value) => type = value)
+            .catchError((Object _) => type),
+        api
+            .suggestTags(documentId, text)
+            .then((_) {})
+            .catchError((Object _) {}),
+      ]);
+    }
     if (!mounted) return;
     setState(() {
       _ocrText = text;
@@ -340,8 +350,9 @@ class _AddReportPageState extends State<AddReportPage> {
       child: Column(
         children: [
           PersonPicker(
-            people: _people,
+            people: people,
             selectedId: _patientId,
+            loading: peopleLoading && people.isEmpty,
             onSelected: (id) => setState(() => _patientId = id),
           ),
           Padding(

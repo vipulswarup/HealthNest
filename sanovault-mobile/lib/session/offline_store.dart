@@ -153,6 +153,9 @@ class OfflineStore {
     }
   }
 
+  Future<void> removeJson(String key) =>
+      _storage.delete(key: '$_cachePrefix$key');
+
   Future<void> markOnline() async {
     await _storage.write(
       key: _lastOnlineKey,

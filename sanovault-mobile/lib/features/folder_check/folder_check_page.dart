@@ -58,7 +58,7 @@ class _FolderCheckPageState extends State<FolderCheckPage> {
 
   Future<void> _bootstrap() async {
     try {
-      final people = await SessionScope.of(context).api.patients();
+      final people = await SessionScope.of(context).people.ensure();
       final selected = await loadInitialPersonId(people);
       if (!mounted) return;
       setState(() {

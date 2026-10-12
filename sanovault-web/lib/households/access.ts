@@ -99,13 +99,16 @@ export async function listPatientsForContext(
   userId: string,
   activeHouseholdId: ActiveHouseholdId
 ): Promise<DatabaseRow[]> {
-  const member = await isHouseholdMember(userId, activeHouseholdId);
-  if (!member) return [];
+  // Membership is checked inside the same statement to save a round-trip.
   return sql`
     SELECT p.*
     FROM patients p
     INNER JOIN household_patients hp ON hp.patient_id = p.id
     WHERE hp.household_id = ${activeHouseholdId}::uuid
+      AND EXISTS (
+        SELECT 1 FROM household_members hm
+        WHERE hm.household_id = hp.household_id AND hm.user_id = ${userId}
+      )
     ORDER BY p.created_at DESC
   `;
 }

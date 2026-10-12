@@ -16,9 +16,12 @@ type AppNavProps = {
 
 const defaultLinks = [
   { href: "/dashboard", label: "Home" },
-  { href: "/patients", label: "Family" },
   { href: "/health-records", label: "Reports" },
+  { href: "/visit-notes", label: "Symptoms & Notes" },
+  { href: "/bp", label: "Blood Pressure" },
   { href: "/medications", label: "Medicines" },
+  { href: "/patients", label: "Family" },
+  { href: "/for-the-doctor", label: "Doctor packet" },
   { href: "/households", label: "Who Can See This" },
   { href: "/privacy", label: "Privacy" },
   { href: "/settings/ai", label: "AI processing settings" },
@@ -26,13 +29,10 @@ const defaultLinks = [
 ];
 
 const bottomLinks = [
-  { href: "/health-records/new", label: "Add", match: "/health-records/new" },
   { href: "/dashboard", label: "Home", match: "/dashboard" },
-  {
-    href: "/for-the-doctor",
-    label: "For the Doctor",
-    match: "/for-the-doctor",
-  },
+  { href: "/health-records", label: "Reports", match: "/health-records" },
+  { href: "/visit-notes", label: "Log", match: "/visit-notes" },
+  { href: "/medications", label: "Medicines", match: "/medications" },
 ] as const;
 
 export default function AppNav({
@@ -314,7 +314,7 @@ function AppNavView({
         className="fixed inset-x-0 bottom-0 z-30 border-t border-silver bg-white pb-[env(safe-area-inset-bottom)] print:hidden lg:hidden"
         aria-label="Main actions"
       >
-        <ul className="mx-auto grid max-w-lg grid-cols-3">
+        <ul className="mx-auto grid max-w-lg grid-cols-4">
           {bottomLinks.map((link) => {
             const active =
               pathname === link.match || pathname.startsWith(`${link.match}/`);
@@ -325,7 +325,7 @@ function AppNavView({
                   prefetch={false}
                   aria-current={active ? "page" : undefined}
                   className={`flex min-h-14 flex-col items-center justify-center px-2 text-sm font-medium ${
-                    active ? "text-ink" : "text-slate"
+                    active ? "text-brand font-semibold" : "text-slate"
                   }`}
                 >
                   {link.label}

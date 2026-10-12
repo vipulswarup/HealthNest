@@ -5,7 +5,7 @@ import 'package:sanovault/features/home/add_person_page.dart';
 import 'package:sanovault/features/home/create_household_page.dart';
 import 'package:sanovault/features/doctor/doctor_page.dart';
 import 'package:sanovault/features/family/person_detail_page.dart';
-import 'package:sanovault/features/reports/add_report_page.dart';
+import 'package:sanovault/features/tracking/visit_notes_page.dart';
 import 'package:sanovault/features/reports/record_detail_page.dart';
 import 'package:sanovault/features/reports/reports_page.dart';
 import 'package:sanovault/features/vitals/bp_page.dart';
@@ -137,7 +137,7 @@ class _HomePageState extends State<HomePage> {
               onPressed: _home?.householdId == null
                   ? _openCreateHousehold
                   : _openAddPerson,
-              child: const Text('Add'),
+              child: const Text('Add person'),
             ),
           ),
           CupertinoSliverRefreshControl(onRefresh: _load),
@@ -146,7 +146,7 @@ class _HomePageState extends State<HomePage> {
             sliver: SliverList.list(
               children: [
                 const Text(
-                  'Choose a Person, Add a Report, or Open What a Doctor Needs.',
+                  'Log a symptom or blood pressure, or open a person.',
                   style: TextStyle(
                     fontSize: 16,
                     color: SvColors.slate,
@@ -269,9 +269,9 @@ class _HomePageState extends State<HomePage> {
           person: person,
           lastUsed: person.id == _lastPatientId,
           recent: recordsByPerson[person.id] ?? const [],
-          onAddReport: () {
+          onLogSymptom: () {
             _markLast(person.id);
-            _open(AddReportPage(patientId: person.id));
+            _open(VisitNotesPage(patientId: person.id));
           },
           onDoctor: () {
             _markLast(person.id);
@@ -304,7 +304,7 @@ class _PersonCard extends StatelessWidget {
     required this.person,
     required this.lastUsed,
     required this.recent,
-    required this.onAddReport,
+    required this.onLogSymptom,
     required this.onDoctor,
     required this.onLogBp,
     required this.onViewAll,
@@ -315,7 +315,7 @@ class _PersonCard extends StatelessWidget {
   final DashboardPerson person;
   final bool lastUsed;
   final List<DashboardRecord> recent;
-  final VoidCallback onAddReport;
+  final VoidCallback onLogSymptom;
   final VoidCallback onDoctor;
   final VoidCallback onLogBp;
   final VoidCallback onViewAll;
@@ -354,16 +354,9 @@ class _PersonCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _MiniButton(
-                  label: 'Add a Report',
+                  label: 'Log Symptom',
                   filled: true,
-                  onPressed: onAddReport,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _MiniButton(
-                  label: 'For the Doctor',
-                  onPressed: onDoctor,
+                  onPressed: onLogSymptom,
                 ),
               ),
               const SizedBox(width: 8),
@@ -375,6 +368,18 @@ class _PersonCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: CupertinoButton(
+              padding: const EdgeInsets.only(top: 8),
+              minimumSize: const Size(0, 32),
+              onPressed: onDoctor,
+              child: const Text(
+                'Prepare doctor packet',
+                style: TextStyle(fontSize: 14, color: SvColors.slate),
+              ),
+            ),
           ),
           const SizedBox(height: 20),
           Row(
@@ -457,8 +462,8 @@ class _MiniButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final background = filled ? SvColors.ink : SvColors.surface;
-    final foreground = filled ? SvColors.cream : SvColors.ink;
+    final background = filled ? SvColors.brand : SvColors.surface;
+    final foreground = filled ? CupertinoColors.white : SvColors.brandStrong;
     return CupertinoButton(
       padding: EdgeInsets.zero,
       minimumSize: const Size(0, 44),

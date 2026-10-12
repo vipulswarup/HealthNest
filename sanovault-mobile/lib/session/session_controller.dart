@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -9,6 +10,7 @@ import 'package:sanovault/api/sanovault_api.dart';
 import 'package:sanovault/session/auth_link_listener.dart';
 import 'package:sanovault/session/session_store.dart';
 import 'package:sanovault/session/offline_store.dart';
+import 'package:sanovault/session/people_store.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 enum SessionStatus { restoring, signedOut, needsAcknowledgement, ready }
@@ -23,6 +25,7 @@ class SessionController extends ChangeNotifier {
   final SanoVaultApi api;
   final SessionStore store;
   final OfflineStore offline;
+  late final PeopleStore people = PeopleStore(api);
 
   SessionStatus status = SessionStatus.restoring;
   Profile? profile;
@@ -43,6 +46,7 @@ class SessionController extends ChangeNotifier {
 
   void invalidateData() {
     dataEpoch += 1;
+    people.markStale();
     notifyListeners();
   }
 
@@ -165,6 +169,7 @@ class SessionController extends ChangeNotifier {
     } catch (_) {}
     await store.clear();
     await offline.clear();
+    people.reset();
     profile = null;
     error = null;
     status = SessionStatus.signedOut;
@@ -173,14 +178,26 @@ class SessionController extends ChangeNotifier {
 
   Future<void> _loadAfterToken() async {
     try {
-      final beta = await api.betaStatus();
+      // These two checks are independent; run them together.
+      // `me()` is refused until the terms are accepted, so a failure there is
+      // only an error if the terms were in fact accepted.
+      Object? meFailure;
+      final results = await Future.wait<Object?>([
+        api.betaStatus(),
+        api.me().then<Object?>((value) => value).catchError((Object error) {
+          meFailure = error;
+          return null;
+        }),
+      ]);
+      final beta = results[0] as BetaStatus;
       if (!beta.acknowledged) {
         profile = null;
         status = SessionStatus.needsAcknowledgement;
         notifyListeners();
         return;
       }
-      profile = await api.me();
+      if (meFailure != null) throw meFailure!;
+      profile = results[1] as Profile;
       if (api.usedOfflineData) {
         final lastOnline = await offline.lastOnline();
         final withinOfflineWindow =
@@ -196,10 +213,11 @@ class SessionController extends ChangeNotifier {
       }
       status = SessionStatus.ready;
       if (!api.usedOfflineData) await offline.markOnline();
-      // A successful session restore is the safest time to retry additions
-      // recorded while the phone was offline.
-      await api.flushPendingOperations();
       notifyListeners();
+      // Warm the people list so every screen opens with it, and retry additions
+      // recorded while offline, without keeping the first screen waiting.
+      unawaited(people.ensure().then((_) {}).catchError((Object _) {}));
+      unawaited(api.flushPendingOperations());
     } on ApiException catch (caught) {
       if (caught.isUnauthorized) {
         await store.clear();

@@ -35,7 +35,7 @@ class _DoctorPageState extends State<DoctorPage> {
       _error = null;
     });
     try {
-      final people = await api.patients();
+      final people = await SessionScope.of(context).people.ensure();
       _patientId ??= await loadInitialPersonId(people);
       final packet = _patientId == null ? null : await api.doctorPacket(_patientId!);
       if (!mounted) return;

@@ -266,10 +266,10 @@ export default function PatientDetailPage() {
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-gray-900">Reports</h3>
               <Link
-                href={`/health-records/new?patientId=${patientId}`}
-                className="sv-btn sv-btn-primary"
+                href={`/health-records?patientId=${patientId}`}
+                className="sv-btn sv-btn-outline"
               >
-                Add a Report
+                Open Reports
               </Link>
             </div>
 
@@ -280,13 +280,7 @@ export default function PatientDetailPage() {
               </div>
             ) : healthRecords.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
-                <p>No reports yet</p>
-                <Link
-                  href={`/health-records/new?patientId=${patientId}`}
-                  className="mt-4 inline-block text-coral hover:text-coral-strong"
-                >
-                  Add a Report
-                </Link>
+                <p>No reports yet. Add one from the Reports tab.</p>
               </div>
             ) : (
               <div className="space-y-4">

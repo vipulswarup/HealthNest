@@ -1,19 +1,24 @@
 @import "tailwindcss";
 @import "@heroui/styles";
 
+/*
+ * Design tokens. "Calm clinical teal": one brand colour on a cool off-white
+ * background. Mirrors sanovault-mobile/lib/theme/sv_colors.dart.
+ */
 :root {
-  --ink: #313647;
-  --slate: #435663;
-  --sage: #a3b087;
-  --cream: #fff8d4;
-  --silver: #c7cec1;
-  /* Compatibility names for existing component classes during migration. */
-  --coral: var(--ink);
-  --coral-strong: var(--slate);
+  --brand: #0f766e;
+  --brand-strong: #115e59;
+  --brand-tint: #e3f2f0;
+  --ink: #1b2b2a;
+  --slate: #52645f;
+  --sage: #5eaaa2;
+  --cream: #f5f8f8;
+  --silver: #d9e2e1;
+  /* Legacy names still referenced by components. */
+  --coral: var(--brand);
+  --coral-strong: var(--brand-strong);
   --background: var(--cream);
   --foreground: var(--ink);
-  --brand: var(--ink);
-  --brand-strong: var(--slate);
   --surface: #ffffff;
   --border: var(--silver);
   --accent: var(--sage);
@@ -30,6 +35,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-tint: var(--brand-tint);
   --color-ink: var(--ink);
   --color-slate: var(--slate);
   --color-blue-slate: var(--slate);
@@ -40,6 +48,57 @@
   --color-coral-strong: var(--coral-strong);
   --font-sans: var(--app-font-sans);
   --font-mono: var(--app-font-mono);
+}
+
+/*
+ * Remap the stock neutral and accent scales so the many existing
+ * gray/slate/blue/indigo utility classes follow the brand palette.
+ */
+@theme {
+  --color-gray-50: #f5f8f8;
+  --color-gray-100: #edf2f1;
+  --color-gray-200: #d9e2e1;
+  --color-gray-300: #c3d0ce;
+  --color-gray-400: #93a5a1;
+  --color-gray-500: #6b7d79;
+  --color-gray-600: #52645f;
+  --color-gray-700: #3e4f4b;
+  --color-gray-800: #2a3b38;
+  --color-gray-900: #1f2e2c;
+  --color-gray-950: #1b2b2a;
+  --color-slate-50: #f5f8f8;
+  --color-slate-100: #edf2f1;
+  --color-slate-200: #d9e2e1;
+  --color-slate-300: #c3d0ce;
+  --color-slate-400: #93a5a1;
+  --color-slate-500: #6b7d79;
+  --color-slate-600: #52645f;
+  --color-slate-700: #3e4f4b;
+  --color-slate-800: #2a3b38;
+  --color-slate-900: #1f2e2c;
+  --color-slate-950: #1b2b2a;
+  --color-blue-50: #e8f4f2;
+  --color-blue-100: #d1eae6;
+  --color-blue-200: #a8d6cf;
+  --color-blue-300: #7abdb4;
+  --color-blue-400: #4a9f95;
+  --color-blue-500: #1f8a80;
+  --color-blue-600: #0f766e;
+  --color-blue-700: #0f615b;
+  --color-blue-800: #115048;
+  --color-blue-900: #12403b;
+  --color-blue-950: #0a2a27;
+  --color-indigo-50: #e8f4f2;
+  --color-indigo-100: #d1eae6;
+  --color-indigo-200: #a8d6cf;
+  --color-indigo-300: #7abdb4;
+  --color-indigo-400: #4a9f95;
+  --color-indigo-500: #1f8a80;
+  --color-indigo-600: #0f766e;
+  --color-indigo-700: #0f615b;
+  --color-indigo-800: #115048;
+  --color-indigo-900: #12403b;
+  --color-indigo-950: #0a2a27;
 }
 
 body {
@@ -70,7 +129,7 @@ textarea {
 }
 
 :focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 
@@ -95,31 +154,31 @@ textarea {
 }
 
 .sv-btn-primary {
-  background: var(--ink);
-  color: var(--cream);
+  background: var(--brand);
+  color: #ffffff;
 }
 
 .sv-btn-primary:hover {
-  background: var(--slate);
+  background: var(--brand-strong);
 }
 
 .sv-btn-secondary {
-  background: var(--slate);
-  color: var(--cream);
+  background: var(--brand-tint);
+  color: var(--brand-strong);
 }
 
 .sv-btn-secondary:hover {
-  background: var(--ink);
+  background: color-mix(in srgb, var(--brand) 18%, white);
 }
 
 .sv-btn-outline {
   background: #ffffff;
-  color: var(--ink);
-  border: 1px solid var(--sage);
+  color: var(--brand-strong);
+  border: 1px solid var(--brand);
 }
 
 .sv-btn-outline:hover {
-  background: color-mix(in srgb, var(--sage) 16%, white);
+  background: var(--brand-tint);
 }
 
 [data-slot="button"] {

@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/cupertino.dart';
 import 'package:path/path.dart' as p;
-import 'package:sanovault/api/models.dart';
-import 'package:sanovault/features/reports/pdf_password_prompt.dart';
+import 'package:sanovault/session/app_preferences.dart';
+import 'package:sanovault/widgets/people_aware.dart';
 import 'package:sanovault/session/session_scope.dart';
 import 'package:sanovault/theme/sv_colors.dart';
 import 'package:sanovault/widgets/person_picker.dart';
@@ -25,8 +25,8 @@ class ShareImportPage extends StatefulWidget {
   State<ShareImportPage> createState() => _ShareImportPageState();
 }
 
-class _ShareImportPageState extends State<ShareImportPage> {
-  List<Person> _people = const [];
+class _ShareImportPageState extends State<ShareImportPage>
+    with PeopleAware<ShareImportPage> {
   String? _patientId;
   String? _error;
   String _status = '';
@@ -38,19 +38,51 @@ class _ShareImportPageState extends State<ShareImportPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
   }
 
+  /// People come from memory or the on-device cache, so the person is chosen
+  /// and Save is enabled almost immediately.
   Future<void> _bootstrap() async {
     try {
-      final people = await SessionScope.of(context).api.patients();
-      final selected = await loadInitialPersonId(people);
+      final list = await ensurePeople();
+      final lastUsed = await AppPreferences().lastPatientId();
       if (!mounted) return;
-      setState(() {
-        _people = people;
-        _patientId = selected;
-      });
+      setState(() => _patientId = initialPersonFrom(list, null, lastUsed));
     } catch (caught) {
       if (!mounted) return;
       setState(() => _error = caught.toString());
     }
+  }
+
+  @override
+  void onPeopleChanged() {
+    if (_patientId == null && people.isNotEmpty) {
+      setState(() => _patientId = people.first.id);
+    }
+  }
+
+  Future<void> _uploadOne(SharedImportFile file, String patientId) async {
+    final api = SessionScope.of(context).api;
+    final bytes = await File(file.path).readAsBytes();
+    final uploaded = await api.uploadDocument(
+      Uint8List.fromList(bytes),
+      file.name,
+      patientId: patientId,
+    );
+    final documentId =
+        uploaded['id'] as String? ??
+        uploaded['_id'] as String? ??
+        uploaded['documentId'] as String?;
+    if (documentId == null) throw Exception('Upload did not return a document.');
+    // The server reads and files the document in the background, unlocking PDFs
+    // with the passwords saved for this person, so nothing waits on OCR here.
+    await api.createHealthRecord({
+      'patientId': patientId,
+      'recordType': 'OTHER',
+      'data': <String, dynamic>{},
+      'source': 'Share',
+      'documentId': documentId,
+      'tags': ['needs_review', 'mobile_share'],
+      'processAsync': true,
+    });
   }
 
   Future<void> _save() async {
@@ -71,36 +103,25 @@ class _ShareImportPageState extends State<ShareImportPage> {
     });
 
     try {
-      final api = SessionScope.of(context).api;
-      for (var i = 0; i < widget.files.length; i++) {
-        final file = widget.files[i];
-        if (!mounted) return;
-        setState(() => _status = widget.files.length == 1 ? 'Uploading…' : 'Uploading ${i + 1} of ${widget.files.length}…');
-        final bytes = await File(file.path).readAsBytes();
-        final uploaded = await api.uploadDocument(Uint8List.fromList(bytes), file.name, patientId: patientId);
-        final documentId =
-            uploaded['id'] as String? ?? uploaded['_id'] as String? ?? uploaded['documentId'] as String?;
-        if (documentId == null) throw Exception('Upload did not return a document.');
-        if (file.name.toLowerCase().endsWith('.pdf')) {
-          await ocrWithPasswordPrompt(
-            context: context,
-            api: api,
-            documentId: documentId,
-            patientId: patientId,
-          );
-        }
-        await api.createHealthRecord({
-          'patientId': patientId,
-          'recordType': 'OTHER',
-          'data': <String, dynamic>{},
-          'source': 'Share',
-          'documentId': documentId,
-          'tags': ['needs_review', 'mobile_share'],
-          'processAsync': true,
-        });
+      // Upload a couple of files at a time instead of strictly one by one.
+      const parallel = 3;
+      var done = 0;
+      for (var start = 0; start < widget.files.length; start += parallel) {
+        final batch = widget.files.skip(start).take(parallel).toList();
+        await Future.wait([
+          for (final file in batch)
+            _uploadOne(file, patientId).then((_) {
+              done += 1;
+              if (mounted && widget.files.length > 1) {
+                setState(
+                  () => _status = 'Uploaded $done of ${widget.files.length}…',
+                );
+              }
+            }),
+        ]);
       }
       if (!mounted) return;
-      await rememberPerson(context, patientId);
+      await AppPreferences().setLastPatientId(patientId);
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } catch (caught) {
@@ -133,8 +154,9 @@ class _ShareImportPageState extends State<ShareImportPage> {
             ),
           ),
           PersonPicker(
-            people: _people,
+            people: people,
             selectedId: _patientId,
+            loading: peopleLoading && people.isEmpty,
             onSelected: (id) => setState(() => _patientId = id),
           ),
           if (_status.isNotEmpty)

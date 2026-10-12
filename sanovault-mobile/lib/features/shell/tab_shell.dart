@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:sanovault/features/family/family_page.dart';
+import 'package:sanovault/features/log/log_page.dart';
 import 'package:sanovault/features/home/home_page.dart';
 import 'package:sanovault/features/medicines/medicines_page.dart';
 import 'package:sanovault/features/more/more_page.dart';
@@ -31,7 +31,7 @@ class _TabShellState extends State<TabShell> {
       backgroundColor: SvColors.groupedBackground,
       tabBar: CupertinoTabBar(
         backgroundColor: SvColors.surface,
-        activeColor: SvColors.ink,
+        activeColor: SvColors.brand,
         inactiveColor: SvColors.slate,
         items: const [
           BottomNavigationBarItem(
@@ -39,12 +39,12 @@ class _TabShellState extends State<TabShell> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.person_2),
-            label: 'Family',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.doc_text),
             label: 'Reports',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.add_circled_solid),
+            label: 'Log',
           ),
           BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.capsule),
@@ -63,9 +63,9 @@ class _TabShellState extends State<TabShell> {
               case 0:
                 return const HomePage();
               case 1:
-                return const FamilyPage();
-              case 2:
                 return const ReportsPage();
+              case 2:
+                return const LogPage();
               case 3:
                 return const MedicinesPage();
               default:

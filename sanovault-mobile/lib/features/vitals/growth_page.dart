@@ -38,7 +38,7 @@ class _GrowthPageState extends State<GrowthPage> {
   Future<void> _load() async {
     final api = SessionScope.of(context).api;
     try {
-      final people = await api.patients();
+      final people = await SessionScope.of(context).people.ensure();
       _patientId ??= await loadInitialPersonId(people);
       final history = _patientId == null ? null : await api.growth(_patientId!);
       if (!mounted) return;

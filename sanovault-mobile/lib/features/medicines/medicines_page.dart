@@ -48,7 +48,7 @@ class _MedicinesPageState extends State<MedicinesPage> {
       _error = null;
     });
     try {
-      final people = await api.patients();
+      final people = await SessionScope.of(context).people.ensure();
       var patientId = requestedPatientId ?? _patientId;
       if (patientId == null ||
           !people.any((person) => person.id == patientId)) {

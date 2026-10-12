@@ -39,7 +39,7 @@ class _VaccinationsPageState extends State<VaccinationsPage> {
   Future<void> _load() async {
     final api = SessionScope.of(context).api;
     try {
-      final people = await api.patients();
+      final people = await SessionScope.of(context).people.ensure();
       _patientId ??= await loadInitialPersonId(people);
       final data = _patientId == null ? null : await api.vaccinations(_patientId!);
       if (!mounted) return;

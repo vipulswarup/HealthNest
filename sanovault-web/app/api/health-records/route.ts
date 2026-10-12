@@ -55,10 +55,10 @@ export async function GET(request: NextRequest) {
         AND (${source}::text IS NULL OR hr.source ILIKE '%' || ${source} || '%')
         AND (${recordType}::text IS NULL OR hr.record_type = ${recordType})
         AND (${tag}::text IS NULL OR ${tag} = ANY(hr.tags))
-        AND (${startDate}::date IS NULL OR hr.created_at >= ${startDate}::date)
-        AND (${endDate}::date IS NULL OR hr.created_at < (${endDate}::date + INTERVAL '1 day'))
+        AND (${startDate}::date IS NULL OR COALESCE(hr.document_date, hr.created_at::date) >= ${startDate}::date)
+        AND (${endDate}::date IS NULL OR COALESCE(hr.document_date, hr.created_at::date) <= ${endDate}::date)
         AND (${keyword}::text IS NULL OR CONCAT_WS(' ', hr.source, hr.doctor_name, hr.record_type, hr.ocr_text, hr.data::text) ILIKE '%' || ${keyword} || '%' OR EXISTS (SELECT 1 FROM unnest(hr.tags) AS record_tag WHERE record_tag ILIKE '%' || ${keyword} || '%'))
-      ORDER BY hr.created_at DESC
+      ORDER BY COALESCE(hr.document_date, hr.created_at::date) DESC, hr.created_at DESC
     `;
 
     return NextResponse.json(records.map(toHealthRecord));

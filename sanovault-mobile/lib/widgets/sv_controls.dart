@@ -44,7 +44,7 @@ class SvErrorBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFE5E5),
+        color: SvColors.dangerTint,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(

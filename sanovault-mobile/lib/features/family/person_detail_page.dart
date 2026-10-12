@@ -6,7 +6,6 @@ import 'package:sanovault/features/doctor/doctor_page.dart';
 import 'package:sanovault/features/family/edit_person_page.dart';
 import 'package:sanovault/features/family/file_passwords_page.dart';
 import 'package:sanovault/features/medicines/medicines_page.dart';
-import 'package:sanovault/features/reports/add_report_page.dart';
 import 'package:sanovault/features/reports/reports_page.dart';
 import 'package:sanovault/features/tracking/vaccinations_page.dart';
 import 'package:sanovault/features/tracking/visit_notes_page.dart';
@@ -15,7 +14,6 @@ import 'package:sanovault/features/vitals/growth_page.dart';
 import 'package:sanovault/session/session_scope.dart';
 import 'package:sanovault/util/dates.dart';
 import 'package:sanovault/widgets/person_picker.dart';
-import 'package:sanovault/widgets/sv_controls.dart';
 import 'package:sanovault/widgets/sv_page.dart';
 
 class PersonDetailPage extends StatefulWidget {
@@ -134,39 +132,19 @@ class _PersonDetailPageState extends State<PersonDetailPage> {
                     ),
                   ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: SvFilledButton(
-                          label: 'Add a Report',
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              CupertinoPageRoute<void>(
-                                builder: (_) =>
-                                    AddReportPage(patientId: person.id),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
                 CupertinoListSection.insetGrouped(
                   header: const Text('Open'),
                   children: [
                     _link('Reports', ReportsPage(patientId: person.id)),
-                    _link('For the Doctor', DoctorPage(patientId: person.id)),
-                    _link('Medicines', MedicinesPage(patientId: person.id)),
+                    _link('Symptoms & Notes', VisitNotesPage(patientId: person.id)),
                     _link('Blood Pressure', BpPage(patientId: person.id)),
+                    _link('Medicines', MedicinesPage(patientId: person.id)),
                     _link('Height & Weight', GrowthPage(patientId: person.id)),
                     _link(
                       'Vaccinations',
                       VaccinationsPage(patientId: person.id),
                     ),
-                    _link('Visit Notes', VisitNotesPage(patientId: person.id)),
+                    _link('Doctor packet', DoctorPage(patientId: person.id)),
                     _link(
                       'File passwords',
                       FilePasswordsPage(

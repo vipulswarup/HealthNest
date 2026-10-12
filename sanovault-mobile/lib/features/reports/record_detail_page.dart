@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:sanovault/theme/sv_colors.dart';
 import 'package:sanovault/api/models.dart';
 import 'package:sanovault/features/reports/document_view_page.dart';
 import 'package:sanovault/session/session_scope.dart';
@@ -30,7 +31,7 @@ class _RecordDetailPageState extends State<RecordDetailPage> {
     try {
       final api = SessionScope.of(context).api;
       final record = await api.healthRecord(widget.recordId);
-      final people = await api.patients();
+      final people = await SessionScope.of(context).people.ensure();
       if (!mounted) return;
       setState(() {
         _record = record;
@@ -92,7 +93,7 @@ class _RecordDetailPageState extends State<RecordDetailPage> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: CupertinoColors.systemYellow.withValues(alpha: 0.18),
+                        color: SvColors.warningTint,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(

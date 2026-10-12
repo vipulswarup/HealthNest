@@ -40,10 +40,14 @@ class _FamilyPageState extends State<FamilyPage> {
       _error = null;
     });
     try {
+      // Both requests are independent, so run them together.
+      final peopleRequest = session.api
+          .patients()
+          .catchError((Object _) => <Person>[]);
       final home = await session.api.dashboard();
       final people = home.householdId == null
           ? <Person>[]
-          : await session.api.patients();
+          : await peopleRequest;
       if (!mounted) return;
       setState(() {
         _householdId = home.householdId;

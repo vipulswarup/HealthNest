@@ -10,7 +10,7 @@ import 'package:sanovault/api/models.dart';
 import 'package:sanovault/features/doctor/doctor_page.dart';
 import 'package:sanovault/features/folder_check/folder_check_page.dart';
 import 'package:sanovault/features/households/households_page.dart';
-import 'package:sanovault/features/reports/add_report_page.dart';
+import 'package:sanovault/features/family/family_page.dart';
 import 'package:sanovault/features/tracking/vaccinations_page.dart';
 import 'package:sanovault/features/tracking/visit_notes_page.dart';
 import 'package:sanovault/features/vitals/bp_page.dart';
@@ -66,6 +66,8 @@ class _MorePageState extends State<MorePage> {
     if (id == _activeId) return;
     final session = SessionScope.of(context);
     await session.api.setActiveHousehold(id);
+    await session.api.forgetPeopleCache();
+    session.people.reset();
     session.invalidateData();
     await _load();
   }
@@ -170,14 +172,9 @@ class _MorePageState extends State<MorePage> {
                       },
                     ),
                   CupertinoListTile(
-                    title: const Text('Add a Report'),
+                    title: const Text('People'),
                     trailing: const CupertinoListTileChevron(),
-                    onTap: () => _open(const AddReportPage()),
-                  ),
-                  CupertinoListTile(
-                    title: const Text('For the Doctor'),
-                    trailing: const CupertinoListTileChevron(),
-                    onTap: () => _open(const DoctorPage()),
+                    onTap: () => _open(const FamilyPage()),
                   ),
                   CupertinoListTile(
                     title: const Text('Blood Pressure'),
@@ -195,9 +192,14 @@ class _MorePageState extends State<MorePage> {
                     onTap: () => _open(const VaccinationsPage()),
                   ),
                   CupertinoListTile(
-                    title: const Text('Visit Notes'),
+                    title: const Text('Symptoms & Notes'),
                     trailing: const CupertinoListTileChevron(),
                     onTap: () => _open(const VisitNotesPage()),
+                  ),
+                  CupertinoListTile(
+                    title: const Text('Doctor packet'),
+                    trailing: const CupertinoListTileChevron(),
+                    onTap: () => _open(const DoctorPage()),
                   ),
                   CupertinoListTile(
                     title: const Text('Who Can See This'),

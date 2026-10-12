@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import AppNav from "@/components/layout/AppNav";
 import { PersonCardActions } from "@/components/dashboard/PersonCardActions";
 import { useHouseholdContext } from "@/components/households/useHouseholdContext";
@@ -34,7 +33,6 @@ export function DashboardHome({
   userLabel: string;
   initial: DashboardHome;
 }) {
-  const router = useRouter();
   const { householdId, hydrate } = useHouseholdContext();
   const [home, setHome] = useState(initial);
   const [error, setError] = useState("");
@@ -105,11 +103,6 @@ export function DashboardHome({
     return grouped;
   }, [home.records]);
 
-  const openAdd = (id: string) => {
-    setLastPatientId(id);
-    router.push(`/health-records/new?patientId=${id}`);
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <AppNav userLabel={userLabel} />
@@ -120,7 +113,7 @@ export function DashboardHome({
               Family{firstName ? `, ${firstName}` : ""}
             </h1>
             <p className="mt-2 max-w-2xl text-base text-blue-slate">
-              Choose a Person, Add a Report, or Open What a Doctor Needs.
+              Log a symptom or blood pressure, add a report, or open a person.
             </p>
           </div>
           <Link href="/patients/new" prefetch={false} className={svBtnOutline}>
@@ -141,11 +134,11 @@ export function DashboardHome({
               Add a Report
             </Link>
             <Link
-              href="/for-the-doctor"
+              href="/visit-notes"
               prefetch={false}
               className={svBtnSecondary}
             >
-              For the Doctor
+              Symptoms &amp; Notes
             </Link>
             <Link
               href="/health-records"
@@ -258,7 +251,6 @@ export function DashboardHome({
                   </p>
                   <PersonCardActions
                     patientId={person.id}
-                    onAddReport={() => openAdd(person.id)}
                     onNavigate={() => setLastPatientId(person.id)}
                   />
                   <div className="mt-5">
